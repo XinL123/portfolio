@@ -1,0 +1,15 @@
+{
+  "name": "christus-luo-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4173 --strictPort",
+    "dev:portfolio": "vite --host 0.0.0.0 --port 4173 --strictPort",
+    "preview:portfolio": "vite preview --host 0.0.0.0 --port 4173 --strictPort",
+    "check:links": "node scripts/check-local-links.js",
+    "check:design": "node scripts/check-design-regression.js"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}
