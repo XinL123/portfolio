@@ -13,11 +13,11 @@
     <meta property="og:url" content="https://christusluo.com/" />
     <meta property="og:type" content="website" />
     <title>christus's portfolio</title>
-    <link rel="stylesheet" href="styles.css?v=20260611a" />
+    <link rel="stylesheet" href="styles.css?v=20260627refresh8" />
   </head>
   <body data-page="home">
     <header class="site-header">
-      <a class="brand-mark" href="index.html" aria-label="Christus Luo home">
+      <a class="brand-mark" href="index.html" aria-label="Xin.L home">
         <img class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
       </a>
 
@@ -26,47 +26,91 @@
       </button>
 
       <nav class="main-nav" aria-label="Main navigation">
-        <a href="#work">Work</a>
+        <a href="index.html#work">Work</a>
         <a href="about.html">About</a>
         <a href="resume.html">Resume</a>
         <a href="playground.html">Playground</a>
+        <a class="nav-connect" href="mailto:hello@christusluo.com">Let's Connect</a>
+        <span class="menu-socials" aria-label="Social links">
+          <a href="#" aria-label="Github">Github</a>
+          <a href="https://www.linkedin.com/in/christus-luo" target="_blank" rel="noreferrer" aria-label="LinkedIn">LinkedIn</a>
+          <a href="#" aria-label="Douyin">Douyin</a>
+          <a href="#" aria-label="RedNote">RedNote</a>
+        </span>
       </nav>
 
       <div class="header-actions">
         <a class="pill-button connect-button" href="mailto:hello@christusluo.com">Let's Connect</a>
         <button class="pull-chain" type="button" aria-label="Pull chain to switch to dark mode" aria-pressed="false">
-          <img class="chain-image" src="assets/system/crayon-pull-chain.png" alt="" draggable="false" />
+          <img class="chain-image" src="assets/system/chain.png" alt="" draggable="false" />
         </button>
       </div>
     </header>
 
     <main>
-      <section class="home-hero reveal-section" aria-labelledby="intro-title">
-        <div class="hero-copy">
-          <p class="role-line">End to end design · Vibe coding · Product thinking</p>
-          <h1 id="intro-title" class="stamp-title">
-            <span>I'm <mark>Christus</mark></span>
-            <span>I bring designs</span>
-            <span>to life</span>
-            <span><em>through code</em></span>
-          </h1>
-          <p class="student-line">Currently a senior @ Vanderbilt University</p>
-          <a class="pill-button hero-button" href="about.html">About Me <span class="button-arrow" aria-hidden="true"></span></a>
-        </div>
+      <section class="home-intro-screen is-active" id="intro-1" data-intro-index="0" aria-label="Intro">
+        <h1 class="intro-line" data-text="Hi, I'm Xin.L"></h1>
+      </section>
 
-        <div class="orange-stage" aria-label="Interactive orange character">
-          <img class="orange-body" src="assets/system/orange-body-no-eyes.png" alt="" />
-          <div class="orange-eye-group" aria-hidden="true">
-            <span class="orange-eye orange-eye-left"></span>
-            <span class="orange-eye orange-eye-right"></span>
+      <section class="home-intro-screen" id="intro-2" data-intro-index="1" aria-label="Intro">
+        <p class="intro-line" data-text="Currently a senior @ Vanderbilt University"></p>
+      </section>
+
+      <section class="home-intro-screen" id="intro-3" data-intro-index="2" aria-label="Intro">
+        <p class="intro-line" data-text="I bring designs to life through code"></p>
+      </section>
+
+      <section class="home-gallery-screen" id="home" data-intro-index="3" aria-label="Portfolio opening collage">
+        <div class="home-gallery-stage">
+          <div class="home-photo home-photo-tall home-photo-a has-image" data-home-photo="a" aria-hidden="true">
+            <img src="assets/home/pic1.jpg" alt="" />
+          </div>
+          <div class="home-photo home-photo-wide home-photo-b has-image" data-home-photo="b" aria-hidden="true">
+            <video
+              class="home-inline-video"
+              src="assets/home/cancun.mov"
+              autoplay
+              muted
+              loop
+              playsinline
+            ></video>
+          </div>
+          <div class="home-photo home-photo-wide home-photo-c has-image" data-home-photo="c" aria-hidden="true">
+            <img src="assets/home/pic4.jpg" alt="" />
+          </div>
+          <div class="home-photo home-photo-wide home-photo-d has-image" data-home-photo="d" aria-hidden="true">
+            <img src="assets/home/pic2.jpg" alt="" />
+          </div>
+          <div class="home-photo home-photo-small home-photo-e has-image" data-home-photo="e" aria-hidden="true">
+            <img src="assets/home/pic3.jpg" alt="" />
+          </div>
+          <div class="home-photo home-photo-main" data-home-photo="main" aria-hidden="true">
+            <video
+              class="home-photo-video"
+              src="assets/home/home video.mov"
+              autoplay
+              muted
+              loop
+              playsinline
+            ></video>
+          </div>
+
+          <div class="home-orange-wrap">
+            <div class="orange-stage" aria-label="Interactive orange character">
+              <img class="orange-body" src="assets/system/orange-body-no-eyes.png" alt="" />
+              <div class="orange-eye-group" aria-hidden="true">
+                <span class="orange-eye orange-eye-left"></span>
+                <span class="orange-eye orange-eye-right"></span>
+              </div>
+            </div>
+            <p class="home-vibe-note">All made with vibe coding ;)</p>
           </div>
         </div>
       </section>
 
       <section id="work" class="work-section reveal-section" aria-labelledby="work-title">
         <div class="section-heading">
-          <p class="eyebrow">Selected projects</p>
-          <h2 id="work-title">Work</h2>
+          <h2 id="work-title" class="work-heading-title">Selected projects</h2>
         </div>
 
         <div class="work-board">
@@ -75,66 +119,148 @@
               <img src="assets/cover/文通logo.png" alt="Land of Wisdom project logo" />
             </div>
             <div class="work-card-copy">
-              <span>2026</span>
               <h3>Publishing × AI</h3>
+              <span>2026</span>
             </div>
           </a>
 
-          <div class="work-row">
-            <a class="work-card work-card-wide" href="playground.html" target="_self">
-              <div class="work-media work-media-full voderrn-media">
-                <img src="assets/cover/voderrn-cover-balanced.png?v=20260609k" alt="Voderrn interface cover" />
-              </div>
-              <div class="work-card-copy">
-                <span>2025</span>
-                <h3>Fashion × Business</h3>
-              </div>
-            </a>
+          <article class="work-card work-card-placeholder">
+            <div class="work-media work-media-full placeholder-media" aria-hidden="true">
+              <span></span>
+            </div>
+            <div class="work-card-copy">
+              <h3>Coming Soon</h3>
+              <span>2026</span>
+            </div>
+          </article>
 
-            <a class="work-card work-card-small" href="Gowncard%20Pitch.pdf" target="_blank" rel="noreferrer">
-              <div class="work-media work-media-full gown-media">
-                <picture>
-                  <source media="(max-width: 1080px)" srcset="assets/cover/healthcare-cover-home-wide.png?v=20260609k" />
-                  <img src="assets/cover/healthcare-cover-home-final.png?v=20260609k" alt="Healthcare mobile app cover" />
-                </picture>
-              </div>
-              <div class="work-card-copy">
-                <span>2024</span>
-                <h3>Healthcare</h3>
-              </div>
-            </a>
-          </div>
+          <a class="work-card work-card-wide" href="work.html" target="_self">
+            <div class="work-media work-media-full voderrn-media">
+              <img src="assets/cover/voderrn-cover-balanced.png?v=20260609k" alt="Voderrn interface cover" />
+            </div>
+            <div class="work-card-copy">
+              <h3>Voderrn</h3>
+              <span>2025</span>
+            </div>
+          </a>
+
+          <a class="work-card work-card-small" href="Gowncard%20Pitch.pdf" target="_blank" rel="noreferrer">
+            <div class="work-media work-media-full gown-media">
+              <img src="assets/cover/healthcare-cover-home-final.png?v=20260609k" alt="Healthcare mobile app cover" />
+            </div>
+            <div class="work-card-copy">
+              <h3>Healthcare</h3>
+              <span>2024</span>
+            </div>
+          </a>
         </div>
       </section>
+
+      <!-- Studio block: two full-screen scroll pages (intro + "What we do"). Placeholder copy/images — swap later. -->
+      <div class="studio-block">
+        <section class="studio-screen studio-intro reveal-section" aria-label="Studio intro">
+          <div class="studio-intro-inner">
+            <p class="studio-intro-lead">
+              We are Playfight, an independent creative, story, and production studio. We believe brands
+              need art and commerce. Founder-led and craft-driven, because the future of creativity lives
+              in tight, experienced teams. No bureaucracy, just better relationships, better customer
+              connection, and ultimately, a better business.
+            </p>
+            <p class="studio-intro-tag">Fighting for authenticity. Making the different.</p>
+          </div>
+        </section>
+
+        <section class="studio-screen studio-services reveal-section" aria-labelledby="studio-services-title">
+          <div class="studio-services-inner">
+            <p class="studio-services-eyebrow" id="studio-services-title">What we do</p>
+            <ul class="studio-service-list">
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Crafting the look that makes brands unforgettable.</span>
+                </span>
+                <span class="studio-service-name">Art Direction</span>
+                <span class="studio-service-big" aria-hidden="true">Art Direction</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Identities with personality, built to last.</span>
+                </span>
+                <span class="studio-service-name">Branding</span>
+                <span class="studio-service-big" aria-hidden="true">Branding</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Stories worth the scroll, the like, and the share.</span>
+                </span>
+                <span class="studio-service-name">Content</span>
+                <span class="studio-service-big" aria-hidden="true">Content</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Thoughtful systems that feel effortless.</span>
+                </span>
+                <span class="studio-service-name">Design</span>
+                <span class="studio-service-big" aria-hidden="true">Design</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Digital experiences with emotional resonance.</span>
+                </span>
+                <span class="studio-service-name">Digital &amp; Web</span>
+                <span class="studio-service-big" aria-hidden="true">Digital &amp; Web</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Stories told in motion, frame by frame.</span>
+                </span>
+                <span class="studio-service-name">Film Production</span>
+                <span class="studio-service-big" aria-hidden="true">Film Production</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Real moments, beautiful shots.</span>
+                </span>
+                <span class="studio-service-name">Photography</span>
+                <span class="studio-service-big" aria-hidden="true">Photography</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Polish that brings every cut to life.</span>
+                </span>
+                <span class="studio-service-name">Post Production</span>
+                <span class="studio-service-big" aria-hidden="true">Post Production</span>
+              </li>
+              <li class="studio-service">
+                <span class="studio-service-aside" aria-hidden="true">
+                  <span class="studio-service-media"></span>
+                  <span class="studio-service-caption">Clear thinking before the first pixel.</span>
+                </span>
+                <span class="studio-service-name">Strategy</span>
+                <span class="studio-service-big" aria-hidden="true">Strategy</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
 
     </main>
 
     <footer class="site-footer">
-      <div class="footer-cta">
-        <h2>
-          <span>Let's make</span>
-          <span>something</span>
-          <span>feel alive!</span>
-        </h2>
-      </div>
-      <nav class="footer-nav" aria-label="Footer navigation">
-        <a href="index.html">Home</a>
-        <a href="#work">Work</a>
-        <a href="about.html">About</a>
-        <a href="resume.html">Resume</a>
-        <a href="playground.html">Playground</a>
+      <nav class="footer-socials" aria-label="Social links">
+        <a href="#" aria-label="Douyin">Douyin</a>
+        <a href="#" aria-label="RedNote">RedNote</a>
       </nav>
-      <div class="footer-right">
-        <nav class="footer-socials" aria-label="Social links">
-          <a href="#" aria-label="Github">Github</a>
-          <a href="#" aria-label="Douyin">Douyin</a>
-          <a href="#" aria-label="RedNote">RedNote</a>
-          <a href="mailto:hello@christusluo.com" aria-label="Let's Connect">Let's Connect</a>
-          <p class="footer-copy">Copyright © 2026 C.L</p>
-        </nav>
-      </div>
+      <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
 
-    <script src="script.js?v=20260611a"></script>
+    <script src="script.js?v=20260627refresh8"></script>
   </body>
 </html>
