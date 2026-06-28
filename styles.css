@@ -6577,21 +6577,21 @@ body[data-page="home"].home-opening-active .studio-block {
 }
 
 .studio-intro-lead {
-  max-width: 620px;
+  max-width: 560px;
   margin: 0 0 0 clamp(0px, 12%, 200px);
   font-family: var(--body);
-  font-size: clamp(22px, 2.1vw, 30px);
-  line-height: 1.85;
+  font-size: clamp(17px, 1.5vw, 23px);
+  line-height: 1.8;
   font-weight: 400;
   color: inherit;
 }
 
 .studio-intro-tag {
-  max-width: 620px;
-  margin: clamp(48px, 6vw, 96px) 0 0 clamp(0px, 12%, 200px);
+  max-width: 560px;
+  margin: clamp(44px, 5.5vw, 88px) 0 0 clamp(0px, 12%, 200px);
   font-family: var(--body);
-  font-size: clamp(22px, 2.1vw, 30px);
-  line-height: 1.85;
+  font-size: clamp(17px, 1.5vw, 23px);
+  line-height: 1.8;
   color: inherit;
 }
 
@@ -6607,7 +6607,7 @@ body[data-page="home"].home-opening-active .studio-block {
 .studio-services-eyebrow {
   margin: 0 0 clamp(40px, 6vh, 84px) var(--studio-col);
   font-family: var(--stamp);
-  font-size: clamp(15px, 1.2vw, 18px);
+  font-size: clamp(13px, 1vw, 16px);
   font-weight: 400;
   letter-spacing: 0.01em;
   color: inherit;
@@ -6624,13 +6624,13 @@ body[data-page="home"].home-opening-active .studio-block {
   padding: clamp(13px, 1.5vw, 20px) 0;
 }
 
-/* the list label (Gaegu) */
+/* the list label (Gaegu) — matches the intro paragraph size */
 .studio-service-name {
   position: relative;
   display: inline-block;
   margin-left: var(--studio-col);
   font-family: var(--body);
-  font-size: clamp(20px, 1.7vw, 26px);
+  font-size: clamp(17px, 1.5vw, 23px);
   font-weight: 400;
   color: inherit;
   transition:
@@ -6643,6 +6643,7 @@ body[data-page="home"].home-opening-active .studio-block {
   content: "\2022"; /* bullet */
   position: absolute;
   left: -30px;
+  top: 0;
   opacity: 0;
   transform: translateX(8px);
   transition:
@@ -6650,31 +6651,99 @@ body[data-page="home"].home-opening-active .studio-block {
     transform 280ms ease;
 }
 
-/* left aside: thumbnail + caption (auto-aligns to hovered row) */
+/* menu labels roll up into place when the section first appears */
+.studio-name-roll {
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1.32;
+  vertical-align: top;
+}
+
+.studio-name-inner {
+  display: block;
+  transition: transform 520ms cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* labels stay visible by default; only hidden once JS arms the entrance, then revealed */
+.studio-services.studio-roll-armed .studio-name-inner {
+  transform: translateY(118%);
+}
+
+.studio-services.studio-roll-armed.is-revealed .studio-name-inner {
+  transform: translateY(0);
+}
+
+.studio-service:nth-child(1) .studio-name-inner { transition-delay: 40ms; }
+.studio-service:nth-child(2) .studio-name-inner { transition-delay: 85ms; }
+.studio-service:nth-child(3) .studio-name-inner { transition-delay: 130ms; }
+.studio-service:nth-child(4) .studio-name-inner { transition-delay: 175ms; }
+.studio-service:nth-child(5) .studio-name-inner { transition-delay: 220ms; }
+.studio-service:nth-child(6) .studio-name-inner { transition-delay: 265ms; }
+.studio-service:nth-child(7) .studio-name-inner { transition-delay: 310ms; }
+.studio-service:nth-child(8) .studio-name-inner { transition-delay: 355ms; }
+.studio-service:nth-child(9) .studio-name-inner { transition-delay: 400ms; }
+
+/* ---- hover: directional vertical masked roll (overflow-hidden text swap) ----
+   The center menu never moves. The left aside (thumb + caption) and the right
+   big label sit at the active row's height; their content rolls vertically inside
+   fixed overflow-hidden masks (old slides out, new slides in), driven by JS. */
 .studio-service-aside {
   position: absolute;
   top: 50%;
   left: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   max-width: 34%;
-  opacity: 0;
-  transform: translateY(-50%) translateX(-14px);
-  transition:
-    opacity 360ms ease,
-    transform 360ms ease;
+  transform: translateY(-50%);
   pointer-events: none;
 }
+
+/* every dynamic block is a mask; its .studio-roll-inner is what translates */
+.studio-service-media,
+.studio-service-caption,
+.studio-service-big {
+  overflow: hidden;
+}
+
+.studio-roll-inner {
+  display: block;
+  transform: translateY(110%); /* hidden below the mask until the row is active */
+  transition: transform 460ms cubic-bezier(0.76, 0, 0.24, 1);
+  will-change: transform;
+}
+
+/* slight stagger so the three regions read as one linked motion */
+.studio-service-caption .studio-roll-inner { transition-delay: 30ms; }
+.studio-service-big .studio-roll-inner { transition-delay: 60ms; }
 
 .studio-service-media {
   flex: 0 0 auto;
   width: 96px;
   height: 64px;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.08);
-  /* swap for <img> later: replace this span with
-     <img class="studio-service-media" src="..." alt="" /> */
+  background: transparent;
+}
+
+.studio-service-media .studio-roll-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.13);
+  overflow: hidden;
+  /* rows without an image (e.g. Film) keep this gray placeholder */
+}
+
+body[data-theme="dark"] .studio-service-media .studio-roll-inner {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.studio-service-media .studio-roll-inner img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
 }
 
 .studio-service-caption {
@@ -6684,62 +6753,78 @@ body[data-page="home"].home-opening-active .studio-block {
   color: inherit;
 }
 
-/* giant hover label (Frijole), clipped by the viewport edge */
+/* giant label (Frijole), clipped at the viewport edge */
 .studio-service-big {
   position: absolute;
   top: 50%;
   left: var(--studio-big);
   font-family: var(--stamp);
-  font-size: clamp(56px, 8.5vw, 150px);
-  line-height: 1;
+  font-size: clamp(24px, 2.9vw, 54px);
+  line-height: 1.45;
   white-space: nowrap;
   color: inherit;
-  opacity: 0;
-  transform: translateY(-50%) translateX(20px);
-  transition:
-    opacity 420ms ease,
-    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateY(-50%);
   pointer-events: none;
 }
 
-/* hover state */
-.studio-service:hover .studio-service-name {
+/* active row: bold name + dot, shifted left — no layout shift for the other rows */
+.studio-service.is-active .studio-service-name {
   transform: translateX(-48px);
   font-weight: 700;
 }
 
-.studio-service:hover .studio-service-name::before {
+.studio-service.is-active .studio-service-name::before {
   opacity: 1;
   transform: translateX(0);
 }
 
-.studio-service:hover .studio-service-aside {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-}
-
-.studio-service:hover .studio-service-big {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-}
-
-/* dark mode: placeholder thumb */
-body[data-theme="dark"] .studio-service-media {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-/* respect reduced motion */
+/* reduced motion: swap instantly, no roll */
 @media (prefers-reduced-motion: reduce) {
-  .studio-service-name,
-  .studio-service-name::before,
-  .studio-service-aside,
-  .studio-service-big {
+  .studio-roll-inner {
     transition: none;
   }
 }
 
-/* ---- mobile: simplify to a clean stacked list ---- */
+/* ---- one continuous gray panel that the work section reveals, then slides up to cover ---- */
+.studio-screen {
+  background: #ededed;
+}
+
+body[data-theme="dark"] .studio-screen {
+  background: #161616;
+}
+
+/* the gray block stacks above the work section */
+.studio-block {
+  z-index: 3;
+}
+
+/* rounded top only where the panel meets the work section; content sits higher
+   than dead-center to trim the gray space above the text */
+.studio-intro {
+  border-radius: 28px 28px 0 0;
+  justify-content: flex-start;
+  padding-top: clamp(96px, 16vh, 200px);
+}
+
+/* Work scrolls normally (all cards pass) until its bottom reaches the viewport bottom,
+   then it pins so the gray panel slides up over it from below. The pin offset
+   (viewportHeight - workHeight, a negative number) is set by JS. It never engages near
+   scrollY 0, so the opening glide is left untouched. */
+body[data-page="home"].home-opening-complete .work-section {
+  position: sticky !important;
+  top: var(--work-sticky-top, 0px) !important;
+  bottom: auto !important;
+  z-index: 1;
+}
+
+/* ---- mobile: simplify to a clean stacked list, drop the cover ---- */
 @media (max-width: 760px) {
+  body[data-page="home"].home-opening-complete .work-section {
+    position: relative !important;
+    bottom: auto !important;
+  }
+
   .studio-screen {
     min-height: auto;
     padding: 64px 0;
@@ -6762,5 +6847,117 @@ body[data-theme="dark"] .studio-service-media {
 
   .studio-service-name {
     margin-left: 0;
+  }
+}
+
+/* ===========================================================
+   Bottom marquee — seamless infinite horizontal scroll of square
+   cards above the footer. Pure CSS. Center cards stay sharp/opaque;
+   only the left/right edges fade and softly blur into the background.
+   =========================================================== */
+/* The marquee and the footer share the last viewport (one screen). */
+.home-end {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-end .marquee-section {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.marquee-section {
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(56px, 8vh, 120px) 0;
+  overflow: hidden;
+}
+
+.marquee-viewport {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  transform: translateZ(0); /* own compositor layer so the scroll runs on the GPU */
+  will-change: transform;
+}
+
+/* Animation starts only when the section enters view (added by JS) — avoids the
+   off-screen throttling that made it look stalled for a moment on arrival. */
+.marquee-section.is-scrolling .marquee-track {
+  animation: marquee-scroll 33s linear infinite;
+}
+
+/* duplicated set means -50% is exactly one set → seamless, no jump/gap */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.marquee-section:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+.marquee-card {
+  flex: 0 0 auto;
+  width: clamp(210px, 21vw, 300px);
+  aspect-ratio: 1 / 1;
+  margin-right: clamp(24px, 3vw, 52px);
+  background: var(--paper);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius);
+}
+
+body[data-theme="dark"] .marquee-card {
+  border-color: rgba(255, 255, 255, 0.13);
+}
+
+/* edge treatment: soft white fade + gradual blur (masked so it eases in toward
+   the very edge and leaves the center untouched). Not a hard vertical cutoff. */
+.marquee-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(90px, 15%, 300px);
+  z-index: 2;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.marquee-edge-left {
+  left: 0;
+  background: linear-gradient(to left, transparent, var(--paper) 80%);
+  -webkit-mask: linear-gradient(to left, transparent, #000 82%);
+  mask: linear-gradient(to left, transparent, #000 82%);
+}
+
+.marquee-edge-right {
+  right: 0;
+  background: linear-gradient(to right, transparent, var(--paper) 80%);
+  -webkit-mask: linear-gradient(to right, transparent, #000 82%);
+  mask: linear-gradient(to right, transparent, #000 82%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-section.is-scrolling .marquee-track {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .marquee-card {
+    width: 70vw;
+    margin-right: 6vw;
+  }
+  .marquee-edge {
+    width: clamp(48px, 18%, 140px);
   }
 }

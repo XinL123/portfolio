@@ -901,6 +901,10 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 
     isFinishingOpening = true;
 
+    // Turn off scroll-snap while we drive the scroll/glide ourselves, or the snap container
+    // fights our scrollTo and yanks the position around. Restored once the glide settles.
+    document.documentElement.style.setProperty("scroll-snap-type", "none", "important");
+
     // Where the work section sits on screen right now, pinned (fixed) during the reveal.
     const fromTop = workRevealSection.getBoundingClientRect().top;
 
@@ -921,6 +925,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     const glide = Math.round(fromTop - landedTop);
 
     if (glide <= 2) {
+      document.documentElement.style.removeProperty("scroll-snap-type");
       isFinishingOpening = false;
       return;
     }
@@ -944,6 +949,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       workRevealSection.removeEventListener("transitionend", onGlideEnd);
       workRevealSection.style.removeProperty("transition");
       workRevealSection.style.removeProperty("transform");
+      document.documentElement.style.removeProperty("scroll-snap-type");
       isFinishingOpening = false;
     };
     workRevealSection.addEventListener("transitionend", onGlideEnd);
@@ -982,6 +988,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     isFinishingOpening = false;
     workRevealSection.style.removeProperty("transition");
     workRevealSection.style.removeProperty("transform");
+    document.documentElement.style.removeProperty("scroll-snap-type");
 
     document.body.classList.add("home-opening-active", "home-gallery-active", "home-gallery-revealing");
     document.body.classList.remove("home-opening-complete", "home-work-handoff");
@@ -1043,6 +1050,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     clearHomeHandoffVars();
     header?.classList.remove("is-auto-hidden");
     isFinishingOpening = false;
+    document.documentElement.style.removeProperty("scroll-snap-type");
     workRevealSection?.style.removeProperty("transition");
     workRevealSection?.style.removeProperty("transform");
     workRevealSection?.classList.remove("is-visible");
@@ -1341,3 +1349,193 @@ if (revealSections.length && !prefersReducedMotion.matches) {
   revealSections.forEach((section) => section.classList.add("is-visible"));
   workCards.forEach((card) => card.classList.add("is-visible"));
 }
+
+/* ============================================================
+   Studio "What we do" — directional vertical masked roll on hover.
+   The center menu stays fixed; hovering a row rolls the left aside
+   (thumb + caption) and the right big label content in/out inside
+   overflow-hidden masks, with direction following the menu movement.
+   Self-contained and guarded — touches nothing else.
+   ============================================================ */
+(() => {
+  const list = document.querySelector(".studio-service-list");
+  if (!list) return;
+
+  const rows = Array.from(list.querySelectorAll(".studio-service"));
+  if (!rows.length) return;
+
+  // Wrap each dynamic block's content in a .studio-roll-inner so the mask can clip the roll.
+  rows.forEach((row) => {
+    row.querySelectorAll(".studio-service-media, .studio-service-caption, .studio-service-big").forEach((mask) => {
+      const inner = document.createElement("span");
+      inner.className = "studio-roll-inner";
+      while (mask.firstChild) inner.appendChild(mask.firstChild);
+      mask.appendChild(inner);
+    });
+  });
+
+  // Wrap each menu label in its own mask so it can roll up on first reveal (bullet stays outside).
+  rows.forEach((row) => {
+    const name = row.querySelector(".studio-service-name");
+    if (!name) return;
+    const roll = document.createElement("span");
+    roll.className = "studio-name-roll";
+    const inner = document.createElement("span");
+    inner.className = "studio-name-inner";
+    while (name.firstChild) inner.appendChild(name.firstChild);
+    roll.appendChild(inner);
+    name.appendChild(roll);
+  });
+
+  const innersOf = (row) => row.querySelectorAll(".studio-roll-inner");
+  const IN = "translateY(0)";
+  const BELOW = "translateY(110%)";
+  const ABOVE = "translateY(-110%)";
+
+  let activeIndex = 0;
+
+  // Initial state: first row active (shown), the rest parked below the mask — no animation.
+  rows.forEach((row, i) => {
+    const active = i === 0;
+    row.classList.toggle("is-active", active);
+    innersOf(row).forEach((el) => {
+      el.style.transition = "none";
+      el.style.transform = active ? IN : BELOW;
+    });
+  });
+  void list.offsetHeight; // commit the parked positions
+  rows.forEach((row) => innersOf(row).forEach((el) => { el.style.removeProperty("transition"); }));
+
+  const setActive = (nextIndex) => {
+    if (nextIndex === activeIndex || nextIndex < 0 || nextIndex >= rows.length) return;
+    const goingDown = nextIndex > activeIndex;
+    const oldRow = rows[activeIndex];
+    const newRow = rows[nextIndex];
+
+    // Outgoing content leaves in the direction of travel.
+    innersOf(oldRow).forEach((el) => {
+      el.style.removeProperty("transition");
+      el.style.transform = goingDown ? ABOVE : BELOW;
+    });
+
+    // Incoming content is parked on the opposite side, then rolled into place.
+    innersOf(newRow).forEach((el) => {
+      el.style.transition = "none";
+      el.style.transform = goingDown ? BELOW : ABOVE;
+    });
+    void newRow.offsetHeight; // commit the start position before animating
+    innersOf(newRow).forEach((el) => {
+      el.style.removeProperty("transition");
+      el.style.transform = IN;
+    });
+
+    oldRow.classList.remove("is-active");
+    newRow.classList.add("is-active");
+    activeIndex = nextIndex;
+  };
+
+  // Hover drives the active row; leaving the menu keeps the last active row.
+  rows.forEach((row, i) => {
+    row.addEventListener("mouseenter", () => setActive(i));
+  });
+
+  // Roll the menu labels up the first time the section scrolls into view.
+  const services = document.querySelector(".studio-services");
+  if (services) {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const alreadyInView = services.getBoundingClientRect().top < window.innerHeight * 0.85;
+    if (reduce || alreadyInView) {
+      // Section is already on screen (or reduced motion) — show labels without arming the roll.
+    } else {
+      services.classList.add("studio-roll-armed");
+      const io = new IntersectionObserver((entries, obs) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            services.classList.add("is-revealed");
+            obs.disconnect();
+          }
+        });
+      }, { threshold: 0.2 });
+      io.observe(services);
+    }
+  }
+})();
+
+/* ============================================================
+   Work-section cover pin (home only). The sticky pin offset is
+   viewportHeight - workHeight (a negative number) so the work section
+   scrolls normally until its bottom reaches the viewport bottom, then
+   pins — letting the gray studio panel slide up over it from below.
+   ============================================================ */
+(() => {
+  if (document.body.dataset.page !== "home") return;
+  const work = document.querySelector(".work-section");
+  if (!work) return;
+
+  const updatePin = () => {
+    const pin = Math.min(0, window.innerHeight - work.offsetHeight);
+    document.documentElement.style.setProperty("--work-sticky-top", `${pin}px`);
+  };
+
+  updatePin();
+  window.addEventListener("load", updatePin);
+  window.addEventListener("resize", updatePin, { passive: true });
+})();
+
+/* ============================================================
+   Studio fade (home only). The intro paragraph and the "What I like"
+   content fade in as their section nears the viewport center and fade
+   back out as it leaves — a gentle in/out as each panel arrives.
+   ============================================================ */
+(() => {
+  if (document.body.dataset.page !== "home") return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const pairs = [
+    [document.querySelector(".studio-intro"), document.querySelector(".studio-intro-inner")],
+    [document.querySelector(".studio-services"), document.querySelector(".studio-services-inner")],
+    [document.querySelector(".marquee-section"), document.querySelector(".marquee-viewport")]
+  ].filter((pair) => pair[0] && pair[1]);
+  if (!pairs.length) return;
+
+  let frame = null;
+  const apply = () => {
+    frame = null;
+    const vh = window.innerHeight;
+    pairs.forEach(([section, inner]) => {
+      const rect = section.getBoundingClientRect();
+      const center = rect.top + rect.height / 2;
+      const dist = Math.abs(center - vh / 2);
+      // full opacity while the section center is within ~0.22vh of the viewport
+      // center, fading to 0 by ~0.62vh away.
+      const opacity = Math.max(0, Math.min(1, 1 - (dist - vh * 0.22) / (vh * 0.4)));
+      inner.style.opacity = opacity.toFixed(3);
+    });
+  };
+  const request = () => { if (!frame) frame = requestAnimationFrame(apply); };
+
+  apply();
+  window.addEventListener("scroll", request, { passive: true });
+  window.addEventListener("resize", request, { passive: true });
+})();
+
+/* ============================================================
+   Start the bottom marquee scroll only once it enters the viewport.
+   Running it from page load competed with the heavy opening (videos +
+   intro) and could look stalled on arrival; starting on view fixes that.
+   ============================================================ */
+(() => {
+  const section = document.querySelector(".marquee-section");
+  if (!section) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const io = new IntersectionObserver((entries, obs) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        section.classList.add("is-scrolling");
+        obs.disconnect();
+      }
+    });
+  }, { threshold: 0.01 });
+  io.observe(section);
+})();
