@@ -1,6 +1,8 @@
 const fs = require("fs");
 
 const html = fs.readFileSync("index.html", "utf8");
+const aboutHtml = fs.readFileSync("about.html", "utf8");
+const caseHtml = fs.readFileSync("work.html", "utf8");
 const css = fs.readFileSync("styles.css", "utf8");
 const js = fs.readFileSync("script.js", "utf8");
 
@@ -44,24 +46,41 @@ expect(/\.site-header\.is-scrolled\s+\.pull-chain/.test(css), "pull-chain should
 expect(/\.pull-chain\s*{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*calc\(-1\s*\*\s*var\(--header-top-pad\)\)/.test(css), "pull-chain should pin its image to the top edge without increasing header height");
 expect(js.includes("is-scrolled") && /addEventListener\(\s*"scroll"/.test(js) && js.includes("requestAnimationFrame"), "script should toggle the scrolled header state with a stable animation-frame scroll handler");
 expect(js.includes("SCROLLED_ENTER_Y = 48") && js.includes("SCROLLED_EXIT_Y = 12"), "header scroll state should use hysteresis to prevent menu flicker");
-expect(/\.site-header\.nav-open\s+\.main-nav\s*{[\s\S]*?border-radius:\s*999px[\s\S]*?transform:\s*translateY\(0\)\s*scale\(1\)/.test(css), "mobile menu should open as a floating Framer-style pill");
+expect(css.includes("@keyframes home-soft-arrive") && css.includes('body[data-page="home"] .home-hero.is-visible .stamp-title span'), "Home hero should fade in with a light staggered arrival");
+expect(css.includes("@keyframes about-soft-arrive") && css.includes(".about-hero.is-visible .about-collage"), "About hero should fade in with a light staggered arrival");
+expect(css.includes(".about-page .photo-wall.is-visible .photo-card") && js.includes("syncVisibleAboutPhotoWall") && js.includes("let closestWall = null") && js.includes('body[data-page="about"] .photo-wall.reveal-section'), "About photo walls should use scroll-activated photo reveals");
+expect(/\.about-page\s*{[\s\S]*?--about-card-width:\s*clamp\(178px,\s*15vw,\s*244px\)[\s\S]*?margin:\s*-30px\s+auto\s+0[\s\S]*?padding:\s*0\s+0/.test(css), "About hero should sit higher and define one gallery card size");
+expect(/\.about-collage\s*{[\s\S]*?width:\s*min\(100%,\s*400px\)/.test(css), "About collage should be scaled down without changing its form");
+expect(/\.photo-wall-wrap\s*{[\s\S]*?max-width:\s*min\(100%,\s*calc\(var\(--about-card-width\)\s*\*\s*5\s*\+\s*var\(--about-grid-gap\)\s*\*\s*4\)\)/.test(css), "About photo walls should share one centered width system");
+expect(/\.grid-four\s*{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*var\(--about-card-width\)\)\)/.test(css), "Four-item about grids should use the shared card width");
+expect(/\.grid-five\s*{[\s\S]*?grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*var\(--about-card-width\)\)\)/.test(css), "Five-item about grids should use the shared card width");
+expect(/\.poster-media\s*{[\s\S]*?aspect-ratio:\s*7\s*\/\s*9/.test(css), "Poster sections should use the approved tall card proportions");
+expect(!/\.poster-grid\s+\.photo-card\.no-caption\s*{[\s\S]*?padding-bottom/.test(css), "Poster cards without captions should not reserve blank caption space");
+expect(aboutHtml.includes("Blow, blow, puff<br />puff puff!") && aboutHtml.includes("Two little cats,<br />softly grown.") && aboutHtml.includes("Met my first Vandy squirrel — smile ;)"), "About moment captions should use the requested line breaks and wording");
+expect(
+  js.includes('document.querySelector(".work-section.reveal-section")') &&
+    js.includes("history.scrollRestoration = \"manual\"") &&
+    js.includes("resetHomeOpening") &&
+    js.includes("workCards.forEach((card) => card.classList.remove(\"is-visible\"))") &&
+    js.includes("finishHomeOpening"),
+  "Home opening should hold Projects until the gallery transition completes"
+);
+expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.menu-toggle\s*{[\s\S]*?display:\s*none/.test(css), "tablet header should keep the desktop-style nav instead of switching to a menu button");
+expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.main-nav\s*{[\s\S]*?position:\s*static[\s\S]*?opacity:\s*1[\s\S]*?border-radius:\s*999px/.test(css), "tablet nav should remain a visible pill-shaped nav bar");
+expect(/@media \(max-width:\s*660px\)[\s\S]*?\.menu-toggle\s*{[\s\S]*?display:\s*inline-flex[\s\S]*?font:\s*0\s*\/\s*0\s*a/.test(css), "phone header should show an icon-only menu button");
+expect(/@media \(max-width:\s*660px\)[\s\S]*?body\.nav-lock\s*{[\s\S]*?position:\s*fixed[\s\S]*?overflow:\s*hidden/.test(css), "phone menu should lock body scrolling while open");
+expect(/@media \(max-width:\s*660px\)[\s\S]*?\.main-nav\s*{[\s\S]*?position:\s*fixed[\s\S]*?inset:\s*0[\s\S]*?height:\s*100dvh[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "phone menu should open as a restrained full-screen Gaegu overlay");
+expect(html.includes('class="menu-socials"') && html.includes("Github") && html.includes("LinkedIn") && html.includes("Douyin") && html.includes("RedNote"), "phone menu should include restrained social links at the bottom");
+expect(/@media \(max-width:\s*660px\)[\s\S]*?\.menu-socials\s*{[\s\S]*?display:\s*flex[\s\S]*?color:\s*#8b8b8b/.test(css), "phone menu social links should be gray and low-key");
+expect(/\.site-header\.nav-open\s+\.main-nav\s*{[\s\S]*?opacity:\s*1[\s\S]*?transform:\s*translateY\(0\)/.test(css), "phone menu should become visible when nav-open is set");
 expect(!/menuButton\.textContent\s*=\s*isOpen\s*\?\s*"Close"/.test(js), "menu button should not change into a Close control");
+expect(js.includes("nav-lock") && js.includes("lockedScrollY"), "script should preserve scroll position while the phone menu is open");
 expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.header-actions\s*{[\s\S]*?display:\s*inline-flex/.test(css), "pull-chain should stay visible in tablet/mobile headers");
 expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.header-actions\s+\.connect-button\s*{[\s\S]*?display:\s*none/.test(css), "tablet/mobile header should keep the chain while hiding the connect pill");
 
-const heroRule = css.match(/\.home-hero\s*{([\s\S]*?)}/);
-expect(heroRule && /1\.38fr/.test(heroRule[1]) && /0\.62fr/.test(heroRule[1]), "hero layout should give the title enough width for the three-line composition");
-
-const stampRule = css.match(/\.stamp-title\s*{([\s\S]*?)}/);
-expect(stampRule && /gap:\s*28px/.test(stampRule[1]), "hero title line spacing should be slightly more open");
-expect(stampRule && /line-height:\s*1\.32/.test(stampRule[1]), "hero title should use a slightly more open line height");
-expect(stampRule && /font-size:\s*clamp\(28px,\s*3vw,\s*42px\)/.test(stampRule[1]), "hero title should use the smaller approved size scale");
-
-const bodyCopyRule = css.match(/\.role-line,\s*[\s\S]*?\.eyebrow\s*{([\s\S]*?)}/);
-expect(bodyCopyRule && /font-size:\s*clamp\(18px,\s*1\.45vw,\s*23px\)/.test(bodyCopyRule[1]), "hero/body supporting copy should be reduced");
-expect(html.includes("End to end design · Vibe coding"), "hero role line should use the updated positioning copy");
-
-expect(!/drop-shadow|filter:\s*blur|--glow|orange-stage::before|orange-stage::after/.test(css), "orange character should not glow");
+expect(!html.includes('class="home-hero reveal-section"'), "Home should not keep the old hero section when the opening sequence is active");
+expect(!html.includes("End to end design · Vibe coding"), "Home should not keep the old positioning copy in the new opening sequence");
+expect(!/drop-shadow|--glow|orange-stage::before|orange-stage::after/m.test(css), "orange character should not glow");
 expect(css.includes(".orange-eye"), "CSS should style orange eyes");
 expect(/--eye-max-x:\s*74px/.test(css), "eyes should use the expanded maxX range");
 expect(/--eye-max-y:\s*56px/.test(css), "eyes should use the expanded maxY range");
@@ -85,30 +104,71 @@ expect(js.includes("smoothness = 0.1") && js.includes("convergence = 11"), "eyes
 expect(js.includes("upBoost = 1.1") && js.includes("downReduce = 0.85"), "eyes should use the provided vertical movement multipliers");
 expect(js.includes("deadZone = 0.02"), "eyes should use the provided Framer dead zone");
 expect(!/pull-chain[\s\S]{0,260}var\(--orange\)/.test(css), "pull-chain hover/focus should not use an orange outer ring");
-expect(html.includes("assets/system/crayon-pull-chain.png"), "pull-chain should embed the crayon-textured chain asset");
+expect(html.includes("assets/system/chain.png"), "pull-chain should embed the chain asset");
 expect(/class="chain-image"/.test(html), "pull-chain should render the embedded chain as an image layer");
 expect(/\.chain-image\s*{[\s\S]*?object-fit:\s*contain/.test(css), "embedded pull-chain image should preserve its aspect ratio");
 expect(/\.chain-image\s*{[\s\S]*?pointer-events:\s*none/.test(css), "embedded pull-chain image should keep the button interaction");
 expect(/@keyframes chain-pull[\s\S]*?scaleY\(1\.16\)[\s\S]*?rotate\(-7deg\)[\s\S]*?rotate\(6deg\)/.test(css), "pull-chain should stretch and wobble when pulled");
 expect(!/box-shadow:\s*[^;]*var\(--orange\)/.test(css), "hover/focus effects should not use orange shadow backgrounds");
 expect(/\.pill-button:hover\s*{[\s\S]*?background:\s*var\(--paper\);[\s\S]*?color:\s*var\(--ink\);/.test(css), "pill buttons should hover by inverting between black and white");
-expect(html.includes('class="button-arrow"') && !html.includes('aria-hidden="true">↗</span>'), "About button should use the unified CSS arrow, not the text arrow glyph");
+expect(!html.includes('aria-hidden="true">↗</span>'), "Home should not use the text arrow glyph for buttons");
 expect(/\.button-arrow\s*{[\s\S]*?width:\s*9px[\s\S]*?height:\s*9px[\s\S]*?border-top:\s*2px\s+solid\s+currentColor[\s\S]*?border-right:\s*2px\s+solid\s+currentColor/.test(css), "Button arrows should use the smaller unified CSS stroke language");
-expect(/\.work-card:hover\s*{[\s\S]*?transform:\s*translateY\(-2px\)/.test(css), "Work card hover should stay light and restrained");
+expect(/\.work-card\.is-visible:hover\s*{[\s\S]*?transform:\s*translateY\(-2px\)/.test(css), "Work card hover should stay light and restrained");
 expect(html.includes('class="work-media work-media-full wentong-media"'), "featured Work card should use a full-image media area");
 expect(html.includes('assets/cover/voderrn-cover-balanced.png'), "Voderrn work card should use the balanced uploaded cover image");
+expect(/body\[data-theme="dark"\]\s+\.voderrn-media\s*{[\s\S]*?background:\s*#d8dde5/.test(css), "Voderrn cover should stay visible on dark mode");
 expect(html.includes('class="work-media work-media-full gown-media"'), "Gown Card should use the same full-image card language with a placeholder media area");
-expect(html.includes("<span>2025</span>") && html.includes("<h3>Fashion × Business</h3>"), "Voderrn project copy should use the updated year and title");
+expect(html.includes("<h2 id=\"work-title\" class=\"work-heading-title\">Selected projects</h2>"), "Home Work title should only read Selected projects");
+expect(html.includes('class="work-card work-card-placeholder"') && html.includes('class="work-media work-media-full placeholder-media"'), "Home Work should include the second placeholder card");
+expect(html.includes("<span>2025</span>") && html.includes("<h3>Voderrn</h3>"), "Voderrn project copy should use the updated year and title");
 expect(html.includes("<span>2024</span>") && html.includes("<h3>Healthcare</h3>"), "Gown Card project copy should use the updated year and title");
-expect(!html.includes('id="work-title">Work.</h2>'), "Work heading should not include a period");
+expect(!html.includes('id="work-title">Work</h2>') && !html.includes('id="work-title">Work.</h2>'), "Work heading should not include the large Work title");
 expect(!html.includes('story-strip'), "Home page should not include the 01/02/03 story strip after Work");
 expect(!html.includes('about-teaser'), "Home page should not include the About teaser after Work");
-expect(/\.work-section\s+\.eyebrow\s*{[\s\S]*?color:\s*var\(--ink\)/.test(css), "Selected projects eyebrow should be black");
-expect(/\.work-section\s+h2\s*{[\s\S]*?font-size:\s*clamp\(28px,\s*3vw,\s*42px\)/.test(css), "Work heading should match the homepage title size");
-expect(/\.work-card-copy\s+h3\s*{[\s\S]*?font-size:\s*clamp\(20px,\s*1\.85vw,\s*30px\)/.test(css), "Work card titles should be slightly smaller");
-expect(/\.work-media-full\s*{[\s\S]*?height:\s*clamp\(280px,\s*34vw,\s*460px\)[\s\S]*?border-radius:\s*22px/.test(css), "Work media should be a large rounded full-image panel with constrained height");
-expect(/\.work-card-feature\s+\.work-media-full\s*{[\s\S]*?height:\s*clamp\(300px,\s*36vw,\s*460px\)/.test(css), "Featured Work media should be cinematic but not too tall");
-expect(/\.work-row\s*{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1\.45fr\)\s+minmax\(260px,\s*0\.55fr\)/.test(css), "Desktop Work row should keep Voderrn larger than Gown Card");
+expect(/\.work-section\s*{[\s\S]*?background:\s*#ffffff/.test(css), "Home Work section should use a white background in light mode");
+expect(/body\[data-theme="dark"\]\s+\.work-section\s*{[\s\S]*?background:\s*#000000/.test(css), "Home Work section should stay black in dark mode");
+expect(/\.work-heading-title\s*{[\s\S]*?font-family:\s*var\(--hand\)[\s\S]*?font-size:\s*clamp\(18px,\s*1\.45vw,\s*23px\)/.test(css), "Selected projects heading should match the home body scale");
+expect(/\.work-heading-title\s*{[\s\S]*?font-weight:\s*400/.test(css), "Selected projects heading should not be bold");
+expect(/\.work-section\s*{[\s\S]*?min-height:\s*min\(980px,\s*100vh\)[\s\S]*?padding:\s*clamp\(128px,\s*11vw,\s*164px\)\s+0\s+96px/.test(css), "Home Work section should keep the approved lighter vertical spacing");
+expect(/\.work-board\s*{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)[\s\S]*?gap:\s*clamp\(84px,\s*9vw,\s*136px\)\s+clamp\(58px,\s*6\.6vw,\s*104px\)[\s\S]*?width:\s*min\(100%,\s*1000px\)[\s\S]*?margin:\s*0\s+auto/.test(css), "Home Work board should use a centered two-column grid with balanced project spacing");
+expect(/\.work-card-copy\s+h3\s*{[\s\S]*?font-size:\s*clamp\(12px,\s*1\.25vw,\s*17px\)/.test(css), "Work card titles should use the smaller approved scale");
+expect(/\.work-media-full\s*{[\s\S]*?aspect-ratio:\s*16\s*\/\s*10[\s\S]*?height:\s*auto[\s\S]*?border-radius:\s*22px/.test(css), "Work media should use the updated lighter card proportions");
+expect(/\.work-card-feature\s+\.work-media-full\s*{[\s\S]*?height:\s*auto/.test(css), "Featured Work media should stay restrained in the new grid");
+expect(/\.work-row\s*{[\s\S]*?display:\s*contents/.test(css), "Desktop Work row wrapper should no longer control the new four-card grid");
+expect(/<div class="work-media work-media-full wentong-media">[\s\S]*?<\/div>\s*<div class="work-card-copy">\s*<h3>Publishing × AI<\/h3>\s*<span>2026<\/span>/.test(html), "Work card copy should sit below the cover with title above year");
+expect(js.includes("const workCards = Array.from") && js.includes("syncVisibleWorkCards") && js.includes("(enterLine - top) / (enterLine - settleLine)"), "Work card reveal should be scroll-scrubbed (position-driven progress, glide-compensated), settling into .is-visible — never a triggered pop animation");
+expect(html.includes('class="home-intro-screen is-active"') && html.includes('data-text="Hi, I\'m Xin.L"'), "Home should start with the prototype intro sequence");
+expect(html.includes('data-text="Currently a senior @ Vanderbilt University"') && html.includes('data-text="I bring designs to life through code"'), "Home intro should keep all three requested lines");
+expect(html.includes('class="home-gallery-screen"') && html.includes('class="orange-stage"'), "Home opening should include the collage screen while reusing the existing orange character");
+expect(html.includes('class="home-vibe-note">All made with vibe coding ;)'), "Home gallery should include the small vibe-coding note below the orange character");
+expect(/\.home-intro-screen\s*{[\s\S]*?position:\s*fixed[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Home intro screens should use the white Gaegu prototype style");
+expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(18px,\s*1\.72vw,\s*27px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale");
+expect(/\.home-gallery-screen\s*{[\s\S]*?min-height:\s*100svh[\s\S]*?background:\s*#ffffff/.test(css), "Home gallery should be a full white screen before Projects");
+expect(/body\.home-opening-complete\s+\.home-gallery-screen\s*{[\s\S]*?display:\s*none/.test(css), "Home gallery should leave normal page flow after the opening completes");
+expect(!/body\[data-theme="dark"\]\s+\.home-intro-screen/.test(css), "Intro screens should stay white and should not have a dark mode override");
+expect(/body\[data-theme="dark"\]\s+\.home-gallery-screen\s*{[\s\S]*?background:\s*#000000/.test(css), "Home gallery should support dark mode after the intro");
+expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-gallery-screen\s*{[\s\S]*?background:\s*#000000/.test(css), "Home gallery dark override should win over later home-specific light rules");
+expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-vibe-note\s*{[\s\S]*?color:\s*#ffffff/.test(css), "Home gallery vibe note should remain visible in dark mode");
+expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-photo\s*{[\s\S]*?background:\s*[\s\S]*?#121212/.test(css), "Home gallery placeholder cards should use a dark surface in dark mode");
+expect(js.includes("typeIntroLine") && js.includes("pageHomeOpening") && js.includes("galleryArmed") && js.includes("applyHomeGalleryDelta") && js.includes("homeRevealProgress"), "Home opening should use prototype paging with scroll-driven gallery progress");
+expect(js.includes("reenterHomeGalleryFromProjects") && !js.includes("runHomeGalleryTransition"), "Home gallery should be reversible from Projects and should not autoplay through a timed transition");
+expect(!js.includes("homeReentryHoldUntil") && !js.includes("isReturningFromProjects") && !js.includes("isFinishingHomeOpening"), "Home reverse should not keep stale reentry patch state or undeclared finishing flags");
+expect(!js.includes("home-reentry-prep") && !css.includes("home-reentry-prep"), "Home reverse should not rely on the failed reentry-prep patch class");
+expect(/reenterHomeGalleryFromProjects\(\)[\s\S]*?event\.preventDefault\(\);\s*showHeaderTemporarily\(\);\s*return;/.test(js), "Home reverse wheel event should only enter the centered video state, then wait for the next scroll");
+expect(/const\s+reenterHomeGalleryFromProjects\s*=\s*\(\)\s*=>\s*{[\s\S]*?setHomeGalleryProgress\(1\);[\s\S]*?return true;/.test(js), "Home reverse should re-enter at the centered enlarged video state");
+expect(js.includes("reenterHomeGalleryFromProjects"), "Home should support reverse re-entry into the gallery from the projects view");
+expect(/deltaY\s*<\s*-28[\s\S]*?reenterHomeGalleryFromProjects/.test(js), "Home reverse re-entry should trigger on a deliberate upward wheel gesture");
+expect(js.includes("skipHomeOpening") && js.includes("!window.location.hash"), "Home opening should skip cleanly when entering directly through #work");
+expect(!js.includes("--work-preview-") && !css.includes("--work-preview-"), "Home opening should not use a fixed Projects preview layer that overlaps the video");
+expect(!css.includes("home-gallery-screen::after"), "Home gallery should not draw a duplicate Selected projects overlay heading");
+expect(!js.includes("--home-work-title-") && !css.includes("--home-work-title-"), "Home opening handoff should not use heading-only CSS variables");
+expect(js.includes("home-work-handoff") && css.includes(".home-opening-active.home-work-handoff .work-section"), "Home opening should reveal the real Work section during the video handoff");
+expect(/body\[data-page="home"\]\.home-opening-active:not\(\.home-work-handoff\)\s+\.work-section,\s*body\[data-page="home"\]\.home-opening-active\s+\.site-footer\s*{[\s\S]*?visibility:\s*hidden/.test(css), "Home opening should hide Projects until the real handoff begins and keep the footer hidden");
+expect(!js.includes("snapToWorkGroup") && !js.includes("getWorkSnapTargets") && !js.includes("workSnapLock"), "Home Work should no longer use embedded snap scrolling after the opening animation");
+expect(caseHtml.includes('class="case-theme-toggle pull-chain"'), "Voderrn case page should include the pull-chain theme toggle");
+expect(/body\[data-theme="dark"\]\[data-page="case-study"\]\s*{[\s\S]*?background:\s*#000000/.test(css), "Voderrn case page should support whole-page dark mode");
+expect(/\.case-floating-nav\s*{[\s\S]*?grid-template-columns:\s*64px\s+minmax\(0,\s*auto\)\s+64px/.test(css), "Voderrn case nav should keep arrow, menu, and chain in one balanced row");
+expect(/\.work-card-placeholder\s+\.work-media-full::before,[\s\S]*?\.work-card-placeholder\s+\.work-media-full::after\s*{[\s\S]*?content:\s*none/.test(css), "Placeholder Work card should not show a link arrow");
 expect(/\.work-media-full\s*{[\s\S]*?--project-arrow-circle:\s*clamp\(30px,\s*3\.2vw,\s*44px\)/.test(css), "Work card arrow circle should keep the original larger circle size");
 expect(/\.work-media-full\s*{[\s\S]*?--project-arrow-size:\s*clamp\(5px,\s*0\.55vw,\s*8px\)/.test(css), "Work card arrow itself should be much smaller than the circle");
 expect(/\.work-media-full::before\s*{[\s\S]*?border-radius:\s*50%/.test(css), "Work card arrow should sit inside a subtle circular control");
@@ -121,28 +181,22 @@ expect(/\.work-card:hover\s+\.work-media-full::before\s*{[\s\S]*?background:\s*#
 expect(/\.work-card:hover\s+\.work-media-full::after\s*{[\s\S]*?color:\s*#050505/.test(css), "Work card hover should turn the arrow black");
 expect(/\.work-card:hover\s+\.work-media-full\s+img\s*{[\s\S]*?transform:\s*scale\(1\.035\)/.test(css), "Work card hover should gently enlarge the image");
 expect(!/\.work-card:hover\s*{[\s\S]*?background:\s*var\(--ink\)/.test(css), "Work card hover should not use a black background");
-expect(html.includes('class="footer-nav"') && html.includes('href="index.html"') && html.includes('href="#work"') && html.includes('href="about.html"') && html.includes('href="resume.html"') && html.includes('href="playground.html"'), "Footer should include the full menu navigation");
-expect(html.includes('class="footer-socials"') && html.includes("Github") && html.includes("Douyin") && html.includes("RedNote") && html.includes("Let's Connect"), "Footer should include Github, Douyin, RedNote, and Let's Connect in the same right-side list");
-expect(/<nav class="footer-socials"[\s\S]*?<p class="footer-copy">Copyright © 2026 C\.L<\/p>[\s\S]*?<\/nav>/.test(html), "Footer copyright should live in the social column to align with Playground");
-expect(!/class="[^"]*footer-connect[^"]*"/.test(html), "Footer Let's Connect should not be a separate pill");
+expect(html.includes("https://www.linkedin.com/in/christus-luo"), "LinkedIn profile should be wired into the page");
+expect(/<footer class="site-footer">\s*<nav class="footer-socials"[\s\S]*?<a href="#" aria-label="Douyin">Douyin<\/a>\s*<a href="#" aria-label="RedNote">RedNote<\/a>\s*<\/nav>\s*<p class="footer-copy">Copyright © 2026 C\.L<\/p>\s*<\/footer>/.test(html), "Footer should only keep Douyin, RedNote, and copyright in one row");
+expect(!html.includes('class="footer-nav"'), "Footer should not include the old page navigation");
+expect(!html.includes('class="footer-cta"'), "Footer should not include the old CTA title");
+expect(!/<footer class="site-footer">[\s\S]*?(Github|LinkedIn|Let's Connect)[\s\S]*?<\/footer>/.test(html), "Footer should not include Github, LinkedIn, or Let's Connect links");
+expect(/\.footer-socials\s+a::after\s*{[\s\S]*?border-top:\s*2px\s+solid\s+currentColor[\s\S]*?border-right:\s*2px\s+solid\s+currentColor/.test(css), "Footer Douyin and RedNote should use the original tiny arrow decoration");
+expect(!/\.footer-nav/.test(css), "Footer CSS should not keep the old footer navigation layout");
 expect(!html.includes("<p class=\"eyebrow\">Contact</p>"), "Footer banner should not include the Contact eyebrow");
 expect(html.includes("Copyright © 2026 C.L"), "Footer should include the requested copyright");
-expect(/\.site-footer\s*{[\s\S]*?--footer-divider-offset:\s*clamp\(28px,\s*3\.2vw,\s*44px\)[\s\S]*?position:\s*relative[\s\S]*?background:\s*var\(--paper\)[\s\S]*?color:\s*var\(--ink\)[\s\S]*?border-top:\s*0/.test(css), "Light footer should be full-bleed white without a top-edge divider");
-expect(/\.site-footer::before\s*{[\s\S]*?top:\s*var\(--footer-divider-offset\)[\s\S]*?height:\s*1px[\s\S]*?background:\s*color-mix\(in srgb,\s*var\(--ink\)\s*12%,\s*transparent\)/.test(css), "Footer divider should move down with the banner content");
-expect(/\.site-footer\s*{[\s\S]*?--footer-inline-pad:\s*clamp\(52px,\s*7vw,\s*92px\)[\s\S]*?padding:\s*clamp\(84px,\s*9vw,\s*126px\)\s+var\(--footer-inline-pad\)\s+clamp\(42px,\s*5vw,\s*68px\)/.test(css), "Footer content should sit slightly lower with equal inline padding");
+expect(/\.site-footer\s*{[\s\S]*?--footer-divider-offset:\s*0px[\s\S]*?position:\s*relative[\s\S]*?background:\s*var\(--paper\)[\s\S]*?color:\s*var\(--ink\)[\s\S]*?border-top:\s*0/.test(css), "Light footer should keep content close to the top divider");
+expect(/\.site-footer::before\s*{[\s\S]*?top:\s*var\(--footer-divider-offset\)[\s\S]*?height:\s*1px[\s\S]*?background:\s*color-mix\(in srgb,\s*var\(--ink\)\s*12%,\s*transparent\)/.test(css), "Footer divider should align with the compact banner content");
+expect(/\.site-footer\s*{[\s\S]*?--footer-inline-pad:\s*max\(56px,\s*calc\(\(100vw\s*-\s*1280px\)\s*\/\s*2\)\)[\s\S]*?display:\s*flex[\s\S]*?justify-content:\s*space-between[\s\S]*?padding:\s*22px\s+var\(--footer-inline-pad\)\s+clamp\(26px,\s*3vw,\s*40px\)/.test(css), "Footer should align its one-line content and divider with the home content width");
 expect(/body\[data-theme="dark"\]\s+\.site-footer\s*{[\s\S]*?background:\s*#000000[\s\S]*?color:\s*#ffffff/.test(css), "Dark footer should stay black");
 expect(/body\[data-theme="dark"\]\s+\.site-footer::before\s*{[\s\S]*?background:\s*#ffffff/.test(css), "Dark footer should use a white internal divider");
-expect(/\.footer-cta\s+h2\s*{[\s\S]*?font-size:\s*clamp\(28px,\s*3vw,\s*42px\)/.test(css), "Footer title should match the homepage title scale");
-expect(html.includes("<span>Let's make</span>") && html.includes("<span>something</span>") && html.includes("<span>feel alive!</span>"), "Footer title should be split into controlled lines");
-expect(/\.footer-cta\s+h2\s*{[\s\S]*?display:\s*grid[\s\S]*?gap:\s*var\(--footer-title-gap\)/.test(css), "Footer title should use a dedicated larger line gap");
-expect(/\.site-footer\s*{[\s\S]*?--footer-title-gap:\s*clamp\(48px,\s*6\.4vw,\s*84px\)/.test(css), "Footer title line spacing should be opened further");
-expect(/\.site-footer\s*{[\s\S]*?--footer-list-gap:\s*clamp\(30px,\s*3\.2vw,\s*46px\)/.test(css), "Footer should define one shared list line gap");
-expect(/\.footer-nav,\s*[\s\S]*?\.footer-socials\s*{[\s\S]*?grid-template-rows:\s*repeat\(5,\s*minmax\(32px,\s*max-content\)\)[\s\S]*?gap:\s*var\(--footer-list-gap\)/.test(css), "Footer menu and social columns should share the same row grid");
-expect(/\.footer-nav,\s*[\s\S]*?\.footer-socials\s*{[\s\S]*?font-size:\s*clamp\(18px,\s*1\.45vw,\s*23px\)/.test(css), "Footer small links should match the hero role line size");
-expect(/\.footer-socials\s+a\s*{[\s\S]*?justify-content:\s*flex-start[\s\S]*?gap:\s*18px[\s\S]*?min-width:\s*150px/.test(css), "Footer right-side links should keep compact text-to-arrow spacing");
-expect(/\.footer-socials\s+a::after\s*{[\s\S]*?width:\s*8px[\s\S]*?height:\s*8px[\s\S]*?border-top:\s*2px\s+solid\s+currentColor[\s\S]*?border-right:\s*2px\s+solid\s+currentColor/.test(css), "Footer social links should use the tiny CSS arrow style");
-expect(/\.footer-copy\s*{[\s\S]*?align-self:\s*center[\s\S]*?text-align:\s*left/.test(css), "Footer copyright should align with the Playground row");
-expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.site-footer\s*{[\s\S]*?width:\s*100%[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto\s+auto/.test(css), "Tablet footer should remain full-width with right-aligned auto columns");
+expect(/\.footer-socials\s*{[\s\S]*?display:\s*flex[\s\S]*?font-size:\s*clamp\(18px,\s*1\.45vw,\s*23px\)/.test(css), "Footer social links should keep the existing handwritten type scale");
+expect(/\.footer-copy\s*{[\s\S]*?text-align:\s*right[\s\S]*?white-space:\s*nowrap/.test(css), "Footer copyright should sit on the right in one line");
 expect(!/@media \(max-width:\s*1080px\)[\s\S]*?\.site-header,\s*[\s\S]*?\.site-footer,\s*[\s\S]*?\.page-shell/.test(css), "Tablet container rule should not shrink the footer");
 
 if (failures.length) {

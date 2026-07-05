@@ -620,13 +620,48 @@ const easeOutCubic = (value) => 1 - Math.pow(1 - value, 3);
 const syncVisibleWorkCards = () => {
   if (!workCards.length) return;
 
-  const enterLine = window.innerHeight * 0.82;
-  const exitLine = window.innerHeight * 0.12;
+  if (prefersReducedMotion.matches) {
+    workCards.forEach((card) => card.classList.add("is-visible"));
+    return;
+  }
+
+  // Scroll-SCRUBBED reveal: a card's opacity/lift is a pure function of where it
+  // sits in the viewport, so a card never moves on its own — no triggered pop,
+  // no bounce while scrolling. Scroll down and it eases in exactly in step with
+  // the wheel; stop and it freezes; scroll back and it scrubs back out. Once a
+  // card is fully in, it is handed back to the stock .is-visible styles (hover
+  // lift etc.) and stays revealed while scrolling on up and out.
+  const vh = window.innerHeight;
+  const enterLine = vh * 0.92;  // reveal starts here
+  const settleLine = vh * 0.66; // fully revealed by here
+
+  // While the opening-completion landing is being scrubbed, the whole section
+  // carries a temporary translateY. Measure cards as if the section were already
+  // at rest, otherwise below-fold cards read ~a screen lower and flash after landing.
+  let glideY = 0;
+  if (workRevealSection) {
+    const t = getComputedStyle(workRevealSection).transform;
+    if (t && t !== "none") {
+      const m = t.match(/matrix\(([^)]+)\)/);
+      if (m) glideY = parseFloat(m[1].split(",")[5]) || 0;
+    }
+  }
 
   workCards.forEach((card) => {
-    const rect = card.getBoundingClientRect();
-    const isVisible = rect.top < enterLine && rect.bottom > exitLine;
-    card.classList.toggle("is-visible", isVisible);
+    const top = card.getBoundingClientRect().top - glideY;
+    const progress = Math.max(0, Math.min(1, (enterLine - top) / (enterLine - settleLine)));
+
+    if (progress >= 1) {
+      card.classList.add("is-visible");
+      card.style.removeProperty("opacity");
+      card.style.removeProperty("transform");
+      card.style.removeProperty("transition");
+    } else {
+      card.classList.remove("is-visible");
+      card.style.transition = "none"; // scrubbed by scroll, never animated
+      card.style.opacity = progress.toFixed(3);
+      card.style.transform = `translateY(${((1 - progress) * 20).toFixed(1)}px)`;
+    }
   });
 };
 
@@ -672,6 +707,31 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   const clearHomeHandoffVars = () => {
     document.documentElement.style.removeProperty("--home-work-section-opacity");
     document.documentElement.style.removeProperty("--home-work-section-y");
+    document.documentElement.style.removeProperty("--home-work-fixed-top");
+  };
+
+  // Where the work section will sit (viewport top, scroll 0) once the opening
+  // completes. Measured via a synchronous hidden probe — the class flip, read
+  // and restore all happen inside one JS turn, so nothing is ever painted.
+  // The handoff drives the fixed preview DOWN TO this exact position, so the
+  // fixed→in-flow switch at completion is pixel-identical (no FLIP glide,
+  // no bounce, no "second" projects section).
+  let workLandedTop = null;
+  const measureWorkLandedTop = () => {
+    if (!workRevealSection) return 0;
+    const b = document.body;
+    const had = ["home-opening-active", "home-gallery-active", "home-gallery-revealing", "home-work-handoff"]
+      .filter((cls) => b.classList.contains(cls));
+    const hadComplete = b.classList.contains("home-opening-complete");
+    const hadVisible = workRevealSection.classList.contains("is-visible");
+    b.classList.remove(...had);
+    b.classList.add("home-opening-complete");
+    workRevealSection.classList.add("is-visible");
+    const top = workRevealSection.getBoundingClientRect().top + window.scrollY;
+    if (!hadVisible) workRevealSection.classList.remove("is-visible");
+    if (!hadComplete) b.classList.remove("home-opening-complete");
+    if (had.length) b.classList.add(...had);
+    return top;
   };
 
   const getWorkHandoffViewportY = () => {
@@ -819,6 +879,16 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     document.documentElement.style.setProperty("--home-work-section-opacity", String(workHandoffProgress));
     document.documentElement.style.setProperty("--home-work-section-y", `${260 * (1 - workHandoffEase)}px`);
 
+    // One continuous bridge: ease the fixed preview's top from its 64vh start
+    // down to the section's real landed position, so at release the class swap
+    // changes nothing visually (the FLIP glide then short-circuits at ≤2px).
+    if (workHandoffProgress > 0) {
+      if (workLandedTop === null) workLandedTop = measureWorkLandedTop();
+      const startTop = Math.min(window.innerHeight * 0.64, 700);
+      const fixedTop = startTop + (workLandedTop - startTop) * workHandoffEase;
+      document.documentElement.style.setProperty("--home-work-fixed-top", `${fixedTop.toFixed(1)}px`);
+    }
+
     if (!homeGalleryStage || !homeMainPhoto) return;
 
     if (progress > 0.001 && !galleryBaseRects) {
@@ -885,10 +955,68 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     }
   }
 
-  let isFinishingOpening = false;
+  // The collage videos keep decoding even at display:none — pause them whenever
+  // the opening is behind us, resume when the visitor re-enters the gallery.
+  const homeGalleryVideos = Array.from(document.querySelectorAll(".home-gallery-screen video"));
+  const setGalleryVideosPlaying = (playing) => {
+    homeGalleryVideos.forEach((video) => {
+      if (playing) video.play().catch(() => {});
+      else video.pause();
+    });
+  };
 
-  const finishHomeOpening = () => {
-    if (isFinishingOpening) return;
+  // Scroll-scrubbed landing: after the completion layout-swap the work section
+  // still sits a few hundred px below its resting spot. Instead of playing that
+  // gap back as a timed glide (which ignores the finger for 340ms and then lets
+  // leftover trackpad momentum kick the page — the old "stall then bounce"),
+  // the remaining gap is consumed 1:1 by the visitor's continued wheel/touch
+  // input: the page moves exactly with the finger, freezes the moment it stops,
+  // and hands over to native scrolling seamlessly once the gap reaches zero.
+  let workLandingRemaining = 0;
+  let workLandingTotal = 0;
+  const isWorkLanding = () => workLandingRemaining > 0;
+
+  const cancelWorkLanding = () => {
+    const wasLanding = isWorkLanding();
+    workLandingRemaining = 0;
+    workLandingTotal = 0;
+    if (workRevealSection && wasLanding) {
+      // Zero the offset while `transition: none` is still in force and commit it
+      // with a reflow BEFORE handing the properties back to the stylesheet —
+      // otherwise .reveal-section's stock 520ms transform transition replays the
+      // removal as a self-moving slip right at the native-scroll handover.
+      workRevealSection.style.setProperty("transition", "none", "important");
+      workRevealSection.style.setProperty("transform", "translateY(0)", "important");
+      void workRevealSection.offsetHeight;
+    }
+    workRevealSection?.style.removeProperty("transition");
+    workRevealSection?.style.removeProperty("transform");
+    document.documentElement.style.removeProperty("scroll-snap-type");
+  };
+
+  const scrubWorkLanding = (deltaY) => {
+    if (!workRevealSection || !isWorkLanding()) return;
+    const next = clamp(workLandingRemaining - deltaY, 0, workLandingTotal);
+    const leftover = Math.max(deltaY - (workLandingRemaining - next), 0);
+
+    if (next <= 0.5) {
+      // Cancel while the landing still counts as active, so the transition-safe
+      // zero-and-reflow teardown inside cancelWorkLanding actually runs.
+      cancelWorkLanding();
+      syncVisibleWorkCards();
+      // Pass the unconsumed part of this event on to the page, so the handover
+      // to native scrolling keeps the finger's velocity — no dead frame.
+      if (leftover > 0.5) window.scrollTo({ top: leftover, behavior: "instant" });
+      return;
+    }
+
+    workLandingRemaining = next;
+    workRevealSection.style.setProperty("transform", `translateY(${next.toFixed(1)}px)`, "important");
+    syncVisibleWorkCards();
+  };
+
+  const finishHomeOpening = (carryDelta = 0) => {
+    if (isWorkLanding()) return;
 
     // No work section to bridge to — just complete instantly.
     if (!workRevealSection) {
@@ -896,13 +1024,12 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       document.body.classList.add("home-opening-complete");
       header?.classList.remove("is-auto-hidden");
       clearHomeHandoffVars();
+      setGalleryVideosPlaying(false);
       return;
     }
 
-    isFinishingOpening = true;
-
-    // Turn off scroll-snap while we drive the scroll/glide ourselves, or the snap container
-    // fights our scrollTo and yanks the position around. Restored once the glide settles.
+    // Turn off scroll-snap while we drive the landing ourselves, or the snap container
+    // fights our scrollTo and yanks the position around. Restored once the landing settles.
     document.documentElement.style.setProperty("scroll-snap-type", "none", "important");
 
     // Where the work section sits on screen right now, pinned (fixed) during the reveal.
@@ -914,46 +1041,32 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     document.body.classList.add("home-opening-complete");
     header?.classList.remove("is-auto-hidden");
     clearHomeHandoffVars();
+    setGalleryVideosPlaying(false);
     workRevealSection.classList.add("is-visible");
     window.scrollTo({ top: 0, behavior: "auto" });
     requestAnimationFrame(() => requestAnimationFrame(syncVisibleWorkCards));
 
     // The collapse would snap the section upward. Measure that gap and neutralise it with a
-    // transform that holds the section at its old on-screen spot, then ease the transform to
-    // zero so it glides into place instead of jumping (FLIP).
+    // transform that holds the section at its old on-screen spot (FLIP). From here the
+    // visitor's own scrolling scrubs the offset down to zero — never a timed animation.
     const landedTop = workRevealSection.getBoundingClientRect().top;
     const glide = Math.round(fromTop - landedTop);
 
     if (glide <= 2) {
       document.documentElement.style.removeProperty("scroll-snap-type");
-      isFinishingOpening = false;
       return;
     }
 
     // The completed-state CSS pins the work section with `transform: none !important`, so the
-    // glide must be written with `important` priority to win the cascade.
+    // landing offset must be written with `important` priority to win the cascade.
+    workLandingTotal = glide;
+    workLandingRemaining = glide;
     workRevealSection.style.setProperty("transition", "none", "important");
     workRevealSection.style.setProperty("transform", `translateY(${glide}px)`, "important");
-    void workRevealSection.offsetHeight; // commit the start position before animating
 
-    requestAnimationFrame(() => {
-      workRevealSection.style.setProperty("transition", "transform 460ms cubic-bezier(0.22, 1, 0.36, 1)", "important");
-      workRevealSection.style.setProperty("transform", "translateY(0)", "important");
-    });
-
-    let committed = false;
-    const onGlideEnd = (event) => {
-      if (event && (event.target !== workRevealSection || event.propertyName !== "transform")) return;
-      if (committed) return;
-      committed = true;
-      workRevealSection.removeEventListener("transitionend", onGlideEnd);
-      workRevealSection.style.removeProperty("transition");
-      workRevealSection.style.removeProperty("transform");
-      document.documentElement.style.removeProperty("scroll-snap-type");
-      isFinishingOpening = false;
-    };
-    workRevealSection.addEventListener("transitionend", onGlideEnd);
-    window.setTimeout(onGlideEnd, 560);
+    // The wheel event that crossed the release threshold usually has distance left
+    // over — feed it straight into the landing so the motion never skips a beat.
+    if (carryDelta > 0) scrubWorkLanding(carryDelta);
   };
 
   const applyHomeGalleryDelta = (delta, unit = GALLERY_WHEEL_UNIT) => {
@@ -984,14 +1097,12 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     const reentryTop = Math.max(workRevealSection.offsetTop - handoffViewportY, 0);
     if (window.scrollY > reentryTop + 80) return false;
 
-    // Cancel any in-flight completion glide so its !important inline transform can't get stuck.
-    isFinishingOpening = false;
-    workRevealSection.style.removeProperty("transition");
-    workRevealSection.style.removeProperty("transform");
-    document.documentElement.style.removeProperty("scroll-snap-type");
+    // Cancel any pending landing so its !important inline transform can't get stuck.
+    cancelWorkLanding();
 
     document.body.classList.add("home-opening-active", "home-gallery-active", "home-gallery-revealing");
     document.body.classList.remove("home-opening-complete", "home-work-handoff");
+    setGalleryVideosPlaying(true);
 
     homeIntroScreens.forEach((screen) => screen.classList.remove("is-active"));
     activeIntroIndex = homeIntroScreens.length;
@@ -1045,24 +1156,30 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   const resetHomeOpening = () => {
     if (!shouldResetHomeScroll) return;
     window.scrollTo(0, 0);
+    setGalleryVideosPlaying(true);
     document.body.classList.add("home-opening-active");
     document.body.classList.remove("home-opening-complete", "home-gallery-active", "home-gallery-revealing", "home-work-handoff");
     clearHomeHandoffVars();
     header?.classList.remove("is-auto-hidden");
-    isFinishingOpening = false;
-    document.documentElement.style.removeProperty("scroll-snap-type");
-    workRevealSection?.style.removeProperty("transition");
-    workRevealSection?.style.removeProperty("transform");
+    cancelWorkLanding();
     workRevealSection?.classList.remove("is-visible");
-    workCards.forEach((card) => card.classList.remove("is-visible"));
+    workCards.forEach((card) => {
+      card.classList.remove("is-visible");
+      // drop any mid-scrub inline styles so the handoff opacity var wins again
+      card.style.removeProperty("opacity");
+      card.style.removeProperty("transform");
+      card.style.removeProperty("transition");
+    });
     activateIntroScreen(0);
     syncHeaderScroll();
   };
 
   const skipHomeOpening = () => {
+    cancelWorkLanding();
     document.body.classList.remove("home-opening-active", "home-gallery-active", "home-gallery-revealing", "home-work-handoff");
     document.body.classList.add("home-opening-complete");
     homeIntroScreens.forEach((screen) => screen.classList.remove("is-active"));
+    setGalleryVideosPlaying(false);
     workRevealSection?.classList.add("is-visible");
     workCards.forEach((card) => card.classList.add("is-visible"));
   };
@@ -1097,7 +1214,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 
   const showHomeGalleryFromLogo = () => {
     window.scrollTo(0, 0);
-  
+    setGalleryVideosPlaying(true);
+
     document.body.classList.add(
       "home-opening-active",
       "home-gallery-active",
@@ -1169,6 +1287,20 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   window.addEventListener(
     "wheel",
     (event) => {
+      // Mid-landing: the visitor's scroll drives the section the rest of the
+      // way to its resting spot, 1:1 — no timed animation to fight the finger.
+      if (isWorkLanding()) {
+        event.preventDefault();
+        if (event.deltaY < -28 && workLandingRemaining >= workLandingTotal - 0.5) {
+          // Scrubbed all the way back up — hand back to the gallery.
+          cancelWorkLanding();
+          if (reenterHomeGalleryFromProjects()) showHeaderTemporarily();
+          return;
+        }
+        scrubWorkLanding(event.deltaY);
+        return;
+      }
+
       if (document.body.classList.contains("home-opening-active")) {
         event.preventDefault();
 
@@ -1213,6 +1345,14 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   window.addEventListener(
     "touchmove",
     (event) => {
+      if (isWorkLanding()) {
+        event.preventDefault();
+        if (homeTouchStartY === null) return;
+        const currentY = event.touches[0]?.clientY ?? homeTouchStartY;
+        scrubWorkLanding(homeTouchStartY - currentY);
+        homeTouchStartY = currentY;
+        return;
+      }
       if (!document.body.classList.contains("home-opening-active") || homeTouchStartY === null) return;
       const currentY = event.touches[0]?.clientY ?? homeTouchStartY;
       const delta = homeTouchStartY - currentY;
@@ -1225,12 +1365,31 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   );
 
   window.addEventListener("keydown", (event) => {
-    if (!document.body.classList.contains("home-opening-active")) return;
     if (!["ArrowDown", "PageDown", " ", "ArrowUp", "PageUp"].includes(event.key)) return;
-    event.preventDefault();
     const direction = event.key === "ArrowUp" || event.key === "PageUp" ? -1 : 1;
+    if (isWorkLanding()) {
+      event.preventDefault();
+      scrubWorkLanding(direction * 240);
+      return;
+    }
+    if (!document.body.classList.contains("home-opening-active")) return;
+    event.preventDefault();
     pageHomeOpening(direction, direction * 240, GALLERY_WHEEL_UNIT);
   });
+
+  // Scrollbar drags and programmatic scrolls bypass the wheel handler — if the
+  // page really scrolls while a landing is still pending, settle the landing on
+  // the spot so the two offsets can't stack.
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (isWorkLanding() && window.scrollY > 2) {
+        cancelWorkLanding();
+        syncVisibleWorkCards();
+      }
+    },
+    { passive: true }
+  );
 
   window.addEventListener("pointermove", (event) => {
     if (event.clientY <= 112) showHeaderTemporarily();
@@ -1239,6 +1398,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   window.addEventListener("resize", () => {
     if (galleryProgress > 0.001) resetHomeGalleryStyles();
     galleryBaseRects = null;
+    workLandedTop = null; // landed position depends on viewport size
     setHomeGalleryProgress(galleryProgress);
   });
 
@@ -1472,9 +1632,15 @@ if (revealSections.length && !prefersReducedMotion.matches) {
   const work = document.querySelector(".work-section");
   if (!work) return;
 
+  const lastGray = document.querySelector(".studio-services");
   const updatePin = () => {
     const pin = Math.min(0, window.innerHeight - work.offsetHeight);
     document.documentElement.style.setProperty("--work-sticky-top", `${pin}px`);
+    // Pull the mascot screen up by exactly the last gray screen's height so it starts
+    // fully covered, then gets uncovered as that gray screen slides up (see .home-end).
+    if (lastGray) {
+      document.documentElement.style.setProperty("--home-end-pull", `-${lastGray.offsetHeight}px`);
+    }
   };
 
   updatePin();
@@ -1493,10 +1659,17 @@ if (revealSections.length && !prefersReducedMotion.matches) {
 
   const pairs = [
     [document.querySelector(".studio-intro"), document.querySelector(".studio-intro-inner")],
-    [document.querySelector(".studio-services"), document.querySelector(".studio-services-inner")],
-    [document.querySelector(".marquee-section"), document.querySelector(".marquee-viewport")]
+    [document.querySelector(".studio-services"), document.querySelector(".studio-services-inner")]
   ].filter((pair) => pair[0] && pair[1]);
-  if (!pairs.length) return;
+
+  // The gray studio panel stays SOLID; the mascot content (marquee + footer) is what
+  // fades in as that solid panel slides up and off it.
+  const lastGray = document.querySelector(".studio-services");
+  const mascotBits = [
+    document.querySelector(".marquee-viewport"),
+    document.querySelector(".home-end .site-footer")
+  ].filter(Boolean);
+  if (!pairs.length && !mascotBits.length) return;
 
   let frame = null;
   const apply = () => {
@@ -1511,6 +1684,19 @@ if (revealSections.length && !prefersReducedMotion.matches) {
       const opacity = Math.max(0, Math.min(1, 1 - (dist - vh * 0.22) / (vh * 0.4)));
       inner.style.opacity = opacity.toFixed(3);
     });
+
+    // Reveal handoff: the gray studio panel stays fully solid and slides up (CSS sticky)
+    // to uncover the pinned mascot screen. Dissolve the mascot content in with the reveal
+    // progress (0 = still covered, 1 = fully uncovered), and back out on the way up.
+    if (lastGray && mascotBits.length) {
+      if (document.body.classList.contains("home-opening-complete")) {
+        const svH = lastGray.offsetHeight || vh;
+        const p = Math.max(0, Math.min(1, -lastGray.getBoundingClientRect().top / svH));
+        mascotBits.forEach((el) => { el.style.opacity = p.toFixed(3); });
+      } else {
+        mascotBits.forEach((el) => { el.style.opacity = ""; });
+      }
+    }
   };
   const request = () => { if (!frame) frame = requestAnimationFrame(apply); };
 
@@ -1520,22 +1706,70 @@ if (revealSections.length && !prefersReducedMotion.matches) {
 })();
 
 /* ============================================================
-   Start the bottom marquee scroll only once it enters the viewport.
-   Running it from page load competed with the heavy opening (videos +
-   intro) and could look stalled on arrival; starting on view fixes that.
+   Marquee mascots — curious-eye autonomy + off-screen pausing.
+   One shared timer cycles every curious mascot's eyes toward the
+   corners (in px, scaled to the body, so the up/down reach matches the
+   home mascot; CSS transition smooths each move). CSS handles the other
+   seven variants. An IntersectionObserver pauses all mascot motion while
+   the carousel is off-screen. (The carousel scroll itself is pure CSS and
+   always running, so it's already in motion when reached.)
    ============================================================ */
 (() => {
   const section = document.querySelector(".marquee-section");
   if (!section) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  const io = new IntersectionObserver((entries, obs) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        section.classList.add("is-scrolling");
-        obs.disconnect();
-      }
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const curiousEyeGroups = Array.from(document.querySelectorAll(".mascot--curious .mascot-eyes"));
+  const curiousEyeDots = Array.from(document.querySelectorAll(".mascot--curious .mascot-eye"));
+  const curiousBody = document.querySelector(".mascot--curious .mascot-body");
+
+  // fractional corner targets; scaled to px against the body so the reach is large
+  const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]];
+  let cornerIdx = 0;
+  let lookTimer = null;
+  let blinkTimer = null;
+
+  const look = () => {
+    const [fx, fy] = corners[cornerIdx % corners.length];
+    const w = curiousBody ? curiousBody.getBoundingClientRect().width : 180;
+    const maxX = w * 0.2;
+    const maxY = w * 0.14;
+    curiousEyeGroups.forEach((group) => {
+      group.style.setProperty("--lx", `${(fx * maxX).toFixed(1)}px`);
+      group.style.setProperty("--ly", `${(fy * maxY).toFixed(1)}px`);
     });
-  }, { threshold: 0.01 });
+    cornerIdx += 1;
+  };
+
+  const blink = () => {
+    curiousEyeDots.forEach((dot) => {
+      dot.style.transform = "scaleY(0.1)";
+      window.setTimeout(() => { dot.style.transform = ""; }, 130);
+    });
+  };
+
+  const startCurious = () => {
+    if (reduce.matches || lookTimer || !curiousEyeGroups.length) return;
+    look();
+    lookTimer = window.setInterval(look, 1600);
+    blinkTimer = window.setInterval(() => { if (Math.random() < 0.7) blink(); }, 3400);
+  };
+
+  const stopCurious = () => {
+    window.clearInterval(lookTimer);
+    window.clearInterval(blinkTimer);
+    lookTimer = null;
+    blinkTimer = null;
+  };
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const visible = entry.isIntersecting;
+      section.classList.toggle("is-mascot-paused", !visible);
+      if (visible) startCurious();
+      else stopCurious();
+    });
+  }, { threshold: 0 });
+
   io.observe(section);
 })();

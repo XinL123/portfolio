@@ -19,3 +19,14 @@ WordPress/
 previous/
 docs/superpowers/
 assets/playground/**/original-upload/
+
+# Local scratch / working files — not part of the deployed site
+backups/
+参考/
+Page Pics/
+.Rhistory
+
+# Local experiments / per-machine config
+linedemo/
+pencil/
+.claude/settings.local.json

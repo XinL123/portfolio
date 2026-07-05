@@ -6412,7 +6412,12 @@ body[data-page="home"].home-opening-active .site-footer {
 
 body[data-page="home"].home-opening-active.home-work-handoff .work-section {
   position: fixed;
-  top: clamp(58vh, 64vh, 700px);
+  /* JS drives this from the 64vh start DOWN TO the section's real landed
+     position as the handoff progresses, so the moment the opening completes
+     the fixed preview and the in-flow section occupy the SAME pixels — the
+     old constant top left a ~250px gap that the FLIP glide then animated,
+     which read as the page "bouncing" / projects appearing twice. */
+  top: var(--home-work-fixed-top, clamp(58vh, 64vh, 700px));
   left: 0;
   right: 0;
   z-index: 6;
@@ -6425,6 +6430,7 @@ body[data-page="home"].home-opening-active.home-work-handoff .work-section {
   transition: none;
   pointer-events: none;
   visibility: visible;
+  will-change: transform, opacity;
 }
 
 body[data-page="home"].home-opening-active.home-work-handoff .work-section .section-heading {
@@ -6785,24 +6791,129 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
   }
 }
 
-/* ---- one continuous gray panel that the work section reveals, then slides up to cover ---- */
-.studio-screen {
-  background: #ededed;
-}
-
-body[data-theme="dark"] .studio-screen {
-  background: #161616;
-}
-
-/* the gray block stacks above the work section */
+/* ---- one continuous frosted-glass panel that the work section reveals, then slides up to cover ----
+   Two glass layers, both pseudo-elements of .studio-block:
+   • ::before (body) — sheen + veil + warm blobs over an opaque base. A mask fades its paint
+     to transparent over the top ~200px; everywhere else it is FULLY OPAQUE, because the pinned
+     work section and the mascot screen sit beneath the panel during the scroll handoffs and
+     must never ghost through (the mascot only ever overlaps the LAST screen, far below the rim).
+   • ::after (rim) — the top 160px is genuinely translucent with a real backdrop blur, so the
+     content the panel slides over shows through — softened — right at the glass lip. */
 .studio-block {
   z-index: 3;
+  border-radius: 32px 32px 0 0;
+  background: none;
+  box-shadow:
+    0 -6px 18px rgba(20, 18, 15, 0.05),
+    0 -28px 60px rgba(20, 18, 15, 0.06),
+    0 12px 36px rgba(20, 18, 15, 0.05);
+  /* own compositor layer: the multi-gradient glass + shadows otherwise
+     re-rasterise while sliding over the pinned work section (scroll jank) */
+  transform: translateZ(0);
 }
 
-/* rounded top only where the panel meets the work section; content sits higher
-   than dead-center to trim the gray space above the text */
+.studio-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    /* diagonal light streak — a soft reflection sweeping the upper-left */
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 12%,
+      rgba(255, 255, 255, 0.34) 26%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    /* frosted veil — thinner than the first pass so the blobs read through */
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.34) 14%,
+      rgba(255, 255, 255, 0.42) 100%
+    ),
+    /* warm blobs behind the glass — peach / butter / matcha / coral */
+    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 186, 145, 0.7), transparent 70%),
+    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 219, 143, 0.6), transparent 70%),
+    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(178, 207, 148, 0.58), transparent 70%),
+    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 199, 178, 0.52), transparent 70%)
+    /* opaque base — outside the rim zone nothing beneath the panel may show through */
+    #f4f2ee;
+  /* fade the body out under the rim so the rim has real page content to blur;
+     if masks are unsupported this is simply ignored and the body stays opaque */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.55) 90px, #000 200px);
+  mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.55) 90px, #000 200px);
+}
+
+.studio-block::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  border-radius: 32px 32px 0 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 55%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  backdrop-filter: blur(18px) saturate(1.15);
+  /* bright hairline where light catches the lip of the glass */
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* panel text sits above both glass layers (and stays crisp — the rim only blurs
+   what is stacked beneath it) */
+.studio-screen {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-theme="dark"] .studio-block {
+  box-shadow:
+    0 -6px 18px rgba(0, 0, 0, 0.35),
+    0 -28px 60px rgba(0, 0, 0, 0.3),
+    0 12px 36px rgba(0, 0, 0, 0.3);
+}
+
+body[data-theme="dark"] .studio-block::before {
+  background:
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 12%,
+      rgba(255, 255, 255, 0.05) 26%,
+      rgba(255, 255, 255, 0) 42%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(28, 26, 23, 0.6) 0%,
+      rgba(24, 23, 21, 0.4) 14%,
+      rgba(24, 23, 21, 0.46) 100%
+    ),
+    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 160, 100, 0.22), transparent 70%),
+    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 205, 120, 0.17), transparent 70%),
+    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(160, 195, 125, 0.16), transparent 70%),
+    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 170, 140, 0.14), transparent 70%)
+    #171512;
+}
+
+body[data-theme="dark"] .studio-block::after {
+  background: linear-gradient(
+    180deg,
+    rgba(26, 24, 21, 0.5) 0%,
+    rgba(26, 24, 21, 0.18) 55%,
+    rgba(26, 24, 21, 0) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* content sits higher than dead-center to trim the empty space above the text */
 .studio-intro {
-  border-radius: 28px 28px 0 0;
   justify-content: flex-start;
   padding-top: clamp(96px, 16vh, 200px);
 }
@@ -6818,11 +6929,42 @@ body[data-page="home"].home-opening-complete .work-section {
   z-index: 1;
 }
 
+/* Studio → mascot handoff (desktop): the mascot screen is pulled up by one screen
+   (--home-end-pull, set by JS to the last gray screen's height) so it starts exactly
+   overlapping — and hidden behind — that gray screen. Once scrolled that far, it
+   sticks at top:0 and stops moving, while the gray screen (left as plain, unpinned
+   content) keeps scrolling normally up and off, uncovering the now-static mascot.
+   The pull cancels that gray screen's contribution to the page's scrollable height,
+   so .home-reveal-spacer below adds an equal amount back — the runway the mascot
+   needs to actually stay pinned while gray finishes scrolling away instead of
+   running out of page to scroll. */
+body[data-page="home"].home-opening-complete .home-end {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-top: var(--home-end-pull, 0px);
+}
+
+body[data-page="home"].home-opening-complete .home-reveal-spacer {
+  display: block;
+  height: calc(-1 * var(--home-end-pull, 0px));
+}
+
 /* ---- mobile: simplify to a clean stacked list, drop the cover ---- */
 @media (max-width: 760px) {
   body[data-page="home"].home-opening-complete .work-section {
     position: relative !important;
     bottom: auto !important;
+  }
+
+  /* keep the simple stacked scroll on mobile — no pin/reveal handoff */
+  body[data-page="home"].home-opening-complete .home-end {
+    position: static;
+    margin-top: 0;
+  }
+
+  body[data-page="home"].home-opening-complete .home-reveal-spacer {
+    display: none;
   }
 
   .studio-screen {
@@ -6882,41 +7024,58 @@ body[data-page="home"].home-opening-complete .work-section {
   overflow: hidden;
 }
 
+/* Always scrolling (runs from load on its own GPU layer) so it is already in
+   motion the moment the section is reached — and it never pauses on hover. */
 .marquee-track {
+  position: relative;                   /* anchors the ::after frame overlay below */
   display: flex;
+  align-items: center;                  /* frames centred in the strip */
   width: max-content;
-  transform: translateZ(0); /* own compositor layer so the scroll runs on the GPU */
+  padding: clamp(26.35px, 2.601vw, 36.55px) 0;  /* matches the film's sprocket bands (scaled to 85%) */
+  transform: translateZ(0);
   will-change: transform;
+  animation: marquee-scroll 33s linear infinite;
 }
 
-/* Animation starts only when the section enters view (added by JS) — avoids the
-   off-screen throttling that made it look stalled for a moment on arrival. */
-.marquee-section.is-scrolling .marquee-track {
-  animation: marquee-scroll 33s linear infinite;
+/* The film frame is painted as an overlay ON TOP of the cards/mascots (not as the
+   track's own background) so the mascots are always visually *behind* the tape —
+   any sub-pixel gap between a card's clip edge and the frame artwork's window edge
+   is simply covered by the frame's opaque black, instead of relying on the two
+   boundaries lining up pixel-perfectly. Moves with the track for free since it's
+   the track's own pseudo-element (inherits its transform/animation). */
+.marquee-track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* one cropped film cell (frame window + divider + sprockets) tiled across the
+     strip. background-size x = 100%/18 = exactly one cell, so it aligns with each
+     card and loops seamlessly on the -50% scroll. The tile is cropped mid-divider
+     to mid-divider, so the half-dividers rejoin into one bar at every seam. */
+  background-image: url("assets/system/film-strip-bold.png?v=20260705d");
+  background-repeat: repeat-x;
+  background-size: calc(100% / 18) 100%;
+  background-position: left center;
+}
+
+/* Dark mode: swap to the white-frame tile (filter:invert can't be used here —
+   it would also invert the mascot children of the track). */
+body[data-theme="dark"] .marquee-track::after {
+  background-image: url("assets/system/film-strip-bold-dark.png?v=20260705d");
 }
 
 /* duplicated set means -50% is exactly one set → seamless, no jump/gap */
 @keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-.marquee-section:hover .marquee-track {
-  animation-play-state: paused;
+  from { transform: translateZ(0) translateX(0); }
+  to { transform: translateZ(0) translateX(-50%); }
 }
 
 .marquee-card {
   flex: 0 0 auto;
-  width: clamp(210px, 21vw, 300px);
-  aspect-ratio: 1 / 1;
-  margin-right: clamp(24px, 3vw, 52px);
-  background: var(--paper);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: var(--radius);
-}
-
-body[data-theme="dark"] .marquee-card {
-  border-color: rgba(255, 255, 255, 0.13);
+  width: clamp(161.5px, 16.15vw, 229.5px); /* the film window (natural landscape) — scaled to 85% */
+  aspect-ratio: 849 / 713;
+  margin: 0 clamp(3.4px, 0.391vw, 5.53px); /* half the divider on each side → window centred in the cell (85%) */
+  background: transparent;                 /* frame + sprockets come from the film image */
 }
 
 /* edge treatment: soft white fade + gradual blur (masked so it eases in toward
@@ -6947,7 +7106,7 @@ body[data-theme="dark"] .marquee-card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee-section.is-scrolling .marquee-track {
+  .marquee-track {
     animation: none;
   }
 }
@@ -6960,4 +7119,400 @@ body[data-theme="dark"] .marquee-card {
   .marquee-edge {
     width: clamp(48px, 18%, 140px);
   }
+}
+
+/* ===========================================================
+   Marquee mascots — one orange mascot per card, 8 animated variants.
+   Reuses the existing hand-drawn body PNG + black-dot eyes; props and
+   motion are code-based. Carousel moves the .marquee-track (outer);
+   mascot motion lives on inner elements only.
+   =========================================================== */
+.marquee-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.mascot {
+  --m-orange: #ee7b2c;
+  position: relative;
+  width: 55%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 5%;
+  container-type: inline-size; /* lets prop/symbol sizes use cqw (% of mascot width) */
+}
+
+.mascot-body {
+  position: relative;
+  width: 100%;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.mascot-img {
+  display: block;
+  width: 100%;
+  mix-blend-mode: multiply;
+}
+
+body[data-theme="dark"] .mascot-img {
+  mix-blend-mode: normal;
+}
+
+/* eyes — two black dots positioned over the dome (matches the home mascot) */
+.mascot-eyes {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  width: 30%;
+  display: flex;
+  justify-content: space-between;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.mascot-eye {
+  position: relative;
+  width: 19%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #111111;
+  transform-origin: 50% 50%;
+}
+
+/* closed/relaxed eyes (music) → gentle downward curves */
+.mascot-eyes-closed .mascot-eye {
+  background: none;
+  border-bottom: 2px solid #111111;
+  border-radius: 0 0 60% 60%;
+  height: 8%;
+  aspect-ratio: auto;
+  align-self: center;
+}
+
+/* ---- 1. Curious (eyes driven by JS in px, so up/down reach matches the home mascot) ---- */
+.mascot--curious .mascot-eyes {
+  transform: translate(-50%, -50%) translate(var(--lx, 0px), var(--ly, 0px));
+  transition: transform 640ms cubic-bezier(0.45, 0, 0.25, 1);
+}
+.mascot--curious .mascot-eye {
+  transition: transform 180ms ease;
+}
+
+/* ---- 2. Crying ---- */
+.mascot--crying .mascot-eye-l { transform: rotate(10deg) scaleY(0.9); }
+.mascot--crying .mascot-eye-r { transform: rotate(-10deg) scaleY(0.9); }
+.mascot-tear {
+  position: absolute;
+  top: 70%;
+  width: 6%;
+  height: 9%;
+  background: #8fd3f4;
+  border-radius: 50% 50% 50% 50% / 70% 70% 40% 40%;
+  opacity: 0;
+}
+.mascot-tear-l { left: 35%; animation: mascot-tear-fall 5.4s ease-in 0.3s infinite; }
+.mascot-tear-r { left: 59%; animation: mascot-tear-fall 5.4s ease-in 3s infinite; }
+@keyframes mascot-tear-fall {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  14% { opacity: 0.9; transform: translateY(0) scale(1); }
+  60% { opacity: 0.85; transform: translateY(140%) scale(1); }
+  78% { opacity: 0; transform: translateY(220%) scale(0.9); }
+  100% { opacity: 0; transform: translateY(220%) scale(0.9); }
+}
+
+/* ---- 3. Peeking (crouches low behind the card's bottom edge and peeks up) ---- */
+/* push the whole mascot down so its lower half is clipped by the card edge;
+   a touch more than half of the dome still shows. */
+.mascot--peeking { transform: translateY(38%); }
+.mascot--peeking .mascot-body {
+  animation: mascot-peek 7s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+/* Synced with the eye look-around below (same 7s duration): rise to 3/4, hold while
+   the eyes glance upper-left / upper-right and return to centre, then duck to half. */
+@keyframes mascot-peek {
+  0%, 6%    { transform: translateY(47%); }  /* start: about half (1/2) of the dome shows */
+  16%, 82%  { transform: translateY(22%); }  /* peek up to three-quarters (3/4) and hold */
+  92%, 100% { transform: translateY(47%); }  /* duck back down to half */
+}
+/* eyes sit higher and look upward */
+.mascot--peeking .mascot-eyes { top: 52%; }
+.mascot--peeking .mascot-eye {
+  animation: mascot-peek-look 7s ease-in-out infinite;
+}
+/* Timed to the dome (same 7s): centred while it rises, then glance upper-left + blink →
+   upper-right + blink → return to centre (正视) + blink, held centred while it ducks. */
+@keyframes mascot-peek-look {
+  0%, 16%   { transform: translate(0, -32%) scaleY(1); }       /* forward / centred while rising */
+  22%, 30%  { transform: translate(-210%, -42%) scaleY(1); }   /* glance upper-left */
+  33%       { transform: translate(-210%, -42%) scaleY(0.1); } /* blink */
+  36%, 44%  { transform: translate(-210%, -42%) scaleY(1); }
+  50%, 58%  { transform: translate(210%, -42%) scaleY(1); }    /* glance upper-right */
+  61%       { transform: translate(210%, -42%) scaleY(0.1); }  /* blink */
+  64%, 70%  { transform: translate(210%, -42%) scaleY(1); }
+  76%, 82%  { transform: translate(0, -32%) scaleY(1); }       /* return to centre (正视) before ducking */
+  85%       { transform: translate(0, -32%) scaleY(0.1); }     /* blink */
+  88%, 100% { transform: translate(0, -32%) scaleY(1); }       /* hold centre through the duck + rest */
+}
+
+/* ---- 4. Working (round wire-frame glasses + temple arms, laptop to the left) ---- */
+.mascot--working .mascot-eye { animation: mascot-work-scan 3.4s ease-in-out infinite; }
+@keyframes mascot-work-scan {
+  0%, 100% { transform: translateX(-20%); }
+  20% { transform: translateX(20%); }
+  40% { transform: translateX(-20%); }
+  48% { transform: translateX(-20%) scaleY(0.12); }
+  52% { transform: translateX(-20%) scaleY(1); }
+  70% { transform: translateX(16%); }
+  90% { transform: translateX(-8%); }
+}
+.mascot-glasses {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: 48%;
+  aspect-ratio: 2.4 / 1;
+  transform: translate(-50%, -50%);
+}
+.mg-lens {
+  position: absolute;
+  top: 0;
+  width: 38%;
+  aspect-ratio: 1;
+  border: 3.2px solid #161616;
+  border-radius: 50%;
+  background: transparent; /* frame only — no lens fill */
+}
+.mg-lens-l { left: 4%; }
+.mg-lens-r { right: 4%; }
+.mg-bridge {
+  position: absolute;
+  top: 18%;
+  left: 42%;
+  right: 42%;
+  height: 3.2px;
+  background: #161616;
+}
+.mg-arm {
+  position: absolute;
+  top: 26%;
+  width: 16%;
+  height: 3.2px;
+  background: #161616;
+}
+.mg-arm-l { left: -12%; transform: rotate(10deg); transform-origin: right center; }
+.mg-arm-r { right: -12%; transform: rotate(-10deg); transform-origin: left center; }
+/* glasses sit so the laptop's top edge cuts their lower half; pupils ride low
+   (just above the edge) so the mascot reads as looking down at the screen */
+.mascot--working .mascot-eyes { top: 43.5%; }
+.mascot--working .mascot-glasses { top: 46%; }
+/* MacBook seen from the back of the lid: white panel, hand-drawn outline, Apple logo */
+.mascot-laptop {
+  position: absolute;
+  left: 50%;
+  bottom: -3%;
+  width: 70%;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+.ml-lid {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1.5 / 1;
+  background: #ffffff;
+  border: 2.5px solid #181818;
+  border-radius: 12% 12% 5% 5% / 20% 20% 8% 8%;
+}
+.ml-apple {
+  width: 18%;
+  height: auto;
+}
+.ml-apple path {
+  fill: #181818;
+}
+
+/* ---- 5. Sleepy (eyes stay shut, slow breathing, looping zzz) ---- */
+.mascot--sleepy .mascot-body { animation: mascot-breathe 4.2s ease-in-out infinite; }
+@keyframes mascot-breathe {
+  0%, 100% { transform: scaleY(1) scaleX(1); }
+  50% { transform: scaleY(1.04) scaleX(0.99); }
+}
+/* eyes blink and settle mostly shut — original dot-based doze form */
+.mascot-lid { display: none; }
+.mascot--sleepy .mascot-eye { animation: mascot-doze 7s ease-in-out infinite; }
+@keyframes mascot-doze {
+  0%, 8% { transform: scaleY(0.7); }    /* drowsy, only half-open */
+  28% { transform: scaleY(0.07); }      /* slowly drifts shut */
+  82% { transform: scaleY(0.07); }      /* stays shut a good while */
+  100% { transform: scaleY(0.7); }      /* slowly opens again, loops */
+}
+/* small "zzz" drifting up the top-right corner, fading in and out in a loop */
+.mascot-z {
+  position: absolute;
+  font-family: var(--body);
+  font-weight: 700;
+  color: #9a9a9a;
+  opacity: 0;
+}
+.mascot-z1 { right: 14%; top: 22%; font-size: 12cqw; animation: mascot-zfloat 3.6s ease-in-out 0s infinite; }
+.mascot-z2 { right: 6%;  top: 14%; font-size: 10cqw; animation: mascot-zfloat 3.6s ease-in-out 0.55s infinite; }
+.mascot-z3 { right: -2%; top: 7%;  font-size: 8cqw;  animation: mascot-zfloat 3.6s ease-in-out 1.1s infinite; }
+@keyframes mascot-zfloat {
+  0%   { opacity: 0; transform: translateY(25%) rotate(-4deg); }
+  35%  { opacity: 0.85; }
+  65%  { opacity: 0.85; transform: translateY(-8%) rotate(5deg); }
+  100% { opacity: 0; transform: translateY(-22%) rotate(8deg); }
+}
+
+/* ---- 6. Dizzy (woozy lean; left eye orbits clockwise, right counter-clockwise) ---- */
+.mascot--dizzy .mascot-body { animation: mascot-dizzy-body 2.6s ease-in-out infinite; transform-origin: 50% 92%; }
+@keyframes mascot-dizzy-body {
+  0%, 100% { transform: rotate(-3.5deg); }
+  50% { transform: rotate(3.5deg); }
+}
+.mascot--dizzy .mascot-eye-l { animation: mascot-orbit-cw 1.9s linear infinite; }
+.mascot--dizzy .mascot-eye-r { animation: mascot-orbit-ccw 1.9s linear infinite; }
+@keyframes mascot-orbit-cw {
+  from { transform: rotate(0deg) translateX(95%) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(95%) rotate(-360deg); }
+}
+@keyframes mascot-orbit-ccw {
+  from { transform: rotate(0deg) translateX(95%) rotate(0deg); }
+  to { transform: rotate(-360deg) translateX(95%) rotate(360deg); }
+}
+
+/* ---- 7. Jumping (squash → stretch → land → rest) ---- */
+.mascot--jumping .mascot-body { animation: mascot-jump 3s ease-in-out infinite; }
+@keyframes mascot-jump {
+  0%, 20% { transform: translateY(0) scaleX(1) scaleY(1); }
+  30% { transform: translateY(0) scaleX(1.12) scaleY(0.84); }
+  48% { transform: translateY(-40%) scaleX(0.93) scaleY(1.12); }
+  64% { transform: translateY(0) scaleX(1.14) scaleY(0.82); }
+  78%, 100% { transform: translateY(0) scaleX(1) scaleY(1); }
+}
+
+/* ---- 8. Listening to music (single composed mascot+headphones asset, sway, notes) ---- */
+/* the composed art includes the head, closed eyes and worn headphones; widen
+   the body so the whole headphone fills the card like the other mascots. */
+.mascot--music .mascot-body { width: 140%; flex-shrink: 0; animation: mascot-sway 3.4s ease-in-out infinite; transform-origin: 50% 90%; }
+@keyframes mascot-sway {
+  0%, 100% { transform: rotate(-3deg) translateY(0); }
+  25% { transform: rotate(0deg) translateY(-2%); }
+  50% { transform: rotate(3deg) translateY(0); }
+  75% { transform: rotate(0deg) translateY(-2%); }
+}
+/* powder-blue over-ear headphones (hand-drawn SVG, Bose-style): the band
+   arcs over the crown, the ear cups sit at the sides of the head (ear level) */
+/* two stacked copies of the same headphone asset create a worn front/back
+   relationship: the band tucks behind the crown, the ear cups sit in front
+   of the head's sides. */
+.mascot-headphones {
+  position: absolute;
+  left: 50%;
+  top: -24%;       /* band dips onto the crown so it tucks behind the head */
+  width: 108%;     /* cups press onto the head's sides, overlapping in front */
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.mascot-headphones img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* back copy: behind the head — the headband arcs over/behind the crown */
+.mascot-headphones--back { z-index: -1; }
+/* front copy: clipped to the two ear-cup columns so the cups sit on the
+   head's sides while the band stays behind */
+.mascot-headphones--front { z-index: 5; }
+.mascot-headphones--front img {
+  clip-path: polygon(0 0, 30% 0, 30% 50%, 70% 50%, 70% 0, 100% 0, 100% 100%, 0 100%);
+}
+.mascot-note {
+  position: absolute;
+  top: 15%;
+  right: 14%;
+  opacity: 0;
+}
+.mascot-note img { display: block; width: 100%; height: auto; }
+/* widths are chosen so the *rendered heights* land close together (~1cqw apart) —
+   the single-note art is tall/narrow (0.55 w/h) and the double-note art is near-
+   square (1.01 w/h), so matching width alone left the single note rendering at
+   roughly 2x the visual height of the double note. */
+.mascot-note1 { width: 7.9cqw; animation: mascot-note-float 3.6s ease-in-out infinite; }
+.mascot-note2 { width: 13.7cqw; right: 24%; animation: mascot-note-float 3.6s ease-in-out 1.8s infinite; }
+@keyframes mascot-note-float {
+  0% { opacity: 0; transform: translate(0, 0) rotate(-6deg); }
+  25% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(50%, -130%) rotate(10deg); }
+}
+
+/* ---- 9. Angry (inward-tilted brows + eyes, tense shake, comic anger mark) ---- */
+.mascot--angry .mascot-body {
+  animation: mascot-angry-shake 3.2s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes mascot-angry-shake {
+  0%, 58%, 100% { transform: translateX(0) scaleY(1); }
+  62% { transform: translateX(-1.6%) scaleY(0.985); }
+  66% { transform: translateX(1.6%); }
+  70% { transform: translateX(-1.3%); }
+  74% { transform: translateX(1.3%); }
+  78% { transform: translateX(0) scaleY(1); }
+}
+/* eyes morph from calm round dots into angled, narrowed "glare" shapes and
+   relax again — the anger is carried entirely by the eyes (no brows) */
+.mascot--angry .mascot-eye-l { animation: mascot-angry-eye-l 3.2s ease-in-out infinite; }
+.mascot--angry .mascot-eye-r { animation: mascot-angry-eye-r 3.2s ease-in-out infinite; }
+@keyframes mascot-angry-eye-l {
+  0%, 16% { border-radius: 50%; transform: rotate(0deg) scaleY(1); }                  /* calm */
+  34%, 82% { border-radius: 16% 16% 50% 50%; transform: rotate(26deg) scaleY(0.58); } /* glare, inner-down */
+  100% { border-radius: 50%; transform: rotate(0deg) scaleY(1); }                     /* relax + loop */
+}
+@keyframes mascot-angry-eye-r {
+  0%, 16% { border-radius: 50%; transform: rotate(0deg) scaleY(1); }
+  34%, 82% { border-radius: 16% 16% 50% 50%; transform: rotate(-26deg) scaleY(0.58); }
+  100% { border-radius: 50%; transform: rotate(0deg) scaleY(1); }
+}
+/* hand-drawn red anger mark (image asset), top-right corner, static */
+.mascot-anger {
+  position: absolute;
+  top: 16%;
+  right: 8%;
+  width: 11cqw;
+  transform: rotate(-6deg);
+}
+.mascot-anger img { display: block; width: 100%; height: auto; }
+
+/* pause mascot motion when the section is off-screen (set by JS) */
+.marquee-section.is-mascot-paused .mascot-body,
+.marquee-section.is-mascot-paused .mascot-eye,
+.marquee-section.is-mascot-paused .mascot-eyes,
+.marquee-section.is-mascot-paused .mascot-blush,
+.marquee-section.is-mascot-paused .mascot-tear,
+.marquee-section.is-mascot-paused .mascot-z,
+.marquee-section.is-mascot-paused .mascot-note,
+.marquee-section.is-mascot-paused .mascot-anger {
+  animation-play-state: paused;
+}
+
+/* reduced motion: hold a calm static pose for every mascot */
+@media (prefers-reduced-motion: reduce) {
+  .mascot-body,
+  .mascot-eye,
+  .mascot-eyes,
+  .mascot-blush,
+  .mascot-tear,
+  .mascot-z,
+  .mascot-note,
+  .mascot-anger {
+    animation: none !important;
+    transition: none !important;
+  }
+  .mascot-tear, .mascot-z, .mascot-note, .mascot-blush { opacity: 0; }
 }
