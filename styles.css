@@ -6403,6 +6403,17 @@ body[data-theme="dark"][data-page="home"] .home-vibe-note {
   color: #ffffff;
 }
 
+/* Landing-position probe: while the body carries this class, the opening JS is
+   flipping layout classes for a single synchronous measurement — nothing may
+   animate from the round trip. */
+body.home-probe,
+body.home-probe *,
+body.home-probe *::before,
+body.home-probe *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
 body[data-page="home"].home-opening-active:not(.home-work-handoff) .work-section,
 body[data-page="home"].home-opening-active .site-footer {
   opacity: 0;
@@ -6421,20 +6432,18 @@ body[data-page="home"].home-opening-active.home-work-handoff .work-section {
   left: 0;
   right: 0;
   z-index: 6;
-  width: min(100% - 112px, 1280px);
-  min-height: 0;
+  /* NO width/padding/min-height overrides here: the fixed preview must use the
+     exact same box geometry as the in-flow section (base rules + every media
+     query), or the release swap visibly re-lays-out the content — heading and
+     cards dropped by the padding-top delta on desktop, and the side margins
+     jumped on phones (100%-112px vs the mobile 100%-56px width). */
   margin: 0 auto;
-  padding: 0 0 96px;
   opacity: var(--home-work-section-opacity, 0);
   transform: translateY(var(--home-work-section-y, 34px));
   transition: none;
   pointer-events: none;
   visibility: visible;
   will-change: transform, opacity;
-}
-
-body[data-page="home"].home-opening-active.home-work-handoff .work-section .section-heading {
-  margin-bottom: clamp(34px, 4vw, 56px);
 }
 
 body[data-page="home"].home-opening-active.home-work-handoff .work-card {
@@ -6954,6 +6963,7 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
 @media (max-width: 760px) {
   body[data-page="home"].home-opening-complete .work-section {
     position: relative !important;
+    top: auto !important; /* the sticky pin's negative top must not shift the relative element */
     bottom: auto !important;
   }
 
@@ -7052,7 +7062,7 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
      strip. background-size x = 100%/18 = exactly one cell, so it aligns with each
      card and loops seamlessly on the -50% scroll. The tile is cropped mid-divider
      to mid-divider, so the half-dividers rejoin into one bar at every seam. */
-  background-image: url("assets/system/film-strip-bold.png?v=20260705d");
+  background-image: url("assets/system/film-strip-bold.png?v=20260705i");
   background-repeat: repeat-x;
   background-size: calc(100% / 18) 100%;
   background-position: left center;
@@ -7061,7 +7071,7 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
 /* Dark mode: swap to the white-frame tile (filter:invert can't be used here —
    it would also invert the mascot children of the track). */
 body[data-theme="dark"] .marquee-track::after {
-  background-image: url("assets/system/film-strip-bold-dark.png?v=20260705d");
+  background-image: url("assets/system/film-strip-bold-dark.png?v=20260705i");
 }
 
 /* duplicated set means -50% is exactly one set → seamless, no jump/gap */

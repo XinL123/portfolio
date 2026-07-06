@@ -710,6 +710,16 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     document.documentElement.style.removeProperty("--home-work-fixed-top");
   };
 
+  // Lightweight flight recorder for the opening choreography. If an arrival
+  // artifact shows up on a real device, run  copy(__openingTrace)  in DevTools
+  // and share the paste — every state change that can move the section is here.
+  const openingTrace = [];
+  window.__openingTrace = openingTrace;
+  const traceOpening = (tag, data) => {
+    if (openingTrace.length > 300) openingTrace.splice(0, 150);
+    openingTrace.push(Object.assign({ t: Math.round(performance.now()), tag }, data));
+  };
+
   // Where the work section will sit (viewport top, scroll 0) once the opening
   // completes. Measured via a synchronous hidden probe — the class flip, read
   // and restore all happen inside one JS turn, so nothing is ever painted.
@@ -724,6 +734,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       .filter((cls) => b.classList.contains(cls));
     const hadComplete = b.classList.contains("home-opening-complete");
     const hadVisible = workRevealSection.classList.contains("is-visible");
+    // Suppress every transition/animation for the round trip: the class flip
+    // changes computed values across the page, and without this the restore
+    // recalc would START real 300-500ms transitions from the probed values —
+    // a visible one-frame "other version" flash right as the handoff begins.
+    b.classList.add("home-probe");
     b.classList.remove(...had);
     b.classList.add("home-opening-complete");
     workRevealSection.classList.add("is-visible");
@@ -731,7 +746,32 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     if (!hadVisible) workRevealSection.classList.remove("is-visible");
     if (!hadComplete) b.classList.remove("home-opening-complete");
     if (had.length) b.classList.add(...had);
+    void b.offsetHeight; // commit the restore while transitions are still off
+    b.classList.remove("home-probe");
     return top;
+  };
+
+  // During the handoff ride, drive each card's opacity with the SAME
+  // as-if-settled scrub formula syncVisibleWorkCards uses after completion
+  // (measured against where the section will land, not where it currently
+  // rides). Without this, cards below the settle line sat at full handoff
+  // opacity during the ride and then SNAPPED dimmer at the release swap — the
+  // "one version of the projects appears, then another replaces it" artifact.
+  // The section-level handoff fade still multiplies on top via the parent.
+  const syncRideCardOpacities = (cardLag = 0) => {
+    if (!workCards.length || !workRevealSection || workLandedTop === null) return;
+    const vh = window.innerHeight;
+    const enterLine = vh * 0.92;
+    const settleLine = vh * 0.66;
+    const rideOffset = workRevealSection.getBoundingClientRect().top - workLandedTop;
+    workCards.forEach((card) => {
+      // cardLag = the card's own handoff translateY (y * 0.55) — it is part of
+      // the measured rect but must not count against the settled position.
+      const top = card.getBoundingClientRect().top - rideOffset - cardLag;
+      const progress = clamp((enterLine - top) / (enterLine - settleLine), 0, 1);
+      card.style.transition = "none";
+      card.style.opacity = progress.toFixed(3);
+    });
   };
 
   const getWorkHandoffViewportY = () => {
@@ -861,6 +901,15 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   };
 
   function setHomeGalleryProgress(nextProgress) {
+    // State-machine lock: once the opening is complete (and we're not back in an
+    // explicit re-entry, which removes the complete class first), the opening
+    // choreography may never write classes, vars or probes again.
+    if (
+      document.body.classList.contains("home-opening-complete") &&
+      !document.body.classList.contains("home-opening-active")
+    ) {
+      return;
+    }
     const progress = clamp(nextProgress, 0, GALLERY_PROGRESS_MAX);
     const revealProgress = clamp(progress, 0, 1);
     const exitProgress = clamp(progress - 1, 0, 1);
@@ -879,14 +928,37 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     document.documentElement.style.setProperty("--home-work-section-opacity", String(workHandoffProgress));
     document.documentElement.style.setProperty("--home-work-section-y", `${260 * (1 - workHandoffEase)}px`);
 
-    // One continuous bridge: ease the fixed preview's top from its 64vh start
-    // down to the section's real landed position, so at release the class swap
-    // changes nothing visually (the FLIP glide then short-circuits at ≤2px).
+    // One continuous bridge: ride the fixed preview from its 64vh start down to
+    // the section's real landed position, so at release the class swap changes
+    // nothing visually (the FLIP glide then short-circuits at ≤2px). The curve's
+    // END SLOPE is matched to the wheel — at the release point the section moves
+    // exactly 1px per scrolled px, the same speed native scrolling continues at,
+    // so there is no stall-then-resume gear change. Cubic with f(0)=0, f'(0)=0,
+    // f(1)=1, f'(1)=k (monotonic for 0 <= k <= 2; k = wheel budget / travel).
     if (workHandoffProgress > 0) {
-      if (workLandedTop === null) workLandedTop = measureWorkLandedTop();
+      if (workLandedTop === null) {
+        workLandedTop = measureWorkLandedTop();
+        traceOpening("probe", { landed: +workLandedTop.toFixed(1) });
+      }
       const startTop = Math.min(window.innerHeight * 0.64, 700);
-      const fixedTop = startTop + (workLandedTop - startTop) * workHandoffEase;
+      const travel = Math.max(startTop + 260 - workLandedTop, 1);
+      const windowWheelPx = 0.74 * GALLERY_WHEEL_UNIT;
+      const k = clamp(windowWheelPx / travel, 0, 2);
+      const u = workHandoffProgress;
+      const ride = (k - 2) * u * u * u + (3 - k) * u * u;
+      const fixedTop = startTop + (workLandedTop - startTop) * ride;
+      traceOpening("ride", { u: +u.toFixed(3), top: +fixedTop.toFixed(1) });
       document.documentElement.style.setProperty("--home-work-fixed-top", `${fixedTop.toFixed(1)}px`);
+      document.documentElement.style.setProperty("--home-work-section-y", `${(260 * (1 - ride)).toFixed(1)}px`);
+      syncRideCardOpacities(260 * (1 - ride) * 0.55);
+
+      // Bring the header home early in the ride — if it only reappears at the
+      // completion swap, its slide-in reads as a top-of-screen mode switch right
+      // where the section heading is landing.
+      if (u > 0.1 && header?.classList.contains("is-auto-hidden")) {
+        window.clearTimeout(headerHideTimer);
+        header.classList.remove("is-auto-hidden");
+      }
     }
 
     if (!homeGalleryStage || !homeMainPhoto) return;
@@ -974,10 +1046,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   // and hands over to native scrolling seamlessly once the gap reaches zero.
   let workLandingRemaining = 0;
   let workLandingTotal = 0;
+  let workArrivedAt = 0;
   const isWorkLanding = () => workLandingRemaining > 0;
 
   const cancelWorkLanding = () => {
-    const wasLanding = isWorkLanding();
+    const wasLanding = Math.abs(workLandingRemaining) > 0.5;
     workLandingRemaining = 0;
     workLandingTotal = 0;
     if (workRevealSection && wasLanding) {
@@ -1018,6 +1091,12 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   const finishHomeOpening = (carryDelta = 0) => {
     if (isWorkLanding()) return;
 
+    // Finalize the opening's own state so no later event (resize etc.) can see
+    // a lingering mid-choreography progress value and wake the ride back up.
+    galleryProgress = 0;
+    homeRevealProgress = 0;
+    rideReverseAccum = 0;
+
     // No work section to bridge to — just complete instantly.
     if (!workRevealSection) {
       document.body.classList.remove("home-opening-active", "home-gallery-active", "home-gallery-revealing", "home-work-handoff");
@@ -1042,8 +1121,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     header?.classList.remove("is-auto-hidden");
     clearHomeHandoffVars();
     setGalleryVideosPlaying(false);
+    workArrivedAt = Date.now();
     workRevealSection.classList.add("is-visible");
-    window.scrollTo({ top: 0, behavior: "auto" });
+    // "auto" resolves to the html's scroll-behavior (smooth!) — that would be an
+    // ASYNC animated scroll racing the landing. Must be a真正的 instant jump.
+    window.scrollTo({ top: 0, behavior: "instant" });
     requestAnimationFrame(() => requestAnimationFrame(syncVisibleWorkCards));
 
     // The collapse would snap the section upward. Measure that gap and neutralise it with a
@@ -1051,9 +1133,22 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // visitor's own scrolling scrubs the offset down to zero — never a timed animation.
     const landedTop = workRevealSection.getBoundingClientRect().top;
     const glide = Math.round(fromTop - landedTop);
+    traceOpening("release", { fromTop: +fromTop.toFixed(1), landedTop: +landedTop.toFixed(1), glide, carry: Math.round(carryDelta), scrollY: Math.round(window.scrollY) });
 
-    if (glide <= 2) {
+    if (Math.abs(glide) <= 2) {
       document.documentElement.style.removeProperty("scroll-snap-type");
+      return;
+    }
+
+    if (glide < 0) {
+      // The section landed slightly LOWER than the ride's endpoint. Snapping down
+      // is exactly the "reached the height, then dropped back" artifact — instead
+      // hold it at the old spot and let the scroll listener release the hold at
+      // half speed: the section keeps moving up-screen, never backwards.
+      workLandingTotal = glide;
+      workLandingRemaining = glide;
+      workRevealSection.style.setProperty("transition", "none", "important");
+      workRevealSection.style.setProperty("transform", `translateY(${glide}px)`, "important");
       return;
     }
 
@@ -1069,9 +1164,27 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     if (carryDelta > 0) scrubWorkLanding(carryDelta);
   };
 
+  // Ratchet for the handoff ride: macOS trackpads emit small REVERSE deltas as
+  // fingers lift off, and with the section riding at ~1.3x gain those wobbles
+  // read as the arriving content visibly retreating ("reached the height, then
+  // shrank back"). Swallow reverse motion during the ride until it accumulates
+  // into a deliberate gesture; any forward motion re-arms the ratchet.
+  let rideReverseAccum = 0;
+  const RIDE_REVERSE_THRESHOLD = 90;
+
   const applyHomeGalleryDelta = (delta, unit = GALLERY_WHEEL_UNIT) => {
 
     if (!galleryArmed || Date.now() < galleryReadyAt) return;
+
+    if (delta > 0) {
+      rideReverseAccum = 0;
+    } else if (delta < 0 && galleryProgress > 1.12) {
+      rideReverseAccum += -delta;
+      if (rideReverseAccum < RIDE_REVERSE_THRESHOLD) {
+        traceOpening("wobble-swallowed", { delta: Math.round(delta), accum: Math.round(rideReverseAccum) });
+        return;
+      }
+    }
 
     const nextProgress = galleryProgress + delta / unit;
 
@@ -1098,6 +1211,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     if (window.scrollY > reentryTop + 80) return false;
 
     // Cancel any pending landing so its !important inline transform can't get stuck.
+    traceOpening("reenter", { scrollY: Math.round(window.scrollY) });
     cancelWorkLanding();
 
     document.body.classList.add("home-opening-active", "home-gallery-active", "home-gallery-revealing");
@@ -1155,7 +1269,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 
   const resetHomeOpening = () => {
     if (!shouldResetHomeScroll) return;
-    window.scrollTo(0, 0);
+    traceOpening("reset", { readyState: document.readyState, scrollY: Math.round(window.scrollY) });
+    window.scrollTo({ top: 0, behavior: "instant" });
     setGalleryVideosPlaying(true);
     document.body.classList.add("home-opening-active");
     document.body.classList.remove("home-opening-complete", "home-gallery-active", "home-gallery-revealing", "home-work-handoff");
@@ -1322,7 +1437,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       if (
         document.body.dataset.page === "home" &&
         document.body.classList.contains("home-opening-complete") &&
-        event.deltaY < -28 &&
+        // Deliberate gestures only: a firmer threshold plus a short cooldown
+        // after arrival, so trackpad lift-off wobble right after landing can't
+        // yank the whole collage back ("two versions switching").
+        event.deltaY < -48 &&
+        Date.now() - workArrivedAt > 600 &&
         reenterHomeGalleryFromProjects()
       ) {
         event.preventDefault();
@@ -1377,12 +1496,27 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     pageHomeOpening(direction, direction * 240, GALLERY_WHEEL_UNIT);
   });
 
-  // Scrollbar drags and programmatic scrolls bypass the wheel handler — if the
-  // page really scrolls while a landing is still pending, settle the landing on
-  // the spot so the two offsets can't stack.
+  // Scroll listener does double duty:
+  // 1. A negative landing hold (section landed lower than the ride's endpoint)
+  //    releases as a pure function of scrollY at half speed — the section's
+  //    absolute motion stays upward, never a visible backward snap.
+  // 2. Scrollbar drags / programmatic scrolls bypass the wheel handler — if the
+  //    page really scrolls while a POSITIVE landing is pending, settle it on the
+  //    spot so the two offsets can't stack.
   window.addEventListener(
     "scroll",
     () => {
+      if (workLandingTotal < 0 && workRevealSection) {
+        const eased = clamp(workLandingTotal + window.scrollY * 0.5, workLandingTotal, 0);
+        if (eased >= -0.5) {
+          cancelWorkLanding();
+        } else {
+          workLandingRemaining = eased;
+          workRevealSection.style.setProperty("transform", `translateY(${eased.toFixed(1)}px)`, "important");
+        }
+        syncVisibleWorkCards();
+        return;
+      }
       if (isWorkLanding() && window.scrollY > 2) {
         cancelWorkLanding();
         syncVisibleWorkCards();
@@ -1396,16 +1530,31 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   }, { passive: true });
 
   window.addEventListener("resize", () => {
+    workLandedTop = null; // landed position depends on viewport size
+    // Once the opening has completed, it is FINALIZED — a resize (window drag,
+    // DevTools opening, ...) must only invalidate caches, never re-run the
+    // choreography. Re-running it re-probed and re-applied ride vars on the
+    // settled page: the exact "landed, then shifted again" artifact.
+    if (document.body.classList.contains("home-opening-complete")) return;
     if (galleryProgress > 0.001) resetHomeGalleryStyles();
     galleryBaseRects = null;
-    workLandedTop = null; // landed position depends on viewport size
     setHomeGalleryProgress(galleryProgress);
   });
 
   if (shouldResetHomeScroll) {
     resetHomeOpening();
-    window.addEventListener("pageshow", resetHomeOpening);
+    // The late `load` event (heavy videos) and the initial `pageshow` must not
+    // yank a visitor who already started scrolling back to the first intro
+    // screen. Only a bfcache return (persisted) still resets unconditionally.
+    const hasStartedOpening = () =>
+      activeIntroIndex > 0 ||
+      galleryProgress > 0.001 ||
+      document.body.classList.contains("home-opening-complete");
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted || !hasStartedOpening()) resetHomeOpening();
+    });
     window.addEventListener("load", () => {
+      if (hasStartedOpening()) return;
       resetHomeOpening();
       requestAnimationFrame(resetHomeOpening);
     });
