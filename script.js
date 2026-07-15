@@ -22,6 +22,10 @@ if (isPageReload) {
 
 const applyTheme = (theme) => {
   document.body.dataset.theme = theme;
+  // keep <html> in sync with <body>: the head boot script stamps <html> before
+  // first paint, and the html[data-theme="dark"] CSS keys off it — a stale
+  // value there would fight the body theme after a pull-chain toggle
+  document.documentElement.dataset.theme = theme;
 
   if (themeButton) {
     const isDark = theme === "dark";
@@ -33,9 +37,11 @@ const applyTheme = (theme) => {
   }
 };
 
-const savedTheme = localStorage.getItem("portfolio-theme");
-const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-applyTheme(savedTheme || systemTheme);
+// Theme is NOT persisted across page loads: every refresh / navigation starts
+// in light mode. The pull-chain still toggles dark live (see themeButton), but
+// the choice is deliberately not remembered — a refresh always returns to light,
+// which also sidesteps the dark-mode flash during the opening scroll.
+applyTheme("light");
 
 if ("scrollRestoration" in history) {
   history.scrollRestoration = "manual";
@@ -188,7 +194,8 @@ if (header && menuButton) {
 if (themeButton) {
   themeButton.addEventListener("click", () => {
     const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
-    localStorage.setItem("portfolio-theme", nextTheme);
+    // deliberately NOT persisted — the choice lasts only for this view; a refresh
+    // returns to light (see applyTheme("light") on load above)
     themeButton.classList.remove("is-pulled");
     void themeButton.offsetWidth;
     themeButton.classList.add("is-pulled");
@@ -216,6 +223,17 @@ if (header && !caseHoverZone) {
     "pointermove",
     (event) => {
       if (event.clientY <= 112) showHeaderFromTop();
+    },
+    { passive: true }
+  );
+
+  // touch devices have no pointermove hover — a tap near the top edge is the
+  // same "reaching for the header" gesture
+  window.addEventListener(
+    "touchstart",
+    (event) => {
+      const touch = event.touches[0];
+      if (touch && touch.clientY <= 112) showHeaderFromTop();
     },
     { passive: true }
   );
@@ -364,6 +382,14 @@ if (orangeStage) {
   const rightEye = orangeStage.querySelector(".orange-eye-right");
   const eyes = [leftEye, rightEye].filter(Boolean);
   orangeStage.classList.add("has-random-blink");
+  // Every px below is expressed in the coordinate system of a 360px-wide stage
+  // (the desktop size). The stage shrinks with the screen — 35cqw of the collage
+  // canvas on tablets, 52cqw on phones — so the whole rig is multiplied by
+  // eyeScale = stage layout width / 360. Without it the pupils kept swinging the
+  // full desktop 82px on a ~186px phone dome and flew off the orange.
+  // The same factor is published as --eye-scale, which sizes the pupils and their
+  // gap in CSS, so pupil size, spacing, resting spot and travel can never drift apart.
+  const EYE_REF_STAGE_WIDTH = 360;
   const maxX = 82;
   const maxY = 62;
   const smoothness = 0.16;
@@ -377,13 +403,31 @@ if (orangeStage) {
   const neutralEyeX = -28;
   const neutralEyeY = 12;
 
+  let eyeScale = 1;
+
+  const syncEyeScale = () => {
+    // offsetWidth is the LAYOUT width, unaffected by the stage's scale(0.72)
+    // transform — correct, because the eye px live inside that same transform.
+    // A hidden stage (display:none once the opening completes) measures 0; keep
+    // the last good value rather than collapsing the rig to nothing.
+    const width = orangeStage.offsetWidth;
+    if (width <= 0) return;
+    eyeScale = width / EYE_REF_STAGE_WIDTH;
+    orangeStage.style.setProperty("--eye-scale", eyeScale.toFixed(4));
+  };
+
+  const restingEyeX = () => neutralEyeX * eyeScale;
+  const restingEyeY = () => neutralEyeY * eyeScale;
+
+  syncEyeScale();
+
   const eyeState = {
-    currentX: neutralEyeX,
-    currentY: neutralEyeY,
+    currentX: restingEyeX(),
+    currentY: restingEyeY(),
     currentLeftInner: 0,
     currentRightInner: 0,
-    targetX: 0,
-    targetY: neutralEyeY,
+    targetX: restingEyeX(),
+    targetY: restingEyeY(),
     targetLeftInner: 0,
     targetRightInner: 0,
     frame: null,
@@ -485,10 +529,11 @@ if (orangeStage) {
     const leftReach = relativeX < 0 ? Math.abs(relativeX) * leftReachBoost : 0;
     const lowerLeftReach = relativeX < 0 && relativeY > 0 ? Math.min(relativeY, 1) * downReachBoost : 0;
 
-    eyeState.targetX = neutralEyeX + relativeX * maxX - leftReach;
-    eyeState.targetY = neutralEyeY + relativeY * maxY * yMultiplier + lowerLeftReach;
-    eyeState.targetLeftInner = relativeX < 0 ? -directionalConvergence * 0.35 : directionalConvergence;
-    eyeState.targetRightInner = -directionalConvergence;
+    eyeState.targetX = (neutralEyeX + relativeX * maxX - leftReach) * eyeScale;
+    eyeState.targetY = (neutralEyeY + relativeY * maxY * yMultiplier + lowerLeftReach) * eyeScale;
+    eyeState.targetLeftInner =
+      (relativeX < 0 ? -directionalConvergence * 0.35 : directionalConvergence) * eyeScale;
+    eyeState.targetRightInner = -directionalConvergence * eyeScale;
 
     scheduleEyes();
 
@@ -501,12 +546,37 @@ if (orangeStage) {
   };
 
   const resetEyes = () => {
-    eyeState.targetX = neutralEyeX;
-    eyeState.targetY = neutralEyeY;
+    eyeState.targetX = restingEyeX();
+    eyeState.targetY = restingEyeY();
     eyeState.targetLeftInner = 0;
     eyeState.targetRightInner = 0;
     scheduleEyes();
   };
+
+  // Watch the stage's own box rather than the window: the collage canvas is sized
+  // off BOTH axes (svh feeds its width), and the first measurement above can land
+  // before layout settles. A ResizeObserver catches the settle, every resize and a
+  // rotation alike. Rescale whatever the pupils are currently doing, then re-aim at
+  // the new resting spot — a resting orange would otherwise hold the old screen's
+  // offset until the next pointer move.
+  if (typeof ResizeObserver === "function") {
+    let observedScale = eyeScale;
+
+    const eyeStageObserver = new ResizeObserver(() => {
+      syncEyeScale();
+      if (eyeScale === observedScale) return;
+
+      const ratio = observedScale > 0 ? eyeScale / observedScale : 1;
+      observedScale = eyeScale;
+      eyeState.currentX *= ratio;
+      eyeState.currentY *= ratio;
+      eyeState.currentLeftInner *= ratio;
+      eyeState.currentRightInner *= ratio;
+      resetEyes();
+    });
+
+    eyeStageObserver.observe(orangeStage);
+  }
 
   const startEyeTrackingDelay = () => {
     eyeTrackingEnabled = false;
@@ -576,6 +646,7 @@ if (wasGalleryActive) {
 
 const revealSections = document.querySelectorAll(".reveal-section");
 const workRevealSection = document.querySelector(".work-section.reveal-section");
+const workScene = document.querySelector(".work-section .pc-scene");
 const workCards = Array.from(document.querySelectorAll('body[data-page="home"] .work-card'));
 const aboutPhotoWalls = Array.from(document.querySelectorAll('body[data-page="about"] .photo-wall.reveal-section'));
 const homeIntroScreens = Array.from(document.querySelectorAll('body[data-page="home"] .home-intro-screen'));
@@ -586,6 +657,13 @@ const homeMainPhoto = document.querySelector('body[data-page="home"] [data-home-
 const homeOrangeWrap = document.querySelector('body[data-page="home"] .home-orange-wrap');
 
 const isHomePage = document.body.dataset.page === "home";
+
+// The opening choreography's Work-arrival fn is defined deep inside the opening
+// block (which only runs when there ARE intro/gallery screens and motion is
+// allowed). Expose it here so the Work-nav interceptor below can reach it in
+// every state — the interceptor must NOT live inside that block, or it silently
+// stops working whenever the block is skipped (reduced motion, etc.).
+let goToWorkSectionRef = null;
 
 const shouldStartAtHomeGallery =
   isHomePage && window.location.hash === "#home";
@@ -663,6 +741,42 @@ const syncVisibleWorkCards = () => {
       card.style.transform = `translateY(${((1 - progress) * 20).toFixed(1)}px)`;
     }
   });
+};
+
+// Scroll-linked fade for the Selected-projects (clothesline) scene: it eases in
+// as you slide toward it and eases out as it leaves — a gentle 渐隐渐入. Opacity is
+// a pure function of the SCENE's own viewport position (the section itself pins
+// via position:sticky, so its rect.top is not a reliable travel signal; the scene
+// still scrolls up and off before the pin). Scrubs with the wheel, never plays on
+// its own; the opening choreography owns opacity while it runs.
+const syncWorkSceneFade = () => {
+  if (!workScene || !workRevealSection) return;
+  if (document.body.classList.contains("home-opening-active")) return;
+  if (prefersReducedMotion.matches) {
+    workScene.style.removeProperty("opacity");
+    return;
+  }
+  const vh = window.innerHeight || 1;
+  // During the completion landing the section carries a temporary translateY
+  // (finishHomeOpening's FLIP glide). Measure the scene AS IF settled — otherwise
+  // its rect.top reads a screenful too low, this fade computes op<1, and the
+  // scene dips then restores as the glide lands: a second flicker on top of the
+  // handoff's fade-in. Same compensation syncVisibleWorkCards already applies.
+  let glideY = 0;
+  if (workRevealSection) {
+    const t = getComputedStyle(workRevealSection).transform;
+    if (t && t !== "none") {
+      const m = t.match(/matrix\(([^)]+)\)/);
+      if (m) glideY = parseFloat(m[1].split(",")[5]) || 0;
+    }
+  }
+  const top = workScene.getBoundingClientRect().top - glideY;
+  // Full while the scene rests in the upper viewport (its landed top ≈ 90px);
+  // fade out as it rises off the top, fade in as it drops in from below.
+  const op = top <= 0
+    ? Math.max(0, Math.min(1, 1 + top / (vh * 0.5)))
+    : Math.max(0, Math.min(1, 1 - (top - vh * 0.15) / (vh * 0.6)));
+  workScene.style.opacity = op.toFixed(3);
 };
 
 const syncVisibleAboutPhotoWall = () => {
@@ -1126,7 +1240,10 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // "auto" resolves to the html's scroll-behavior (smooth!) — that would be an
     // ASYNC animated scroll racing the landing. Must be a真正的 instant jump.
     window.scrollTo({ top: 0, behavior: "instant" });
-    requestAnimationFrame(() => requestAnimationFrame(syncVisibleWorkCards));
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      syncVisibleWorkCards();
+      syncWorkSceneFade();
+    }));
 
     // The collapse would snap the section upward. Measure that gap and neutralise it with a
     // transform that holds the section at its old on-screen spot (FLIP). From here the
@@ -1297,30 +1414,53 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     setGalleryVideosPlaying(false);
     workRevealSection?.classList.add("is-visible");
     workCards.forEach((card) => card.classList.add("is-visible"));
+    syncWorkSceneFade();
   };
 
+  let workSceneFadeTimer = null;
   const goToWorkSection = () => {
     skipHomeOpening();
-  
+
+    // Soft arrival WITHOUT a smooth scroll. A smooth scrollTo here is async and
+    // interruptible, and it reintroduced the alternating blank-band bug: the
+    // page must be RE-ASSERTED at the section top to defeat the layout drop that
+    // skipHomeOpening()/cancelWorkLanding() causes, and a one-shot glide cannot
+    // do that (its rAF/load re-runs would each snap-interrupt the glide). So the
+    // scroll is an INSTANT, re-asserted jump — deterministic and self-correcting
+    // (verified: repeated clicks stay locked at the section top). The gentleness
+    // instead comes from easing the scene's OPACITY to its resting value: it
+    // fades in when arriving from a scrolled-away / faded state, and is an
+    // invisible no-op when already at Work. The transition is cleared after ~½s
+    // so ordinary scroll-scrubbing stays instant.
+    if (workScene && !prefersReducedMotion.matches) {
+      workScene.style.transition = "opacity 480ms ease";
+      clearTimeout(workSceneFadeTimer);
+      workSceneFadeTimer = window.setTimeout(() => {
+        workScene.style.transition = "";
+      }, 560);
+    }
+
     const moveToWork = () => {
       workRevealSection?.classList.add("is-visible");
       workCards.forEach((card) => card.classList.add("is-visible"));
-  
+
       if (workRevealSection) {
-        workRevealSection.scrollIntoView({
-          behavior: "auto",
-          block: "start"
-        });
+        // instant (re-asserted below) so the section is pinned deterministically
+        // at the top; target is read live from the settled layout.
+        const top = Math.round(workRevealSection.getBoundingClientRect().top + window.scrollY);
+        window.scrollTo({ top, behavior: "instant" });
       }
-  
+
       history.replaceState(null, "", "index.html#work");
       syncVisibleWorkCards();
+      // sets the scene's resting opacity; with the transition above active, that
+      // change eases in gently when arriving from a faded state.
+      syncWorkSceneFade();
     };
-  
-    requestAnimationFrame(() => {
-      requestAnimationFrame(moveToWork);
-    });
-  
+
+    moveToWork(); // immediately, so there is no blank frame after the layout finalizes
+    requestAnimationFrame(() => requestAnimationFrame(moveToWork)); // re-assert after layout settles
+
     // 等图片等内容加载完成后，再校准一次位置
     if (document.readyState !== "complete") {
       window.addEventListener("load", moveToWork, { once: true });
@@ -1566,24 +1706,47 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     skipHomeOpening();
   }
 
-  document.querySelectorAll('a[href="#work"], a[href="index.html#work"]').forEach((link) => {
-    link.addEventListener("click", (event) => {
-      sessionStorage.removeItem(HOME_LOGO_SKIP_KEY);
-  
-      // 其他页面正常前往 index.html#work
-      if (document.body.dataset.page !== "home") return;
-  
-      // 已经在主页时，直接滚动到 Work
-      event.preventDefault();
-      goToWorkSection();
-    });
-  });
-  
+  // publish the opening's Work-arrival fn so the global interceptor (below,
+  // outside this block) can use it while the opening is still in progress
+  goToWorkSectionRef = goToWorkSection;
+
 } else if (document.body.dataset.page === "home") {
   document.body.classList.add("home-opening-complete");
   clearHomeHandoffVars();
   revealSections.forEach((section) => section.classList.add("is-visible"));
   workCards.forEach((card) => card.classList.add("is-visible"));
+}
+
+// Work nav — registered GLOBALLY (not inside the opening block, which is skipped
+// under reduced motion etc.). On the home page, "Work" must feel like scrolling
+// to a section, never like switching to a separate `#work` link:
+//   • opening already finished → a plain smooth scroll to the section, and NO
+//     `#work` stamped into the URL (that hash is what read as a link switch).
+//   • opening still running    → hand off to the choreography's Work arrival.
+// On other pages there is no Work section to scroll to, so the link keeps its
+// default navigation to index.html#work.
+if (isHomePage) {
+  document.querySelectorAll('a[href="#work"], a[href="index.html#work"]').forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      sessionStorage.removeItem(HOME_LOGO_SKIP_KEY);
+      const workSection = document.querySelector(".work-section");
+      if (document.body.classList.contains("home-opening-complete")) {
+        workSection?.scrollIntoView({
+          behavior: prefersReducedMotion.matches ? "auto" : "smooth",
+          block: "start"
+        });
+      } else if (goToWorkSectionRef) {
+        goToWorkSectionRef();
+      } else {
+        // no opening choreography on this load — reveal + jump to the section
+        document.body.classList.add("home-opening-complete");
+        revealSections.forEach((section) => section.classList.add("is-visible"));
+        workCards.forEach((card) => card.classList.add("is-visible"));
+        workSection?.scrollIntoView({ block: "start" });
+      }
+    });
+  });
 }
 
 document.querySelectorAll(".brand-mark").forEach((link) => {
@@ -1632,6 +1795,7 @@ if (revealSections.length && !prefersReducedMotion.matches) {
         workFrame = null;
         if (!document.body.classList.contains("home-opening-active")) {
           syncVisibleWorkCards();
+          syncWorkSceneFade();
         }
       });
     };
@@ -1743,9 +1907,21 @@ if (revealSections.length && !prefersReducedMotion.matches) {
     activeIndex = nextIndex;
   };
 
-  // Hover drives the active row; leaving the menu keeps the last active row.
+  // Touch tiers (iPad / iPhone) switch by TAP; desktop keeps hover. Same media
+  // terms as the CSS so the two drivers never both fire on one viewport.
+  const stackedServicesMq = window.matchMedia(
+    "(max-width: 1080px), (max-width: 1180px) and (orientation: portrait)"
+  );
+
   rows.forEach((row, i) => {
-    row.addEventListener("mouseenter", () => setActive(i));
+    // desktop: hover previews the row
+    row.addEventListener("mouseenter", () => {
+      if (!stackedServicesMq.matches) setActive(i);
+    });
+    // tablet / phone: a tap selects it (no hover, no scroll hijack)
+    row.addEventListener("click", () => {
+      if (stackedServicesMq.matches) setActive(i);
+    });
   });
 
   // Roll the menu labels up the first time the section scrolls into view.
@@ -1816,6 +1992,7 @@ if (revealSections.length && !prefersReducedMotion.matches) {
   const lastGray = document.querySelector(".studio-services");
   const mascotBits = [
     document.querySelector(".marquee-viewport"),
+    document.querySelector(".reach-note"),
     document.querySelector(".home-end .site-footer")
   ].filter(Boolean);
   if (!pairs.length && !mascotBits.length) return;

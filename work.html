@@ -10,7 +10,22 @@
     <meta property="og:url" content="https://christusluo.com/work.html" />
     <meta property="og:type" content="website" />
     <title>Voderrn | Christus Luo</title>
-    <link rel="stylesheet" href="styles.css?v=20260705i" />
+    <!-- theme boot: stamp <html data-theme> BEFORE first paint so dark mode
+         never flashes white (reads the saved theme, falls back to the system) -->
+    <script>
+      (function () {
+        try {
+          /* Theme is NOT persisted: every page load (refresh or navigation)
+             starts in LIGHT mode. Dark mode still toggles live via the pull-
+             chain, but only for the current view — this avoids the dark-mode
+             flash on the opening scroll after a refresh. */
+          document.documentElement.dataset.theme = "light";
+        } catch (e) {
+          /* storage blocked (private mode) — keep the light default */
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=20260715d" />
   </head>
   <body data-page="case-study">
     <div class="case-hover-zone is-at-top" aria-label="Project navigation">
@@ -524,6 +539,6 @@
       <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
 
-    <script src="script.js?v=20260705i"></script>
+    <script src="script.js?v=20260715d"></script>
   </body>
 </html>

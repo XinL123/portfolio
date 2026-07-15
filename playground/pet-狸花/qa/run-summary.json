@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "run_dir": "/Users/Xin.L/Documents/playground/lihua-real-cute-pet-run",
+  "spritesheet": "/Users/Xin.L/Documents/playground/lihua-real-cute-pet-run/final/spritesheet.webp",
+  "validation": "/Users/Xin.L/Documents/playground/lihua-real-cute-pet-run/final/validation.json",
+  "contact_sheet": "/Users/Xin.L/Documents/playground/lihua-real-cute-pet-run/qa/contact-sheet.png",
+  "review": "/Users/Xin.L/Documents/playground/lihua-real-cute-pet-run/qa/review.json",
+  "package": "/Users/Xin.L/.codex/pets/lihua",
+  "desktop_package": "/Users/Xin.L/Desktop/portfolio/playground/pet-狸花",
+  "visual_qa": "manual-pass-hover-blank-fill",
+  "notes": "Runtime repair: hover reads jumping row across 8 cells, so waving and jumping rows were filled with belly-up frames in all 8 atlas cells to prevent blank flashes."
+}

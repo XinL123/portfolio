@@ -1,0 +1,29 @@
+{
+  "atlas": {
+    "path": "supplemental-actions.webp",
+    "columns": 6,
+    "rows": 3,
+    "cellWidth": 192,
+    "cellHeight": 208
+  },
+  "actions": [
+    {
+      "id": "rest-side-sleep",
+      "row": 0,
+      "frames": 6,
+      "frameDurationMs": 320
+    },
+    {
+      "id": "butt-pat-invite",
+      "row": 1,
+      "frames": 6,
+      "frameDurationMs": 220
+    },
+    {
+      "id": "butt-pat-happy",
+      "row": 2,
+      "frames": 6,
+      "frameDurationMs": 140
+    }
+  ]
+}

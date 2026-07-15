@@ -1,0 +1,18 @@
+{
+  "installed_at": "20260707T122854Z",
+  "targets": {
+    "asar": "/Applications/Codex.app/Contents/Resources/app.asar",
+    "info_plist": "/Applications/Codex.app/Contents/Info.plist",
+    "atlas": "/Users/Xin.L/.codex/pets/kitty/spritesheet.webp"
+  },
+  "backups": {
+    "asar": "/Users/Xin.L/Desktop/portfolio/playground/pet-kitty/install-artifacts/current-runtime-install/backups/20260707T122854Z/app.asar",
+    "info_plist": "/Users/Xin.L/Desktop/portfolio/playground/pet-kitty/install-artifacts/current-runtime-install/backups/20260707T122854Z/Info.plist",
+    "atlas": "/Users/Xin.L/Desktop/portfolio/playground/pet-kitty/install-artifacts/current-runtime-install/backups/20260707T122854Z/spritesheet.webp"
+  },
+  "installed": {
+    "asar_sha256": "3c425f1570ec98e74d2e23d58050fe8d324fe33710cd27cec07196c4130c76d8",
+    "atlas_sha256": "e77d87430c4ac6a01aa9685c9a1359211f83e87e2a6b9e00820e983bd0bc4c76",
+    "header_hash": "25858cad4dcf4148f3c2f36c9a747984397d5cf6024f41f05d99941173b73587"
+  }
+}

@@ -10,7 +10,22 @@
     <meta property="og:url" content="https://christusluo.com/about.html" />
     <meta property="og:type" content="website" />
     <title>About | Christus Luo</title>
-    <link rel="stylesheet" href="styles.css?v=20260705i" />
+    <!-- theme boot: stamp <html data-theme> BEFORE first paint so dark mode
+         never flashes white (reads the saved theme, falls back to the system) -->
+    <script>
+      (function () {
+        try {
+          /* Theme is NOT persisted: every page load (refresh or navigation)
+             starts in LIGHT mode. Dark mode still toggles live via the pull-
+             chain, but only for the current view — this avoids the dark-mode
+             flash on the opening scroll after a refresh. */
+          document.documentElement.dataset.theme = "light";
+        } catch (e) {
+          /* storage blocked (private mode) — keep the light default */
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=20260715d" />
   </head>
   <body data-page="about">
     <header class="site-header">
@@ -45,9 +60,18 @@
           <figure class="about-collage-card collage-back">
             <img src="assets/about/collage-back.jpeg" alt="Christus smiling on the beach" />
           </figure>
-          <figure class="about-collage-card collage-front">
-            <img src="assets/about/collage-front.jpg" alt="Christus kneeling by the ocean" />
-          </figure>
+          <!-- front card + peeking mascot share one rotated wrapper so both carry
+               the exact same tilt; the mascot sits BEHIND the card and pokes out
+               over its top edge (~2/3 visible, lower 1/3 hidden by the card) -->
+          <div class="collage-front-wrap">
+            <span class="collage-peek" aria-hidden="true">
+              <img src="assets/system/orange-body-no-eyes.png" alt="" draggable="false" />
+              <span class="collage-peek-eyes"><i class="collage-peek-eye"></i><i class="collage-peek-eye"></i></span>
+            </span>
+            <figure class="about-collage-card collage-front">
+              <img src="assets/about/collage-front.jpg" alt="Christus kneeling by the ocean" />
+            </figure>
+          </div>
         </div>
 
         <div class="about-intro-copy">
@@ -185,6 +209,6 @@
       </nav>
       <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
-    <script src="script.js?v=20260705i"></script>
+    <script src="script.js?v=20260715d"></script>
   </body>
 </html>

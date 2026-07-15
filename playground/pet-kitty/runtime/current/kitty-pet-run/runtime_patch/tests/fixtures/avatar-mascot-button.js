@@ -1,0 +1,1 @@
+function g(e){let{onMascotClick:o,state:l,transientState:d}=e,p=l===void 0?`idle`:l,[m,g]=useState(!1),v=d??(m?`jumping`:p);let D=()=>{g(!0)},O=()=>{g(!1)};return jsx(`div`,{"data-avatar-mascot":`true`,onPointerEnter:D,onPointerLeave:O,onClick:o,children:jsx(Avatar,{state:v})})}

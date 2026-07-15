@@ -1,0 +1,378 @@
+/* ============================================================
+   小橘子 · intro-scene companion (home page)
+
+   The self-intro screen is a pinned, scroll-scrubbed scene:
+   • .obx-lip   — a shy orange peeks over the glass panel's lip as the
+                  panel buries the work section (painted UNDER the panel,
+                  so its lower body shows through the frosted glass).
+   • .obx-anchor — the big orange anchoring the centre of the scene; its
+                  eyes follow whichever intro sentence is alive.
+   • .obx-glow  — a soft flowing ambient light behind the content, in the
+                  section's own four palette colours.
+   • .obx-phrase / .obx-tagline — the intro sentences, scrubbed by scroll.
+
+   Eye geometry is 1:1 with the site's static marquee mascot
+   (dead-centred pupils, round black dots).
+   ============================================================ */
+
+/* ---- shared orange unit ---- */
+.obx {
+  position: relative;
+  display: inline-block;
+  pointer-events: none;
+}
+
+.obx-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+.obx-eyes {
+  position: absolute;
+  left: 50%;
+  top: 62%;
+  width: 32%;
+  display: flex;
+  justify-content: space-between;
+  transform: translate(-50%, -50%)
+    translate(var(--obx-lx, 0px), var(--obx-ly, 0px));
+  will-change: transform;
+}
+
+.obx-eye {
+  width: 26%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #111;
+  transition: transform 300ms ease;
+}
+
+.obx-eye.is-blinking {
+  animation: obx-blink 230ms cubic-bezier(0.42, 0, 0.28, 1) both;
+}
+
+@keyframes obx-blink {
+  0%, 100% { transform: scaleY(1); }
+  45%, 60% { transform: scaleY(0.08); }
+}
+
+/* ============ peeking over the glass panel lip ============ */
+/* The orange is a SIBLING of .studio-block painted UNDERNEATH it
+   (work section z1 < orange z2 < glass panel z3): the dome above the
+   lip line is crisp, and everything below the lip shows through the
+   frosted pane — the body truly sits under the glass, no clipping.
+   Size + face geometry are 1:1 with the ending marquee's shy mascot:
+   body = 55% of the film card clamp(161.5px, 16.15vw, 229.5px). */
+body[data-page="home"] main {
+  position: relative; /* document-space anchor for the peeker */
+}
+
+.obx-lip-wrap {
+  position: absolute;
+  top: var(--obx-lip-top, -9999px); /* JS: glued to the panel's top edge */
+  right: 15%;
+  width: clamp(88.8px, 8.88vw, 126.2px);
+  height: 0;                   /* pure anchor — nothing is clipped */
+  overflow: visible;
+  pointer-events: none;
+  z-index: 2;                  /* under the glass panel (z 3) */
+  opacity: var(--obx-lip-o, 0);
+}
+
+.obx-lip {
+  position: absolute;
+  left: 0;
+  top: 2px;                    /* body top parked at the lip line… */
+  width: 100%;
+  transform: translateY(calc(var(--obx-rise, 0) * -100%)); /* …rising above it */
+  will-change: transform;
+}
+
+/* crayon texture sits ON the page, exactly like every site mascot */
+.obx-lip .obx-img {
+  mix-blend-mode: multiply;
+}
+
+body[data-theme="dark"] .obx-lip .obx-img {
+  mix-blend-mode: normal;
+}
+
+/* the marquee peeking mascot's face: eyes higher on the dome (top 52%),
+   row 30% of the body, pupils 19% of the row */
+.obx-lip .obx-eyes {
+  top: 52%;
+  width: 30%;
+}
+
+.obx-lip .obx-eye {
+  width: 19%;
+}
+
+/* ============ pinned scroll-scrubbed intro scene ============
+   The section provides a ~3-screen scroll runway; the stage inside
+   is position:sticky, so it pins while the visitor scrubs the
+   timeline. All element states are driven by JS as pure functions
+   of scroll progress — nothing here is time-triggered. */
+.obx-scene {
+  /* neutralise the old .studio-intro screen layout */
+  display: block;
+  min-height: auto;
+  padding: 0;
+}
+
+.obx-runway {
+  height: 320vh;              /* scrub length — more = slower story */
+}
+
+.obx-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- ambient flowing light (behind everything in the stage) ----
+   Two large, very soft, low-opacity radial washes in ONE of the section's
+   four palette colours at a time. JS drives --glow-x/y (where the light
+   gathers), --glow-color (which palette colour, blended), --glow-opacity
+   (fades in with the scene, out with the closing tagline) and --glow-rx/ry
+   (which flatten into a wide horizontal band as the tagline arrives). A slow
+   independent breathing drift keeps it alive when scrolling pauses. Kept
+   deliberately faint — the section stays clean white; the light is only felt
+   in motion. */
+.obx-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;                 /* under the orange + text (which come later in DOM) */
+  pointer-events: none;
+  opacity: var(--glow-opacity, 0);
+  background:
+    radial-gradient(
+      var(--glow-rx, 32vmax) var(--glow-ry, 25vmax)
+      at var(--glow-x, 50%) var(--glow-y, 48%),
+      rgba(var(--glow-color, 255, 186, 145), 0.42),
+      rgba(var(--glow-color, 255, 186, 145), 0.14) 42%,
+      transparent 68%
+    ),
+    radial-gradient(
+      calc(var(--glow-rx, 32vmax) * 0.62) calc(var(--glow-ry, 25vmax) * 0.72)
+      at var(--glow-x, 50%) var(--glow-y, 48%),
+      rgba(var(--glow-color, 255, 186, 145), 0.28),
+      transparent 60%
+    );
+  filter: blur(34px);
+  will-change: opacity, transform, background;
+  animation: obx-glow-breathe 17s ease-in-out infinite;
+}
+
+/* slow organic drift/breathing so the light lives even when scroll is still */
+@keyframes obx-glow-breathe {
+  0%, 100% { transform: translate3d(-1.6%, -1.1%, 0) scale(1.03); }
+  50%      { transform: translate3d(1.8%, 1.4%, 0) scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .obx-glow { animation: none; opacity: 0; }
+}
+
+/* the anchor orange — centre of the scene, everything orbits it.
+   Face geometry is 1:1 with the CANONICAL resting mascot on the same PNG:
+   eyes dead-centred at (50%, 62%), row 30% of the body, pupils 19% of
+   the row. Dead-centre X = looking straight ahead. */
+.obx-anchor {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: min(56vw, 259px);
+  transform: translate(-50%, -50%)
+    translateY(var(--obx-dy, 0px)) scale(var(--obx-s, 1));
+  will-change: transform;
+  opacity: var(--obx-o, 0);
+}
+
+.obx-anchor .obx-img {
+  mix-blend-mode: multiply; /* crayon texture sits on the page, like the hero */
+}
+
+body[data-theme="dark"] .obx-anchor .obx-img {
+  mix-blend-mode: normal;
+}
+
+.obx-anchor .obx-eyes {
+  left: 50%;
+  top: 62%;
+  width: 30%;
+}
+
+.obx-anchor .obx-eye {
+  width: 19%;
+}
+
+/* reduced motion: the scene JS never runs, so the anchor must be simply there */
+@media (prefers-reduced-motion: reduce) {
+  .obx-anchor {
+    opacity: 1;
+  }
+}
+
+/* intro sentences — JS scrubs opacity/offset; hidden by default */
+.obx-phrase {
+  position: absolute;
+  margin: 0;
+  max-width: min(330px, 34vw);
+  font-family: var(--body);
+  font-size: clamp(16px, 1.4vw, 22px);
+  line-height: 1.7;
+  color: inherit;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.obx-ph1 { left: 11%;  top: 24%; }
+.obx-ph2 { right: 10%; top: 34%; text-align: left; }
+.obx-ph3 { left: 13%;  top: 60%; }
+.obx-ph4 { right: 11%; top: 62%; }
+
+.obx-tagline {
+  position: absolute;
+  left: 50%;
+  /* sits just below the anchor orange (its bottom edge is ≈58% of the stage) */
+  top: 66%;
+  transform: translateX(-50%) translateY(var(--obx-tag-y, 20px));
+  margin: 0;
+  width: max-content;
+  max-width: 86vw;
+  text-align: center;
+  font-family: var(--body);
+  font-size: clamp(16px, 1.4vw, 22px); /* same size as the four intro sentences */
+  opacity: var(--obx-tag-o, 0);
+  will-change: transform, opacity;
+}
+
+/* ---- stacked tiers, per the user's intro sketch: orange centred ABOVE, one
+   sentence at a time in a FIXED text box below it, generous air around the
+   group. Every sentence (and the tagline) occupies the SAME box, so switching
+   is a pure crossfade-in-place — the dome, logo and menu never move. Same
+   width logic as the clothesline tiers: all mid-size windows regardless of
+   orientation, plus portrait iPads to 1180. Desktop >1080 landscape keeps the
+   scattered composition, untouched.
+
+   Geometry is one var chain: --obx-center is the dome's CENTRE (the anchor's
+   existing translate(-50%,-50%) contract stays intact for the JS bloom and
+   the reduced-motion override), the text box hangs off it. The group rides
+   just above the vertical middle; max() keeps the dome clear of the fixed
+   header on short windows — the sketch's "safe margins first" note. */
+@media (min-width: 661px) and (max-width: 1080px), (min-width: 661px) and (max-width: 1180px) and (orientation: portrait) {
+  .obx-stage {
+    --obx-ow: clamp(240px, 26vw, 280px); /* sketch: dome 240–280px */
+    --obx-oh: calc(var(--obx-ow) * 0.63); /* the PNG's dome height ratio */
+    --obx-gap: 18px;                      /* sketch said 28–40; user: tighter */
+    --obx-th: 190px;                      /* sketch: fixed 170–210px box */
+    --obx-tw: min(560px, 85vw);           /* sketch: ≤480–560px, centred */
+    --obx-center: max(
+      calc(47% - (var(--obx-oh) + var(--obx-gap) + var(--obx-th)) / 2 + var(--obx-oh) / 2),
+      calc(96px + var(--obx-oh) / 2)
+    );
+  }
+
+  .obx-anchor {
+    top: var(--obx-center);
+    width: var(--obx-ow);
+  }
+
+  .obx-phrase,
+  .obx-tagline {
+    top: calc(var(--obx-center) + var(--obx-oh) / 2 + var(--obx-gap));
+    left: calc(50% - var(--obx-tw) / 2);
+    right: auto;
+    width: var(--obx-tw);
+    max-width: none;
+    height: var(--obx-th);
+    display: grid;
+    align-content: center;
+    text-align: center;
+    font-size: clamp(22px, 2.3vw, 26px); /* sketch: 22–26px */
+    line-height: 1.55;                    /* sketch: 1.5–1.6 */
+  }
+
+  /* base centres the tagline with translateX(-50%); here left/width centre
+     the box, so only the JS-driven settle offset remains */
+  .obx-tagline {
+    transform: translateY(var(--obx-tag-y, 20px));
+  }
+
+  /* the sketch draws the light as a halo BEHIND the dome — pin the wander
+     (the JS glow positions trace the desktop scatter); colour, breathing and
+     the tagline band-flatten still come from JS. CSS !important beats the
+     inline var writes. */
+  .obx-glow {
+    --glow-x: 50% !important;
+    --glow-y: 38% !important;
+  }
+}
+
+/* phones: same structure at the sketch's iPhone numbers */
+@media (max-width: 660px) {
+  .obx-runway { height: 240vh; }
+
+  .obx-stage {
+    --obx-ow: clamp(180px, 52vw, 220px); /* sketch: dome 190–220px */
+    --obx-oh: calc(var(--obx-ow) * 0.63);
+    --obx-gap: 12px;                      /* sketch said 24–32; user: tighter */
+    --obx-th: 165px;                      /* sketch: fixed 150–180px box */
+    --obx-tw: 82vw;                       /* sketch: 82vw, centred */
+    --obx-center: max(
+      calc(46% - (var(--obx-oh) + var(--obx-gap) + var(--obx-th)) / 2 + var(--obx-oh) / 2),
+      calc(84px + var(--obx-oh) / 2)
+    );
+  }
+
+  .obx-anchor {
+    top: var(--obx-center);
+    width: var(--obx-ow);
+  }
+
+  .obx-phrase,
+  .obx-tagline {
+    top: calc(var(--obx-center) + var(--obx-oh) / 2 + var(--obx-gap));
+    left: calc(50% - var(--obx-tw) / 2);
+    right: auto;
+    width: var(--obx-tw);
+    max-width: none;
+    height: var(--obx-th);
+    display: grid;
+    align-content: center;
+    text-align: center;
+    font-size: clamp(12px, 3.6vw, 17px); /* sketch: 13–18px */
+    line-height: 1.5;                     /* sketch: 1.45–1.6 */
+  }
+
+  .obx-tagline {
+    transform: translateY(var(--obx-tag-y, 20px));
+  }
+
+  .obx-glow {
+    --glow-x: 50% !important;
+    --glow-y: 38% !important;
+  }
+}
+
+/* reduced motion: no pin-scrub — the scene renders as one calm,
+   fully-assembled static screen */
+@media (prefers-reduced-motion: reduce) {
+  .obx-runway { height: 100vh; }
+  .obx-phrase, .obx-tagline { opacity: 1 !important; transform: none !important; }
+  .obx-anchor { transform: translate(-50%, -50%) !important; opacity: 1 !important; }
+  .obx-eye.is-blinking { animation: none; }
+}
+
+/* reduced motion on the STACKED tiers: the all-visible fallback above would
+   pile four sentences into the one shared text box — show only the closing
+   tagline there (the sketch's own finale line). Later in the file, so it wins
+   the equal-importance tie against the block above. */
+@media (prefers-reduced-motion: reduce) and (max-width: 1080px), (prefers-reduced-motion: reduce) and (max-width: 1180px) and (orientation: portrait) {
+  .obx-phrase { opacity: 0 !important; }
+  .obx-tagline { opacity: 1 !important; transform: none !important; }
+}

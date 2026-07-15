@@ -1,0 +1,6 @@
+.DS_Store
+runtime_patch/output/*.candidate
+runtime_patch/output/*.webp
+runtime_patch/output/*.json
+runtime_patch/output/staging/
+runtime_patch/output/backups/

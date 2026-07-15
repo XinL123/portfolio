@@ -5,7 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
     <title>Page Not Found | Christus Luo</title>
-    <link rel="stylesheet" href="styles.css?v=20260705i" />
+    <!-- theme boot: stamp <html data-theme> BEFORE first paint so dark mode
+         never flashes white (reads the saved theme, falls back to the system) -->
+    <script>
+      (function () {
+        try {
+          /* Theme is NOT persisted: every page load (refresh or navigation)
+             starts in LIGHT mode. Dark mode still toggles live via the pull-
+             chain, but only for the current view — this avoids the dark-mode
+             flash on the opening scroll after a refresh. */
+          document.documentElement.dataset.theme = "light";
+        } catch (e) {
+          /* storage blocked (private mode) — keep the light default */
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=20260715d" />
   </head>
   <body data-page="home">
     <header class="site-header">
@@ -45,6 +60,6 @@
         </div>
       </section>
     </main>
-    <script src="script.js?v=20260705i"></script>
+    <script src="script.js?v=20260715d"></script>
   </body>
 </html>

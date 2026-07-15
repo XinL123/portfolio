@@ -22,11 +22,13 @@ const brandRule = css.match(/\.brand-mark\s*{([\s\S]*?)}/);
 expect(brandRule && !/border\s*:/.test(brandRule[1]), "brand logo should not have an outer circular border");
 expect(brandRule && !/background\s*:/.test(brandRule[1]), "brand logo should not sit on a white circular background");
 
-const bodyRule = css.match(/body\s*{([\s\S]*?)}/);
+// line-start anchor: selectors like `html[data-theme="dark"] body {` (the
+// first-frame dark-mode boot) must not shadow the base body rule here
+const bodyRule = css.match(/\nbody\s*{([\s\S]*?)}/);
 expect(bodyRule && /background\s*:\s*var\(--paper\)/.test(bodyRule[1]), "page background should be a flat theme color");
 expect(bodyRule && !/radial-gradient|linear-gradient/.test(bodyRule[1]), "page background should not use glows or gradients");
 
-const bodyRuleForType = css.match(/body\s*{([\s\S]*?)}/);
+const bodyRuleForType = css.match(/\nbody\s*{([\s\S]*?)}/);
 expect(bodyRuleForType && /font-size:\s*24px/.test(bodyRuleForType[1]), "base body type should be 24px");
 
 const headerRule = css.match(/\.site-header\s*{([\s\S]*?)}/);
@@ -82,9 +84,14 @@ expect(!html.includes('class="home-hero reveal-section"'), "Home should not keep
 expect(!html.includes("End to end design · Vibe coding"), "Home should not keep the old positioning copy in the new opening sequence");
 expect(!/drop-shadow|--glow|orange-stage::before|orange-stage::after/m.test(css), "orange character should not glow");
 expect(css.includes(".orange-eye"), "CSS should style orange eyes");
-expect(/--eye-max-x:\s*74px/.test(css), "eyes should use the expanded maxX range");
-expect(/--eye-max-y:\s*56px/.test(css), "eyes should use the expanded maxY range");
-expect(/--eye-gap:\s*82px/.test(css), "eyes should use the provided Framer eyeGap value");
+// The eye rig is proportional: script.js measures the stage against the 360px
+// desktop reference and writes --eye-scale, which drives pupil size + gap here
+// and the travel range / resting offset in JS. The Framer-era eyeGap (82px) and
+// eyeSize (22px) survive as the desktop-reference numerators.
+expect(/--eye-scale:\s*1/.test(css), "eye rig should define a scale factor that JS can drive from the stage width");
+expect(/--eye-gap:\s*calc\(82px\s*\*\s*var\(--eye-scale\)\)/.test(css), "eye gap should scale from the provided Framer eyeGap value");
+expect(/--eye-size:\s*calc\(22px\s*\*\s*var\(--eye-scale\)\)/.test(css), "eye size should scale from the provided Framer eyeSize value");
+expect(js.includes("EYE_REF_STAGE_WIDTH") && js.includes("--eye-scale"), "eye travel range should scale with the stage instead of using fixed desktop pixels");
 expect(/--eye-top:\s*50%/.test(css), "eyes should use the provided Framer eyeTop value");
 expect(/--eye-left:\s*41%/.test(css), "eyes should use the provided Framer eyeLeft value");
 expect(/\.orange-eye-group\s*{[\s\S]*?gap:\s*var\(--eye-gap\)/.test(css), "eyes should be positioned as a grouped pair");
@@ -114,14 +121,14 @@ expect(/\.pill-button:hover\s*{[\s\S]*?background:\s*var\(--paper\);[\s\S]*?colo
 expect(!html.includes('aria-hidden="true">↗</span>'), "Home should not use the text arrow glyph for buttons");
 expect(/\.button-arrow\s*{[\s\S]*?width:\s*9px[\s\S]*?height:\s*9px[\s\S]*?border-top:\s*2px\s+solid\s+currentColor[\s\S]*?border-right:\s*2px\s+solid\s+currentColor/.test(css), "Button arrows should use the smaller unified CSS stroke language");
 expect(/\.work-card\.is-visible:hover\s*{[\s\S]*?transform:\s*translateY\(-2px\)/.test(css), "Work card hover should stay light and restrained");
-expect(html.includes('class="work-media work-media-full wentong-media"'), "featured Work card should use a full-image media area");
-expect(html.includes('assets/cover/voderrn-cover-balanced.png'), "Voderrn work card should use the balanced uploaded cover image");
+expect(html.includes('class="pc-media pc-media-wentong"'), "featured Work card should hang on the clothesline with the wentong media panel");
+expect(html.includes('assets/cover/voderrn-cover-scene.png'), "Voderrn card should use the hand-drawn scene cover");
 expect(/body\[data-theme="dark"\]\s+\.voderrn-media\s*{[\s\S]*?background:\s*#d8dde5/.test(css), "Voderrn cover should stay visible on dark mode");
-expect(html.includes('class="work-media work-media-full gown-media"'), "Gown Card should use the same full-image card language with a placeholder media area");
-expect(html.includes("<h2 id=\"work-title\" class=\"work-heading-title\">Selected projects</h2>"), "Home Work title should only read Selected projects");
-expect(html.includes('class="work-card work-card-placeholder"') && html.includes('class="work-media work-media-full placeholder-media"'), "Home Work should include the second placeholder card");
-expect(html.includes("<span>2025</span>") && html.includes("<h3>Voderrn</h3>"), "Voderrn project copy should use the updated year and title");
-expect(html.includes("<span>2024</span>") && html.includes("<h3>Healthcare</h3>"), "Gown Card project copy should use the updated year and title");
+expect(html.includes('class="pc-media pc-media-health"') && html.includes('assets/cover/healthcare-cover-scene.png'), "Healthcare card should hang on the clothesline with the hand-drawn scene cover");
+expect(html.includes("<h2 id=\"work-title\" class=\"work-heading-title pc-sr-title\">Selected projects</h2>"), "Home Work title should stay for screen readers only (visually hidden)");
+expect(html.includes('pc-card-soon') && html.includes('assets/cover/llm-cover-scene.png'), "Coming-soon card should hang on the line showing the LLM scene cover");
+expect(html.includes('class="pc-year">2025<') && html.includes("<h3>Voderrn</h3>"), "Voderrn project copy should use the updated year and title");
+expect(html.includes('class="pc-year">2024<') && html.includes("<h3>Healthcare</h3>"), "Healthcare project copy should use the updated year and title");
 expect(!html.includes('id="work-title">Work</h2>') && !html.includes('id="work-title">Work.</h2>'), "Work heading should not include the large Work title");
 expect(!html.includes('story-strip'), "Home page should not include the 01/02/03 story strip after Work");
 expect(!html.includes('about-teaser'), "Home page should not include the About teaser after Work");
@@ -129,20 +136,24 @@ expect(/\.work-section\s*{[\s\S]*?background:\s*#ffffff/.test(css), "Home Work s
 expect(/body\[data-theme="dark"\]\s+\.work-section\s*{[\s\S]*?background:\s*#000000/.test(css), "Home Work section should stay black in dark mode");
 expect(/\.work-heading-title\s*{[\s\S]*?font-family:\s*var\(--hand\)[\s\S]*?font-size:\s*clamp\(18px,\s*1\.45vw,\s*23px\)/.test(css), "Selected projects heading should match the home body scale");
 expect(/\.work-heading-title\s*{[\s\S]*?font-weight:\s*400/.test(css), "Selected projects heading should not be bold");
-expect(/\.work-section\s*{[\s\S]*?min-height:\s*min\(980px,\s*100vh\)[\s\S]*?padding:\s*clamp\(128px,\s*11vw,\s*164px\)\s+0\s+96px/.test(css), "Home Work section should keep the approved lighter vertical spacing");
+expect(/\.work-section\s*{[\s\S]*?min-height:\s*min\(980px,\s*100vh\)[\s\S]*?padding:\s*clamp\(84px,\s*7\.5vw,\s*116px\)\s+0\s+96px/.test(css), "Home Work section should keep the tightened vertical spacing (title removed)");
 expect(/\.work-board\s*{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)[\s\S]*?gap:\s*clamp\(84px,\s*9vw,\s*136px\)\s+clamp\(58px,\s*6\.6vw,\s*104px\)[\s\S]*?width:\s*min\(100%,\s*1000px\)[\s\S]*?margin:\s*0\s+auto/.test(css), "Home Work board should use a centered two-column grid with balanced project spacing");
 expect(/\.work-card-copy\s+h3\s*{[\s\S]*?font-size:\s*clamp\(12px,\s*1\.25vw,\s*17px\)/.test(css), "Work card titles should use the smaller approved scale");
 expect(/\.work-media-full\s*{[\s\S]*?aspect-ratio:\s*16\s*\/\s*10[\s\S]*?height:\s*auto[\s\S]*?border-radius:\s*22px/.test(css), "Work media should use the updated lighter card proportions");
 expect(/\.work-card-feature\s+\.work-media-full\s*{[\s\S]*?height:\s*auto/.test(css), "Featured Work media should stay restrained in the new grid");
 expect(/\.work-row\s*{[\s\S]*?display:\s*contents/.test(css), "Desktop Work row wrapper should no longer control the new four-card grid");
-expect(/<div class="work-media work-media-full wentong-media">[\s\S]*?<\/div>\s*<div class="work-card-copy">\s*<h3>Publishing × AI<\/h3>\s*<span>2026<\/span>/.test(html), "Work card copy should sit below the cover with title above year");
+expect(/class="pc-media pc-media-wentong">[\s\S]*?<\/div>\s*<div class="pc-caption">\s*<div class="pc-cap-main">\s*<h3>Publishing × AI<\/h3>\s*<span class="pc-year">2026<\/span>/.test(html), "Work card copy should sit inside the card below the image panel, title + year sharing the first caption row");
+expect(html.includes('class="pc-go">visit site') && html.includes('class="pc-go">case study') && html.includes('class="pc-go">pitch deck') && /\.pc-go\s*{[\s\S]*?transition:\s*color/.test(css), "Each linked clothesline card should carry a quiet destination hint that warms on hover");
+expect(!/\.pc-card[\s\S]{0,400}?scale\(var\(--pc-depth/.test(css) && !js.includes("--pc-depth"), "Lower carousel should stay flat and front-facing — no perspective scaling");
+expect(html.includes('class="pc-track"') && html.includes('class="pc-rope"') && html.includes('class="pc-top-line"') && html.includes('assets/system/clothesline-top.png') && html.includes('clothesline.js'), "Selected projects should keep the two-rope clothesline scene (artwork top rope + perspective zipline)");
+expect(html.includes('class="pc-bun"') && html.includes('pc-bun-eye-l'), "The orange bun mascot should hang from the fixed top rope with winkable eyes");
 expect(js.includes("const workCards = Array.from") && js.includes("syncVisibleWorkCards") && js.includes("(enterLine - top) / (enterLine - settleLine)"), "Work card reveal should be scroll-scrubbed (position-driven progress, glide-compensated), settling into .is-visible — never a triggered pop animation");
 expect(html.includes('class="home-intro-screen is-active"') && html.includes('data-text="Hi, I\'m Xin.L"'), "Home should start with the prototype intro sequence");
 expect(html.includes('data-text="Currently a senior @ Vanderbilt University"') && html.includes('data-text="I bring designs to life through code"'), "Home intro should keep all three requested lines");
 expect(html.includes('class="home-gallery-screen"') && html.includes('class="orange-stage"'), "Home opening should include the collage screen while reusing the existing orange character");
 expect(html.includes('class="home-vibe-note">All made with vibe coding ;)'), "Home gallery should include the small vibe-coding note below the orange character");
 expect(/\.home-intro-screen\s*{[\s\S]*?position:\s*fixed[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Home intro screens should use the white Gaegu prototype style");
-expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(18px,\s*1\.72vw,\s*27px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale");
+expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(25px,\s*1\.72vw,\s*27px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (floor raised so the iPad/small-laptop band matches desktop)");
 expect(/\.home-gallery-screen\s*{[\s\S]*?min-height:\s*100svh[\s\S]*?background:\s*#ffffff/.test(css), "Home gallery should be a full white screen before Projects");
 expect(/body\.home-opening-complete\s+\.home-gallery-screen\s*{[\s\S]*?display:\s*none/.test(css), "Home gallery should leave normal page flow after the opening completes");
 expect(!/body\[data-theme="dark"\]\s+\.home-intro-screen/.test(css), "Intro screens should stay white and should not have a dark mode override");

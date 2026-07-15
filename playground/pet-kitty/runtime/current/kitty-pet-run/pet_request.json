@@ -1,0 +1,265 @@
+{
+  "pet_id": "kitty",
+  "display_name": "Kitty",
+  "description": "A calm, heavy five-year-old blue-gray cat with a round face, amber eyes, and a thick tail.",
+  "created_at": "2026-07-01T08:53:09.465624+00:00",
+  "atlas": {
+    "columns": 8,
+    "rows": 9,
+    "cell_width": 192,
+    "cell_height": 208,
+    "width": 1536,
+    "height": 1872
+  },
+  "rows": [
+    {
+      "state": "idle",
+      "row": 0,
+      "frames": 6,
+      "purpose": "calm resting, breathing, and blinking loop"
+    },
+    {
+      "state": "running-right",
+      "row": 1,
+      "frames": 8,
+      "purpose": "rightward drag movement loop"
+    },
+    {
+      "state": "running-left",
+      "row": 2,
+      "frames": 8,
+      "purpose": "leftward drag movement loop"
+    },
+    {
+      "state": "waving",
+      "row": 3,
+      "frames": 4,
+      "purpose": "greeting or attention gesture"
+    },
+    {
+      "state": "jumping",
+      "row": 4,
+      "frames": 5,
+      "purpose": "hover or playful jump"
+    },
+    {
+      "state": "failed",
+      "row": 5,
+      "frames": 8,
+      "purpose": "blocked, failed, or cancelled reaction"
+    },
+    {
+      "state": "waiting",
+      "row": 6,
+      "frames": 6,
+      "purpose": "waiting for approval, help, or user input"
+    },
+    {
+      "state": "running",
+      "row": 7,
+      "frames": 6,
+      "purpose": "active task work or processing"
+    },
+    {
+      "state": "review",
+      "row": 8,
+      "frames": 6,
+      "purpose": "ready or completed output review"
+    }
+  ],
+  "layout_guides": [
+    {
+      "state": "idle",
+      "path": "references/layout-guides/idle.png",
+      "width": 1152,
+      "height": 208,
+      "frames": 6,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "running-right",
+      "path": "references/layout-guides/running-right.png",
+      "width": 1536,
+      "height": 208,
+      "frames": 8,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "running-left",
+      "path": "references/layout-guides/running-left.png",
+      "width": 1536,
+      "height": 208,
+      "frames": 8,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "waving",
+      "path": "references/layout-guides/waving.png",
+      "width": 768,
+      "height": 208,
+      "frames": 4,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "jumping",
+      "path": "references/layout-guides/jumping.png",
+      "width": 960,
+      "height": 208,
+      "frames": 5,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "failed",
+      "path": "references/layout-guides/failed.png",
+      "width": 1536,
+      "height": 208,
+      "frames": 8,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "waiting",
+      "path": "references/layout-guides/waiting.png",
+      "width": 1152,
+      "height": 208,
+      "frames": 6,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "running",
+      "path": "references/layout-guides/running.png",
+      "width": 1152,
+      "height": 208,
+      "frames": 6,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    },
+    {
+      "state": "review",
+      "path": "references/layout-guides/review.png",
+      "width": 1152,
+      "height": 208,
+      "frames": 6,
+      "cell_width": 192,
+      "cell_height": 208,
+      "safe_margin_x": 18,
+      "safe_margin_y": 16,
+      "usage": "layout guide input only; do not copy visible guide lines into generated sprite strips"
+    }
+  ],
+  "references": [
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-01.jpg",
+      "width": 1280,
+      "height": 1707,
+      "mode": "RGB",
+      "format": "JPEG",
+      "source_path": "/Users/Xin.L/Desktop/70c9a01354646aa83c72cdf8af2ec744.jpg",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-01.jpg"
+    },
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-02.jpg",
+      "width": 960,
+      "height": 1280,
+      "mode": "RGB",
+      "format": "JPEG",
+      "source_path": "/Users/Xin.L/Desktop/b7edf490bd5f9c2430ee415264991c9e.jpg",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-02.jpg"
+    },
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-03.jpg",
+      "width": 1522,
+      "height": 960,
+      "mode": "RGB",
+      "format": "JPEG",
+      "source_path": "/Users/Xin.L/Desktop/218f15d00e1afa8e9cce932c90ddec75.jpg",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-03.jpg"
+    },
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-04.png",
+      "width": 696,
+      "height": 1124,
+      "mode": "RGBA",
+      "format": "PNG",
+      "source_path": "/Users/Xin.L/Desktop/Screenshot 2026-07-01 at 15.43.28.png",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-04.png"
+    },
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-05.png",
+      "width": 1122,
+      "height": 1490,
+      "mode": "RGBA",
+      "format": "PNG",
+      "source_path": "/Users/Xin.L/Desktop/Screenshot 2026-07-01 at 15.42.29.png",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-05.png"
+    },
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-06.png",
+      "width": 816,
+      "height": 660,
+      "mode": "RGBA",
+      "format": "PNG",
+      "source_path": "/Users/Xin.L/Desktop/Screenshot 2026-07-01 at 15.44.51.png",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-06.png"
+    },
+    {
+      "path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-07.png",
+      "width": 706,
+      "height": 512,
+      "mode": "RGBA",
+      "format": "PNG",
+      "source_path": "/Users/Xin.L/Desktop/Screenshot 2026-07-01 at 15.44.56.png",
+      "copied_path": "/Users/Xin.L/Documents/playground/.worktrees/kitty-realistic-pet/kitty-pet-run/references/reference-07.png"
+    }
+  ],
+  "chroma_key": {
+    "hex": "#00FF00",
+    "rgb": [
+      0,
+      255,
+      0
+    ],
+    "name": "green",
+    "selection": "auto",
+    "score": 205.61
+  },
+  "pet_notes": "Match the photographed cat faithfully: realistic dense blue-gray short fur, amber round eyes, round cheeks, broad heavy body, thick tail, calm temperament. Cuteness comes only from soft expression and slow natural motion. No mascot, toy, plush, sticker, cartoon, clothing, scenery, floor, shadow, text, or detached effects. The running state alone may include one open book.",
+  "style_preset": "auto",
+  "style_notes": "Realistic photographic cat rendering optimized for a small transparent desktop sprite; preserve natural anatomy and Kitty's exact identity.",
+  "style_contract": "Realistic photographic blue-gray cat sprite with faithful natural feline anatomy and proportions: preserve Kitty's round face, amber eyes, broad heavy body, thick tail, and realistic dense short fur. Keep the complete full body readable within a 192x208 cell, with a clear natural silhouette, stable photographic fur color and texture, and crisp opaque edges for chroma-key extraction. Preserve this exact realistic photographic style across every row. Do not stylize as a mascot, toy, plush, sticker, or cartoon.",
+  "brand_name": "",
+  "brand_brief": "",
+  "brand_sources": [],
+  "pet_safe_style": "Realistic photographic blue-gray cat sprite with faithful natural feline anatomy and proportions: preserve Kitty's round face, amber eyes, broad heavy body, thick tail, and realistic dense short fur. Keep the complete full body readable within a 192x208 cell, with a clear natural silhouette, stable photographic fur color and texture, and crisp opaque edges for chroma-key extraction. Do not stylize as a mascot, toy, plush, sticker, or cartoon.",
+  "primary_generation_skill": "$imagegen"
+}

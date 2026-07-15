@@ -19,7 +19,23 @@
   --home-title-size: clamp(28px, 3vw, 42px);
 }
 
-body[data-theme="dark"] {
+/* first-frame dark: an inline script in each page's <head> stamps
+   <html data-theme> from localStorage/prefers-color-scheme BEFORE first paint,
+   and the html[data-theme="dark"] alternates below make the very first frame
+   render with the dark palette — no white flash, no light→dark fade (the
+   body background never changes value when script.js later stamps <body>). */
+html {
+  /* fade the canvas/overscroll color together with body on a theme switch */
+  transition: background-color 240ms ease;
+}
+
+html[data-theme="dark"] {
+  background: #070707; /* = dark --paper, covers overscroll areas too */
+  color-scheme: dark;
+}
+
+body[data-theme="dark"],
+html[data-theme="dark"] body {
   color-scheme: dark;
   --ink: #f9f3eb;
   --paper: #070707;
@@ -51,7 +67,13 @@ body {
   font-family: var(--body);
   font-size: 24px;
   font-weight: 400;
-  overflow-x: hidden;
+  /* clip, NOT hidden: `overflow-x: hidden` forces the spec to compute
+     `overflow-y: auto`, which turns <body> into a scroll container and breaks
+     every `position: sticky` inside it on iOS Safari (the pinned intro scene
+     scrolls away instead of holding). `overflow-x: clip` hides horizontal
+     overflow identically WITHOUT establishing a scroll container, so sticky
+     keeps working. */
+  overflow-x: clip;
   transition:
     background-color 240ms ease,
     color 240ms ease;
@@ -416,7 +438,12 @@ body.home-opening-complete .home-intro-screen {
   margin: 0;
   color: #000000;
   font-family: var(--hand);
-  font-size: clamp(18px, 1.72vw, 27px);
+  /* Floor raised 18→25: this base rule owns every width >820px, but 1.72vw only
+     reaches 25px at ~1450px, so the whole 821–1450 band (iPad, small laptops)
+     used to sit at the 18px floor — tiny, and a jarring 27→18 drop across the
+     820px breakpoint where the ≤820 rule caps at 27. 25px keeps that band at the
+     desktop size; the max (27) still governs very wide screens unchanged. */
+  font-size: clamp(25px, 1.72vw, 27px);
   font-weight: 300;
   font-synthesis: none;
   line-height: 1.12;
@@ -428,7 +455,9 @@ body.home-opening-complete .home-intro-screen {
 
 #intro-2 .intro-line,
 #intro-3 .intro-line {
-  font-size: clamp(17px, 1.56vw, 24px);
+  /* same fix as .intro-line above: floor 17→22 so the longer lines 2/3 don't
+     shrink to the floor across the iPad / small-laptop band */
+  font-size: clamp(22px, 1.56vw, 24px);
 }
 
 .intro-line::after {
@@ -705,10 +734,15 @@ body[data-theme="dark"] .home-gallery-screen {
   min-height: 360px;
   isolation: isolate;
   overflow: visible;
-  --eye-max-x: 74px;
-  --eye-max-y: 56px;
-  --eye-size: 22px;
-  --eye-gap: 82px;
+  /* One number scales the whole eye rig with the dome. script.js measures the
+     stage's layout width against the 360px desktop reference and writes
+     --eye-scale; the pupils' size and spacing follow it here, their travel range
+     and resting offset follow it in JS. So the eyes stay the same fraction of the
+     orange on a 1440px desktop and on a 390px phone. The fallback of 1 keeps the
+     desktop geometry if the script never runs. */
+  --eye-scale: 1;
+  --eye-size: calc(22px * var(--eye-scale));
+  --eye-gap: calc(82px * var(--eye-scale));
   --eye-top: 50%;
   --eye-left: 41%;
 }
@@ -822,7 +856,7 @@ body[data-theme="dark"] .orange-body {
 
 .work-section {
   min-height: min(980px, 100vh);
-  padding: clamp(128px, 11vw, 164px) 0 96px;
+  padding: clamp(84px, 7.5vw, 116px) 0 96px;
   border-top: 0;
 }
 
@@ -864,6 +898,16 @@ body[data-theme="dark"] .orange-body {
 
 body[data-theme="dark"] .work-section {
   background: #000000;
+}
+
+/* home main paints the full-width backdrop of the pinned screens (opaque black
+   in dark mode). On a theme switch it must fade COLOR→COLOR on the same 240ms
+   clock as the sections — fading the dark bg to TRANSPARENT instead composites
+   darker than the sections mid-fade (an alpha fade over the still-fading body),
+   which is exactly the left/right side flash. */
+body[data-page="home"] main {
+  background: var(--paper);
+  transition: background-color 240ms ease;
 }
 
 body[data-theme="dark"][data-page="home"] main,
@@ -1345,9 +1389,13 @@ body[data-theme="dark"] .site-footer::before {
 .reveal-section {
   opacity: 0;
   transform: translateY(22px);
+  /* background-color rides the same 240ms clock as body, so opaque sections
+     (e.g. the home work section) fade with the page on a theme switch instead
+     of snapping while the body is still mid-fade (the "side flash") */
   transition:
     opacity 520ms ease,
-    transform 520ms ease;
+    transform 520ms ease,
+    background-color 240ms ease;
 }
 
 .reveal-section.is-visible {
@@ -3415,6 +3463,12 @@ body[data-theme="dark"][data-page="case-study"] .case-placeholder-section {
     font-size: 14px;
   }
 
+  /* below ~1000px the 8-per-row scatter columns get closer than the quote
+     width — thin the wall to every other quote so nothing overlaps */
+  .insight-quote:nth-child(odd) {
+    display: none;
+  }
+
   .visual-style-section,
   .iterations-section {
     width: min(100% - 64px, 900px);
@@ -3615,15 +3669,49 @@ body[data-theme="dark"][data-page="case-study"] .case-placeholder-section {
     margin-top: 18px;
   }
 
+  /* Phone: keep only a sparse curated scatter of quotes in two aligned
+     columns; the rest of the wall reads as noise at this width. */
   .insight-quote {
-    width: 118px;
+    display: none;
+    width: 124px;
     font-size: 13px;
     line-height: 1.22;
   }
 
-  .insight-quote:nth-child(odd) {
-    display: none;
+  .insight-quote:nth-child(2),
+  .insight-quote:nth-child(6),
+  .insight-quote:nth-child(10),
+  .insight-quote:nth-child(14),
+  .insight-quote:nth-child(18),
+  .insight-quote:nth-child(20),
+  .insight-quote:nth-child(24),
+  .insight-quote:nth-child(28) {
+    display: block;
+    transform: none;
   }
+
+  .insight-quote:nth-child(2),
+  .insight-quote:nth-child(10),
+  .insight-quote:nth-child(18),
+  .insight-quote:nth-child(24) {
+    left: 6%;
+  }
+
+  .insight-quote:nth-child(6),
+  .insight-quote:nth-child(14),
+  .insight-quote:nth-child(20),
+  .insight-quote:nth-child(28) {
+    left: 60%;
+  }
+
+  .insight-quote:nth-child(2) { top: 7%; }
+  .insight-quote:nth-child(6) { top: 8%; }
+  .insight-quote:nth-child(10) { top: 32%; }
+  .insight-quote:nth-child(14) { top: 33%; }
+  .insight-quote:nth-child(18) { top: 55%; }
+  .insight-quote:nth-child(20) { top: 56%; }
+  .insight-quote:nth-child(24) { top: 78%; }
+  .insight-quote:nth-child(28) { top: 79%; }
 
   .insight-center-stat {
     width: min(76%, 320px);
@@ -3931,9 +4019,13 @@ body[data-theme="dark"][data-page="case-study"] .case-placeholder-section {
 
 .resume-page {
   display: grid;
-  grid-template-columns: minmax(400px, 0.54fr) minmax(560px, 1fr);
+  grid-template-columns: minmax(400px, 0.54fr) minmax(460px, 1fr);
   align-items: stretch;
-  gap: clamp(136px, 10.8vw, 192px);
+  /* wide gutter so the enlarged "Where I am now" tree sits deep in it, clear of
+     the résumé column, which is itself pushed right. The vw term grows the gap on
+     wide screens; the reduced content min (460) lets the grid still fit in the
+     medium 1081–1200 range instead of the old overflow (was 560 min → overflowed). */
+  gap: clamp(140px, 15.5vw, 250px);
   width: min(100% - 112px, 1380px);
   margin: 0 auto;
   padding: clamp(8px, 1.2vw, 18px) 0 clamp(54px, 6vw, 88px);
@@ -3962,9 +4054,23 @@ body[data-theme="dark"][data-page="case-study"] .case-placeholder-section {
 
 .resume-tree-small {
   position: absolute;
-  right: clamp(-76px, -3.4vw, -38px);
-  bottom: 7px;
-  width: clamp(150px, 10.8vw, 188px);
+  /* shifted ~135px further right than the old sapling — it sits deep in the
+     widened gutter (the résumé column was pushed right to make room). Visible
+     label still clears the column; image right edge is transparent +
+     pointer-events:none, so any box that reaches the column can't block clicks. */
+  right: clamp(-211px, calc(-3.4vw - 135px), -173px);
+  pointer-events: none;
+  /* -7px lands the baked-in grass line (6.1% of image height) on the SAME
+     ground line as the large tree's (1.68% of its drawn height ≈ 22px above
+     the panel bottom): -7 + 0.061×489 ≈ 22.4 ✓ */
+  bottom: -7px;
+  /* sized so the baked-in "Where I am now" label renders at the SAME size as
+     the large tree's "Where I'm growing toward" (large label: 21px cap in a
+     2086px-tall source drawn at ~1331px → ~13.4px; small label: 25px cap in a
+     660px-wide source → needs ~354px width). The large tree's height is
+     content-driven (≈ constant across viewports), so the match is a constant,
+     not vw-based; narrow screens shrink gracefully. */
+  width: min(27.7vw, 354px);
   max-width: none;
   mix-blend-mode: normal;
 }
@@ -4190,10 +4296,23 @@ body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .
 }
 
 .game-showcase {
+  /* Desktop controls: the Game and both arrows are one centred unit.
+     Change only --game-nav-gap to move both arrows closer/farther equally. */
+  --game-frame-width: 820px;
+  --game-nav-size: 56px;
+  --game-nav-gap: 30px;
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  grid-template-columns: var(--game-nav-size) minmax(0, var(--game-frame-width)) var(--game-nav-size);
   align-items: center;
-  gap: clamp(18px, 3vw, 42px);
+  width: min(
+    100%,
+    calc(
+      var(--game-frame-width) + var(--game-nav-size) + var(--game-nav-size) +
+      var(--game-nav-gap) + var(--game-nav-gap)
+    )
+  );
+  margin-inline: auto;
+  gap: var(--game-nav-gap);
 }
 
 .game-feature {
@@ -4221,7 +4340,8 @@ body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .
 
 .game-frame {
   position: relative;
-  width: min(100%, 820px);
+  width: 100%;
+  max-width: var(--game-frame-width);
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 0;
@@ -4295,7 +4415,7 @@ body[data-theme="dark"] .game-feature h1 {
 .game-nav {
   display: grid;
   place-items: center;
-  width: clamp(44px, 5vw, 56px);
+  width: var(--game-nav-size);
   aspect-ratio: 1;
   padding: 0;
   border: 0;
@@ -4318,6 +4438,26 @@ body[data-theme="dark"] .game-feature h1 {
 .game-nav:disabled {
   cursor: default;
   opacity: 0.72;
+}
+
+/* Playground game navigation has exactly three responsive tiers.
+   Edit the variables here instead of searching through unrelated media blocks. */
+@media (min-width: 661px) and (max-width: 1080px) {
+  .game-showcase {
+    --game-nav-size: 48px;
+    --game-nav-gap: 18px;
+  }
+}
+
+@media (max-width: 660px) {
+  .game-showcase {
+    grid-template-columns: 1fr;
+    --game-nav-gap: 14px;
+  }
+
+  .game-nav {
+    display: none;
+  }
 }
 
 .art-archive {
@@ -4795,7 +4935,13 @@ body.is-lightbox-open {
   align-items: center;
   column-gap: clamp(96px, 10vw, 152px);
   row-gap: clamp(34px, 5vw, 64px);
-  min-height: min(620px, calc(100vh - 150px));
+  /* The hero box starts ~144px down (sticky header 150 − the page's -30 margin
+     + reveal settle). Centring content in a box of height 100vh − 2×144 would put
+     the midline exactly on 50vh; we subtract a little less (248 instead of 288) so
+     the group sits a touch BELOW dead centre — the look the design wants.
+     (Replaces the old min(620px, …) cap, which drifted high on tall screens and
+     low on short ones.) */
+  min-height: calc(100vh - 248px);
 }
 
 .about-collage {
@@ -4863,13 +5009,126 @@ body.is-lightbox-open {
   transform: rotate(-7deg);
 }
 
-.collage-front {
+/* The front card and its peeking mascot live in ONE rotated wrapper, so the
+   mascot carries the exact same tilt as the photo. The wrapper owns the old
+   .collage-front position/transform; the card fills it. */
+.collage-front-wrap {
+  position: absolute;
   z-index: 3;
   right: 6%;
   bottom: 15%;
   width: 60%;
   height: 62%;
   transform: translateX(60px) rotate(7deg);
+}
+
+.collage-front {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  transform: none;
+}
+
+/* shy mascot peeking out from BEHIND the card's top edge (upper-right):
+   painted under the card (z 1 < 2), ~2/3 of the dome above the edge, the
+   lower 1/3 covered by the photo */
+.collage-peek {
+  position: absolute;
+  top: 0;
+  right: 12%;
+  z-index: 1;
+  width: 26%;
+  transform: translateY(-66%);
+  /* squash/stretch grows from the BOTTOM (the part tucked behind the card stays
+     anchored), so the dome bulges UP out of the card rather than scaling in place */
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
+/* Entrance: the orange stays HIDDEN behind the photo while the photo + text
+   arrive, then — a beat later — it squeezes up out of the card's top edge with a
+   little volume: pressed flat → stretches as it rises → overshoots & squashes as
+   it clears → settles. Layering is unchanged (z1 under the z2 photo), so its
+   lower third stays tucked behind the card the whole time. NOT a fade/slide. */
+.about-hero.is-visible .collage-peek {
+  animation: collage-peek-emerge 900ms linear 450ms both;
+}
+
+@keyframes collage-peek-emerge {
+  0% {
+    transform: translateY(8%) scaleX(1.07) scaleY(0.64);
+  }
+  30% {
+    transform: translateY(-55%) scaleX(0.95) scaleY(1.11);
+  }
+  52% {
+    transform: translateY(-71%) scaleX(1.05) scaleY(0.93);
+  }
+  72% {
+    transform: translateY(-63.5%) scaleX(0.985) scaleY(1.035);
+  }
+  88% {
+    transform: translateY(-67%) scaleX(1.004) scaleY(0.992);
+  }
+  100% {
+    transform: translateY(-66%) scaleX(1) scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-hero.is-visible .collage-peek {
+    animation: none;
+  }
+}
+
+.collage-peek img {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: multiply;
+  user-select: none;
+}
+
+body[data-theme="dark"] .collage-peek img {
+  mix-blend-mode: normal;
+}
+
+/* eyes: the marquee peeker's face geometry — row 30% of the body, sitting
+   higher on the dome (top 52%), pupils 19% of the row */
+.collage-peek-eyes {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 30%;
+  display: flex;
+  justify-content: space-between;
+  transform: translate(-50%, -50%);
+}
+
+.collage-peek-eye {
+  width: 19%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #111111;
+  animation: collage-peek-blink 4s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+
+/* one gentle blink per cycle — brief scaleY squeeze, otherwise still;
+   both eyes share the exact same timing so the blink is synchronized */
+@keyframes collage-peek-blink {
+  0%,
+  90.5%,
+  95%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  92.7% {
+    transform: scaleY(0.08);
+  }
 }
 
 .about-intro-copy {
@@ -5329,11 +5588,6 @@ body[data-theme="dark"] .about-collage-card {
     grid-template-columns: 1fr 1fr;
   }
 
-  .game-showcase {
-    grid-template-columns: 48px minmax(0, 1fr) 48px;
-    gap: 18px;
-  }
-
   .game-frame {
     border-radius: 22px;
   }
@@ -5383,9 +5637,16 @@ body[data-theme="dark"] .about-collage-card {
     text-align: left;
   }
 
-  .grid-five,
-  .grid-four {
-    grid-template-columns: repeat(2, minmax(0, min(100%, var(--about-card-width))));
+  /* Tablet: keep a composed multi-column wall (fluid tracks) instead of two
+     narrow fixed-width columns swimming in the container. */
+  .grid-four,
+  .grid-five {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .grid-four.poster-grid,
+  .grid-four.square-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .resume-page {
@@ -5394,13 +5655,19 @@ body[data-theme="dark"] .about-collage-card {
   }
 
   .resume-tree-large {
-    left: clamp(-78px, -5.8vw, -48px);
+    /* tucked ~25px further left so its bare trunk clears the enlarged small
+       tree at these narrower widths (panel is only ~300px here) */
+    left: clamp(-103px, calc(-5.8vw - 25px), -73px);
   }
 
   .resume-tree-small {
-    right: clamp(-96px, -7vw, -62px);
-    bottom: 8px;
-    width: clamp(118px, 13vw, 136px);
+    /* +25px right to pair with the large tree's left nudge — separates the two
+       trunks without pushing the tree into the résumé column */
+    right: clamp(-121px, calc(-7vw - 25px), -87px);
+    /* grass-line compensation at this size (see base rule) */
+    bottom: -5px;
+    /* ×2.36 of the old clamp — same scale factor as the label-size match */
+    width: min(30.7vw, 321px);
   }
 
   .resume-content {
@@ -5963,11 +6230,6 @@ body[data-theme="dark"] .about-collage-card {
     padding: 2px 0 54px;
   }
 
-  .game-showcase {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
   .game-feature {
     gap: 14px;
   }
@@ -5985,30 +6247,31 @@ body[data-theme="dark"] .about-collage-card {
     display: none;
   }
 
-  .game-nav {
-    display: none;
-  }
-
   .art-archive {
     gap: 8px;
   }
 
+  /* Phone: let the art wall wrap into a centered 3-up mosaic with tappable
+     thumbnails instead of six tiny cards squeezed onto one line. */
   .art-row {
-    --art-unit: clamp(48px, 13.8vw, 66px);
+    --art-unit: clamp(88px, 26vw, 108px);
     display: flex;
-    flex-wrap: nowrap;
-    gap: 5px;
-    width: calc(100% - 18px);
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 12px;
+    gap: 12px 10px;
+    width: 100%;
   }
 
   .art-year-2026 .art-row,
   .art-year-2025 .art-row {
-    --art-unit: clamp(48px, 13.8vw, 66px);
+    --art-unit: clamp(88px, 26vw, 108px);
     display: flex;
-    flex-wrap: nowrap;
-    gap: 5px;
-    width: calc(100% - 18px);
-    max-width: calc(100% - 18px);
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px 10px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .art-year-2026 .art-card,
@@ -6018,8 +6281,8 @@ body[data-theme="dark"] .about-collage-card {
   }
 
   .art-year-group {
-    padding: 54px 0 64px;
-    gap: 24px;
+    padding: 30px 0 36px;
+    gap: 22px;
   }
 
   .art-year-group h2 {
@@ -6122,7 +6385,7 @@ body[data-theme="dark"] .about-collage-card {
     height: 76%;
   }
 
-  .collage-front {
+  .collage-front-wrap {
     right: 0;
     bottom: 15%;
     width: 60%;
@@ -6150,13 +6413,26 @@ body[data-theme="dark"] .about-collage-card {
     font-size: clamp(18px, 1.45vw, 23px);
   }
 
+  /* Phone: a compact two-column polaroid mosaic — keeps the scattered-wall
+     personality instead of one giant card per row. */
   .grid-five,
   .grid-four {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .photo-grid {
-    gap: 18px;
+    gap: 14px 12px;
+  }
+
+  /* slight vertical stagger so the wall still reads hand-placed */
+  .photo-grid .photo-card:nth-child(even),
+  .about-page .photo-wall.is-visible .photo-card:nth-child(even) {
+    transform: translateY(10px) rotate(var(--r, 0deg));
+  }
+
+  .photo-card figcaption {
+    padding: 8px 10px 10px;
+    font-size: clamp(13px, 3.6vw, 15px);
   }
 
   .photo-wall h2 {
@@ -6698,6 +6974,20 @@ body[data-page="home"].home-opening-active .studio-block {
 .studio-service:nth-child(8) .studio-name-inner { transition-delay: 355ms; }
 .studio-service:nth-child(9) .studio-name-inner { transition-delay: 400ms; }
 
+/* each row knows its index (0–8) so the tablet tier can place the active row's
+   illustration (left) and giant result label (right) at that row's own height —
+   illustration · item · label then read as one horizontal line. Inert on
+   desktop and phone. */
+.studio-service:nth-child(1) { --row-i: 0; }
+.studio-service:nth-child(2) { --row-i: 1; }
+.studio-service:nth-child(3) { --row-i: 2; }
+.studio-service:nth-child(4) { --row-i: 3; }
+.studio-service:nth-child(5) { --row-i: 4; }
+.studio-service:nth-child(6) { --row-i: 5; }
+.studio-service:nth-child(7) { --row-i: 6; }
+.studio-service:nth-child(8) { --row-i: 7; }
+.studio-service:nth-child(9) { --row-i: 8; }
+
 /* ---- hover: directional vertical masked roll (overflow-hidden text swap) ----
    The center menu never moves. The left aside (thumb + caption) and the right
    big label sit at the active row's height; their content rolls vertically inside
@@ -6801,13 +7091,11 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
 }
 
 /* ---- one continuous frosted-glass panel that the work section reveals, then slides up to cover ----
-   Two glass layers, both pseudo-elements of .studio-block:
-   • ::before (body) — sheen + veil + warm blobs over an opaque base. A mask fades its paint
-     to transparent over the top ~200px; everywhere else it is FULLY OPAQUE, because the pinned
-     work section and the mascot screen sit beneath the panel during the scroll handoffs and
-     must never ghost through (the mascot only ever overlaps the LAST screen, far below the rim).
-   • ::after (rim) — the top 160px is genuinely translucent with a real backdrop blur, so the
-     content the panel slides over shows through — softened — right at the glass lip. */
+   v4: the WHOLE pane is real glass. The backdrop blur lives on .studio-block itself
+   (full height), ::before is only a translucent warm tint + blobs painted over the
+   blurred backdrop, and ::after is just the bright lip at the top edge. Nothing under
+   the panel can ghost: the pinned work section showing through softened IS the effect,
+   and the mascot marquee's opacity is scroll-driven to 0 until the panel uncovers it. */
 .studio-block {
   z-index: 3;
   border-radius: 32px 32px 0 0;
@@ -6816,9 +7104,11 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
     0 -6px 18px rgba(20, 18, 15, 0.05),
     0 -28px 60px rgba(20, 18, 15, 0.06),
     0 12px 36px rgba(20, 18, 15, 0.05);
-  /* own compositor layer: the multi-gradient glass + shadows otherwise
-     re-rasterise while sliding over the pinned work section (scroll jank) */
+  /* own compositor layer: the glass + shadows otherwise re-rasterise while
+     sliding over the pinned work section (scroll jank) */
   transform: translateZ(0);
+  -webkit-backdrop-filter: blur(22px) saturate(1.18);
+  backdrop-filter: blur(22px) saturate(1.18);
 }
 
 .studio-block::before {
@@ -6832,27 +7122,23 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
     linear-gradient(
       115deg,
       rgba(255, 255, 255, 0) 12%,
-      rgba(255, 255, 255, 0.34) 26%,
+      rgba(255, 255, 255, 0.2) 26%,
       rgba(255, 255, 255, 0) 42%
     ),
-    /* frosted veil — thinner than the first pass so the blobs read through */
+    /* thin uniform veil — kept flat so it can never band across text lines */
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.6) 0%,
-      rgba(255, 255, 255, 0.34) 14%,
-      rgba(255, 255, 255, 0.42) 100%
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 1) 40%,
+      rgba(255, 255, 255, 1) 60%,
+      rgba(255, 255, 255, 1) 80%,
+      rgba(255, 255, 255, 0.2) 100%
     ),
-    /* warm blobs behind the glass — peach / butter / matcha / coral */
-    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 186, 145, 0.7), transparent 70%),
-    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 219, 143, 0.6), transparent 70%),
-    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(178, 207, 148, 0.58), transparent 70%),
-    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 199, 178, 0.52), transparent 70%)
-    /* opaque base — outside the rim zone nothing beneath the panel may show through */
-    #f4f2ee;
-  /* fade the body out under the rim so the rim has real page content to blur;
-     if masks are unsupported this is simply ignored and the body stays opaque */
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.55) 90px, #000 200px);
-  mask-image: linear-gradient(180deg, transparent 0, rgba(0, 0, 0, 0.55) 90px, #000 200px);
+    /* warm blobs floating in the glass — peach / butter / matcha / coral */
+    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(245, 222, 210, 0.10), transparent 70%),
+    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(245, 235, 210, 0.12), transparent 70%),
+    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(220, 230, 210, 0.12), transparent 70%),
+    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(242, 228, 224, 0.10), transparent 70%)
 }
 
 .studio-block::after {
@@ -6861,19 +7147,52 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
   top: 0;
   left: 0;
   right: 0;
-  height: 160px;
+  height: 120px;
   border-radius: 32px 32px 0 0;
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.5) 0%,
-    rgba(255, 255, 255, 0.2) 55%,
+    rgba(255, 255, 255, 0.35) 0%,
     rgba(255, 255, 255, 0) 100%
   );
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
-  backdrop-filter: blur(18px) saturate(1.15);
   /* bright hairline where light catches the lip of the glass */
   box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* no backdrop-filter support -> translucent tints over sharp content would be a
+   mess of ghosted text; fall back to the old opaque warm panel */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .studio-block::before {
+    background:
+      linear-gradient(
+        115deg,
+        rgba(255, 255, 255, 0) 12%,
+        rgba(255, 255, 255, 0.34) 26%,
+        rgba(255, 255, 255, 0) 42%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.34) 14%,
+        rgba(255, 255, 255, 0.42) 100%
+      ),
+      radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 186, 145, 0.7), transparent 70%),
+      radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 219, 143, 0.6), transparent 70%),
+      radial-gradient(ellipse 50% 19% at 88% 58%, rgba(178, 207, 148, 0.58), transparent 70%),
+      radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 199, 178, 0.52), transparent 70%)
+      #f4f2ee;
+  }
+
+  body[data-theme="dark"] .studio-block::before {
+    background:
+      linear-gradient(115deg, rgba(255, 255, 255, 0) 12%, rgba(255, 255, 255, 0.05) 26%, rgba(255, 255, 255, 0) 42%),
+      linear-gradient(180deg, rgba(28, 26, 23, 0.6) 0%, rgba(24, 23, 21, 0.4) 14%, rgba(24, 23, 21, 0.46) 100%),
+      radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 160, 100, 0.22), transparent 70%),
+      radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 205, 120, 0.17), transparent 70%),
+      radial-gradient(ellipse 50% 19% at 88% 58%, rgba(160, 195, 125, 0.16), transparent 70%),
+      radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 170, 140, 0.14), transparent 70%)
+      #171512;
+  }
 }
 
 /* panel text sits above both glass layers (and stays crisp — the rim only blurs
@@ -6895,27 +7214,26 @@ body[data-theme="dark"] .studio-block::before {
     linear-gradient(
       115deg,
       rgba(255, 255, 255, 0) 12%,
-      rgba(255, 255, 255, 0.05) 26%,
+      rgba(255, 255, 255, 0.04) 26%,
       rgba(255, 255, 255, 0) 42%
     ),
     linear-gradient(
       180deg,
-      rgba(28, 26, 23, 0.6) 0%,
-      rgba(24, 23, 21, 0.4) 14%,
-      rgba(24, 23, 21, 0.46) 100%
+      rgba(24, 22, 20, 0.3) 0%,
+      rgba(22, 21, 19, 0.16) 16%,
+      rgba(22, 21, 19, 0.22) 100%
     ),
-    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 160, 100, 0.22), transparent 70%),
-    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 205, 120, 0.17), transparent 70%),
-    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(160, 195, 125, 0.16), transparent 70%),
-    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 170, 140, 0.14), transparent 70%)
-    #171512;
+    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 160, 100, 0.14), transparent 70%),
+    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 205, 120, 0.11), transparent 70%),
+    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(160, 195, 125, 0.1), transparent 70%),
+    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 170, 140, 0.09), transparent 70%)
+    rgba(18, 17, 15, 0.42);
 }
 
 body[data-theme="dark"] .studio-block::after {
   background: linear-gradient(
     180deg,
-    rgba(26, 24, 21, 0.5) 0%,
-    rgba(26, 24, 21, 0.18) 55%,
+    rgba(26, 24, 21, 0.35) 0%,
     rgba(26, 24, 21, 0) 100%
   );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
@@ -6959,12 +7277,24 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
   height: calc(-1 * var(--home-end-pull, 0px));
 }
 
-/* ---- mobile: simplify to a clean stacked list, drop the cover ---- */
-@media (max-width: 760px) {
+/* ---- mobile + touch tablets: simplify to a clean stacked list, drop the
+   cover. Touch devices (iPad portrait 768/834) have no hover, so the
+   hover-revealed aside images/big labels would be unreachable there. ---- */
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1080px) {
   body[data-page="home"].home-opening-complete .work-section {
     position: relative !important;
     top: auto !important; /* the sticky pin's negative top must not shift the relative element */
     bottom: auto !important;
+  }
+
+  /* The clothesline scene is a wide desktop composition: scaled down by vw it
+     only fills the top ~40% of a phone screen, and the section's min-height
+     (a full viewport, meant for the desktop pin/reveal — which is disabled
+     here anyway) left ~470px of dead white underneath it. Let the section hug
+     its own content instead, so the scene reads as one balanced screen. */
+  body[data-page="home"] .work-section {
+    min-height: auto;
+    padding: clamp(72px, 13vw, 104px) 0 clamp(40px, 8vw, 72px);
   }
 
   /* keep the simple stacked scroll on mobile — no pin/reveal handoff */
@@ -6988,18 +7318,9 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
     max-width: none;
   }
 
-  .studio-services-inner {
-    --studio-col: 0%;
-  }
-
-  .studio-service-aside,
-  .studio-service-big {
-    display: none;
-  }
-
-  .studio-service-name {
-    margin-left: 0;
-  }
+  /* (the old static chip+name list that lived here is superseded by the
+     tap-driven "What I like" tiers at the end of this file — every viewport
+     this block serves is ≤1080 or a portrait tablet, so those tiers cover it) */
 }
 
 /* ===========================================================
@@ -7041,7 +7362,7 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
   display: flex;
   align-items: center;                  /* frames centred in the strip */
   width: max-content;
-  padding: clamp(26.35px, 2.601vw, 36.55px) 0;  /* matches the film's sprocket bands (scaled to 85%) */
+  padding: clamp(21.08px, 2.081vw, 29.24px) 0;  /* matches the film's sprocket bands (≈68% of original: 85% ×0.8) */
   transform: translateZ(0);
   will-change: transform;
   animation: marquee-scroll 33s linear infinite;
@@ -7062,7 +7383,7 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
      strip. background-size x = 100%/18 = exactly one cell, so it aligns with each
      card and loops seamlessly on the -50% scroll. The tile is cropped mid-divider
      to mid-divider, so the half-dividers rejoin into one bar at every seam. */
-  background-image: url("assets/system/film-strip-bold.png?v=20260705i");
+  background-image: url("assets/system/film-strip-bold.png?v=20260707o");
   background-repeat: repeat-x;
   background-size: calc(100% / 18) 100%;
   background-position: left center;
@@ -7071,7 +7392,7 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
 /* Dark mode: swap to the white-frame tile (filter:invert can't be used here —
    it would also invert the mascot children of the track). */
 body[data-theme="dark"] .marquee-track::after {
-  background-image: url("assets/system/film-strip-bold-dark.png?v=20260705i");
+  background-image: url("assets/system/film-strip-bold-dark.png?v=20260707o");
 }
 
 /* duplicated set means -50% is exactly one set → seamless, no jump/gap */
@@ -7082,9 +7403,9 @@ body[data-theme="dark"] .marquee-track::after {
 
 .marquee-card {
   flex: 0 0 auto;
-  width: clamp(161.5px, 16.15vw, 229.5px); /* the film window (natural landscape) — scaled to 85% */
+  width: clamp(129.2px, 12.92vw, 183.6px); /* the film window (natural landscape) — ≈68% of original (85% ×0.8) */
   aspect-ratio: 849 / 713;
-  margin: 0 clamp(3.4px, 0.391vw, 5.53px); /* half the divider on each side → window centred in the cell (85%) */
+  margin: 0 clamp(2.72px, 0.313vw, 4.42px); /* half the divider on each side → window centred in the cell (≈68%) */
   background: transparent;                 /* frame + sprockets come from the film image */
 }
 
@@ -7122,10 +7443,29 @@ body[data-theme="dark"] .marquee-track::after {
 }
 
 @media (max-width: 760px) {
-  .marquee-card {
-    width: 70vw;
-    margin-right: 6vw;
+  /* The strip was still ~3.5× the desktop design's weight: a 187px card on a
+     390px screen, where desktop uses 184px on a 1440px one.
+
+     The film's three sizes are coupled — window (card), sprocket bands (track
+     padding) and divider (card margin) — and must scale by ONE factor or the
+     frame artwork stops matching its windows. So they are all derived here from
+     a single card size, using the desktop ratios (padding = 0.1593 × card,
+     margin = 0.024 × card each side). Card 48vw → 34vw, capped at 170px so the
+     strip doesn't blow up again just under the 760px breakpoint.
+     Strip height at 390px: 199px → 154px. */
+  .marquee-section {
+    --film-card: min(34vw, 170px);
   }
+
+  .marquee-card {
+    width: var(--film-card);
+    margin: 0 calc(var(--film-card) * 0.024);
+  }
+
+  .marquee-track {
+    padding: calc(var(--film-card) * 0.1593) 0;
+  }
+
   .marquee-edge {
     width: clamp(48px, 18%, 140px);
   }
@@ -7525,4 +7865,1404 @@ body[data-theme="dark"] .mascot-img {
     transition: none !important;
   }
   .mascot-tear, .mascot-z, .mascot-note, .mascot-blush { opacity: 0; }
+}
+
+/* ===========================================================
+   Home opening collage — phone + portrait-tablet rebuild.
+   The late "Home gallery position fix / cleanup" rules above use
+   body[data-page="home"] selectors that outrank the old ≤820 media
+   block, so small screens were getting desktop photo sizes/offsets
+   (clumped, overlapping the orange). This block sits later in the
+   file with the same specificity, so it wins on small screens.
+   Composition mirrors the desktop reference proportionally:
+   orange dead-centre (same 0.72 scale; eye row 41%/50% of the dome,
+   35% of its width — measured from desktop), note under the dome,
+   photos orbiting around it, everything smaller.
+   Portrait tablets (iPad up to 1180px) take this canvas too — the
+   desktop orbit was tuned for wide screens and clumps when the
+   viewport is taller than it is wide.
+   =========================================================== */
+@media (max-width: 900px), (min-width: 901px) and (max-width: 1180px) and (orientation: portrait) {
+  body[data-page="home"] .home-gallery-screen {
+    padding: 0 clamp(16px, 4vw, 48px);
+  }
+
+  /* ---- ASPECT-LOCKED DESIGN CANVAS ----
+     The old rules sized the photos in vw but positioned them in % of a stage
+     whose HEIGHT was capped in px. The two units drift apart: widen the screen
+     (or shorten it) and the photos grow while their vertical slots do not, so
+     past ~460px wide the bottom video landed on the beach and rock photos and
+     the sand photo landed on the tree.
+
+     Instead the stage is now a canvas with a FIXED aspect ratio, fitted to
+     whichever axis runs out first, and everything inside it is expressed in
+     units of that canvas: sizes in cqw (% of the canvas width), positions in %
+     (of canvas width / height). Both axes then scale by the same number, so the
+     composition is rigid — it can grow or shrink, but it can never collide. */
+  body[data-page="home"] .home-gallery-stage {
+    width: min(100%, calc((100svh - 150px) * 1.1)); /* 1.1 = the aspect below */
+    aspect-ratio: 11 / 10;
+    height: auto;
+    min-height: 0;
+    container-type: inline-size; /* the canvas IS the unit for everything inside */
+    transform: translateY(-3vh);
+  }
+
+  /* orange: centred, desktop scale ratio. The eye rig needs NO overrides here —
+     size, gap, resting offset and travel range all ride --eye-scale, which JS
+     derives from this stage's own width (see .orange-stage). */
+  body[data-page="home"] .home-gallery-screen .orange-stage {
+    /* the old home-hero mobile rule (.orange-stage { order: 2 }) leaks in at
+       ≤820px and would flip the dome below its caption — restore DOM order */
+    order: 0;
+    width: 35cqw;
+    min-height: 0;
+    transform: translateY(-4px) scale(0.72);
+  }
+
+  /* the caption's fixed -28px pull was tuned for the desktop stage's larger
+     transform inset — scaled down it lands ~4px under the dome, as on desktop */
+  body[data-page="home"] .home-vibe-note {
+    margin-top: -2.55cqw;
+  }
+
+  /* 山 — tall, top-left */
+  body[data-page="home"] .home-photo-a {
+    top: 2%;
+    left: 6%;
+    width: 21cqw;
+    aspect-ratio: 4 / 5;
+    height: auto;
+  }
+
+  /* 坎昆 video — wide, top-right */
+  body[data-page="home"] .home-photo-b {
+    top: 7%;
+    right: 4%;
+    left: auto;
+    width: 31.2cqw;
+    aspect-ratio: 16 / 9;
+    height: auto;
+  }
+
+  /* rocks — mid-right, hugs the edge beside the orange */
+  body[data-page="home"] .home-photo-c {
+    top: 48%;
+    right: 2%;
+    left: auto;
+    width: 25cqw;
+    aspect-ratio: 16 / 9;
+    height: auto;
+  }
+
+  /* 我-海 — mid-left, hugs the edge beside the orange */
+  body[data-page="home"] .home-photo-d {
+    top: 45%;
+    left: 2%;
+    width: 24cqw;
+    aspect-ratio: 4 / 2.5;
+    height: auto;
+  }
+
+  /* 欣欣 — dropped on tablets and phones: the sketch keeps four photos +
+     the bottom video, and the freed lower-left corner is the breathing
+     room the composition needs */
+  body[data-page="home"] .home-photo-e {
+    display: none;
+  }
+
+  /* 北海 video — bottom centre */
+  body[data-page="home"] .home-photo-main {
+    left: 50%;
+    bottom: -2%;
+    top: auto;
+    width: 42.5cqw;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    translate: -50% 0;
+  }
+}
+
+/* ---- phones: per the sketch, only three media survive — tree top-left,
+   rocks top-right, koi video at the base — with the orange + note between
+   them. Anything more turns the airy composition back into a list. Same
+   aspect-locked canvas as ≤900; eye-rig ratios carry over and are re-stated
+   only because the dome is proportionally larger. ---- */
+@media (max-width: 560px) {
+  body[data-page="home"] .home-gallery-stage {
+    width: min(100%, calc((100svh - 128px) * 0.64)); /* 0.64 = the aspect below */
+    aspect-ratio: 16 / 25;
+    transform: translateY(-2vh);
+  }
+
+  /* jetski video + beach photo leave the stage on phones (欣欣 already
+     leaves at ≤900) */
+  body[data-page="home"] .home-photo-b,
+  body[data-page="home"] .home-photo-d {
+    display: none;
+  }
+
+  /* the frames' desktop aspect ratios match each file's natural ratio, so
+     nothing needed cover until now — here the rocks photo is re-cropped
+     into a portrait card to mirror the tree, which needs a real crop */
+  body[data-page="home"] .home-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body[data-page="home"] .home-gallery-screen .orange-stage {
+    width: 52cqw;
+  }
+
+  body[data-page="home"] .home-vibe-note {
+    margin-top: -3.6cqw;
+  }
+
+  /* tree — top-left, tall */
+  body[data-page="home"] .home-photo-a {
+    top: 2%;
+    left: 6%;
+    width: 40cqw;
+    aspect-ratio: 4 / 5;
+  }
+
+  /* rocks — top-right, portrait crop mirroring the tree */
+  body[data-page="home"] .home-photo-c {
+    top: 2%;
+    right: 6%;
+    left: auto;
+    width: 40cqw;
+    aspect-ratio: 4 / 5;
+  }
+
+  /* 北海 video — bottom centre, anchors the base */
+  body[data-page="home"] .home-photo-main {
+    left: 50%;
+    bottom: 0%;
+    top: auto;
+    width: 62cqw;
+    aspect-ratio: 16 / 9;
+    translate: -50% 0;
+  }
+}
+
+/* ===========================================================
+   Selected projects — whimsical clothesline / cable-car carousel.
+   Two rope systems: a FIXED decorative top rope (charms + the
+   winking orange bun mascot) and a lower rope that travels with
+   the four hanging project cards as one draggable track.
+   Gaegu-flavoured: thin sketchy strokes, warm paper, uneven
+   hand-drawn radii, no heavy shadows, no glass. Logic lives in
+   clothesline.js (drag/snap/sway/depth/wink).
+   =========================================================== */
+.pc-scene {
+  --pc-line: #333333;
+  --pc-line-soft: rgba(51, 51, 51, 0.6);
+  --pc-card-bg: #fdfbf6;
+  --pc-blue: #6ba8ff;
+  /* The smaller, flatter notes stay right-weighted, preserving the generous
+     lower-left breathing space for the pinwheel and clothesline scene. */
+  --pc-inset: 55vw;                       /* front card's resting left edge (where the carousel snaps to rest). Bigger = the stopped card sits further RIGHT. */
+  --pc-gap: clamp(48px, 7.5vw, 125px);    /* reference 0.075 of frame */
+  --pc-w: clamp(205px, 17.5vw, 292px);    /* restrained card scale */
+  --pc-fade-l: clamp(14px, 2.4vw, 44px);
+  --pc-fade-r: 18vw;                      /* melts the preview card's right side */
+  --pc-scene-lift: clamp(42px, 5.5vw, 64px);
+  position: relative;
+  font-family: var(--hand);
+}
+
+body[data-theme="dark"] .pc-scene {
+  --pc-line: #e8e0d6;
+  --pc-line-soft: rgba(232, 224, 214, 0.55);
+  --pc-card-bg: #121212;
+}
+
+/* section title kept for screen readers / the #work anchor only */
+.pc-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- fixed decorative top rope: the user's line2 artwork ---- */
+.pc-top {
+  position: relative;
+  /* dome top rides at 9.16% of the viewport width (measured from the art),
+     plus the bun's own height */
+  height: calc(9.16vw + clamp(78px, 8.2vw, 112px) * 0.66 + 10px);
+  margin-top: -6px;
+  transform: translateY(calc(var(--pc-scene-lift) * -1));
+  pointer-events: none;
+}
+
+/* full-bleed, scales 1:1 with the viewport (2172px native, band 250/2172 =
+   11.51% of its width tall) — crisp on any normal screen */
+.pc-top-line {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50vw);
+  z-index: 2; /* above the bun so the drawn clip + rope strokes hold the dome */
+  width: 100vw;
+  max-width: none; /* the global img cap would clamp it to the content column */
+  height: auto;
+  user-select: none;
+  transition: filter 240ms ease; /* invert crossfades with the theme switch */
+}
+
+body[data-theme="dark"] .pc-top-line {
+  filter: invert(1);
+}
+
+.pc-rope path {
+  stroke: var(--pc-line);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.95;
+  transition: stroke 240ms ease; /* theme switch */
+}
+
+/* ---- the bun mascot, tucked under the artwork's drawn clothespin.
+   Art is viewport-sized so both coordinates are in vw: clip centre at 28.75%
+   of the image, dome top at 199px of its 2172px width (9.16vw) — the clip's
+   lower strokes paint over the dome = visually caught in it. Both numbers are
+   re-measured from the asset whenever the decorations are rescaled. ---- */
+.pc-bun {
+  position: absolute;
+  left: calc(50% - 50vw + 28.75vw);
+  top: 8.92vw; /* dome tip 0.74vw inside the enlarged clip's jaw (still 0.13vw
+                  below the rope crossing, so it never pokes above the line) */
+  z-index: 1;
+  width: clamp(78px, 8.2vw, 112px);
+  /* centre the dome under the clip; the 10° tilt is the natural lean of a
+     single-clip hanging item, pivoting from the clip point above */
+  transform: translateX(-50%) rotate(8deg);
+  transform-origin: 50% -0.6vw; /* the clip's jaw, just above the dome */
+}
+
+.pc-bun img {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: multiply;
+  user-select: none;
+  mask-image: radial-gradient(ellipse 3.2% 10% at 50% 0%, transparent 97%, #000 103%);
+}
+
+body[data-theme="dark"] .pc-bun img {
+  mix-blend-mode: normal;
+}
+
+/* both eyes open by default, sitting a touch right + low on the dome so the bun
+   quietly gazes down-right toward the first/second cards — subtle, never extreme */
+.pc-bun-eyes {
+  position: absolute;
+  left: 56%;
+  top: 63%;
+  width: 26%;
+  display: flex;
+  justify-content: space-between;
+  transform: translate(-50%, -50%);
+}
+
+.pc-bun-eye {
+  width: 19%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #111111;
+  transform-origin: 50% 50%;
+  transition: transform 90ms ease;
+}
+
+/* blink: BOTH eyes squeeze shut together for a beat (JS toggles .is-blink) */
+.pc-bun.is-blink .pc-bun-eye {
+  transform: scaleY(0.12);
+}
+
+/* ---- lower rope + card track (they move together) ---- */
+.pc-viewport {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  padding: 6px 0 20px;
+  transform: translateY(calc(var(--pc-scene-lift) * -1));
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+  scrollbar-width: none;
+}
+
+.pc-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.pc-viewport.pc-enhanced {
+  overflow: hidden;
+}
+
+.pc-viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.pc-viewport:focus-visible {
+  outline: 1.5px dashed var(--pc-line-soft);
+  outline-offset: -6px;
+  border-radius: 18px;
+}
+
+.pc-track {
+  position: relative;
+  width: 100%;
+  height: calc(var(--pc-w) * 0.66 + 72px);
+  padding-left: var(--pc-inset); /* read by JS as the front card's inset */
+  /* a real (resolved) property so JS can read the clamped gap — custom
+     properties hand back the raw clamp() token, not its computed value */
+  column-gap: var(--pc-gap);
+  /* cards fade out at both edges — right fade covers the 2nd card's last third,
+     hinting at more projects. The rope is outside the track, so it stays solid. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--pc-fade-l), #000 calc(100% - var(--pc-fade-r)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--pc-fade-l), #000 calc(100% - var(--pc-fade-r)), transparent 100%);
+}
+
+/* a small pinwheel planted in the lower-left breathing space — the user's own
+   TWO-LAYER artwork: the rest layer (stick + pin + ribbon + grass) sizes the
+   container and never moves; the head layer spins about the pin. Desktop only:
+   below 1080px the left breathing space is where the cards live. */
+.pc-pinwheel {
+  position: absolute;
+  /* viewport-anchored like the ropes, so it holds the lower-left zone from the
+     user's reference at every width instead of drifting with the content column */
+  left: calc(50% - 50vw + 12vw);
+  bottom: 25px;
+  z-index: 0;
+  display: block;
+  /* container = the rest layer (318 units); the head overflows it to ~1.47x,
+     so the full drawing renders about the same width as the old pinwheel */
+  width: clamp(44px, 4.5vw, 66px);
+  pointer-events: none;
+  user-select: none;
+  transition: filter 240ms ease; /* invert crossfades with the theme switch */
+}
+
+body[data-theme="dark"] .pc-pinwheel {
+  filter: invert(1); /* inverts both layers; the white sail fills become
+                        background-black, so occlusion stays invisible */
+}
+
+.pc-pinwheel img {
+  display: block;
+  -webkit-user-drag: none;
+}
+
+.pc-pinwheel-rest {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  transform: scale(3.5);
+  transform-origin: 55% 0;
+}
+
+/* The head hangs on the rest layer's pin. Its source-space hub is aligned with
+   the fixed pin, so the existing spin continues around the same visual axis. */
+.pc-pinwheel-head {
+  position: absolute;
+  z-index: 2;
+  width: 250%;            
+  max-width: none;         /* the global img cap would clamp this back to 100% */
+  height: auto;
+  left: -85.3%;            /* hub remains on the static pin */
+  top: -44.2%;
+  /* pivot on the TRUE hub — the centre of the enclosed circle where the four
+     sails converge, measured from the asset (hub interior bbox centre =
+     50.65% / 49.02% of the 1254² source). The old 47.4% y sat ~1.6% above it,
+     so the hub orbited ~2.3px each turn instead of spinning in place. Rotation
+     coordinate only — rest position (left/top), size and art are unchanged. */
+  transform-origin: 50.65% 49.02%;
+  /* driven by a gentle-breeze curve, NOT a constant spinner: the head keeps
+     turning forward but the SPEED undulates (soft gusts + lulls). The variation
+     lives in the keyframes, so timing must stay linear. Pure rotate about the
+     true hub ⇒ no centre drift / no positional wobble. */
+  animation: pc-pinwheel-spin 15s linear infinite;
+}
+
+/* rotation(p) = 720°·p + gentle sine gusts — one seamless loop = two turns, the
+   endpoints share value+slope so it never jumps. Monotonic ⇒ always spins forward,
+   just faster (gust) and slower (lull), like a light wind. */
+@keyframes pc-pinwheel-spin {
+  0% { transform: rotate(11.78deg); }
+  5% { transform: rotate(63.88deg); }
+  10% { transform: rotate(109.28deg); }
+  15% { transform: rotate(147.96deg); }
+  20% { transform: rotate(181.71deg); }
+  25% { transform: rotate(213.22deg); }
+  30% { transform: rotate(244.82deg); }
+  35% { transform: rotate(277.57deg); }
+  40% { transform: rotate(310.90deg); }
+  45% { transform: rotate(342.99deg); }
+  50% { transform: rotate(371.78deg); }
+  55% { transform: rotate(396.07deg); }
+  60% { transform: rotate(416.38deg); }
+  65% { transform: rotate(435.15deg); }
+  70% { transform: rotate(456.12deg); }
+  75% { transform: rotate(483.22deg); }
+  80% { transform: rotate(519.23deg); }
+  85% { transform: rotate(564.76deg); }
+  90% { transform: rotate(618.00deg); }
+  95% { transform: rotate(675.18deg); }
+  100% { transform: rotate(731.78deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-pinwheel-head {
+    animation: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .pc-pinwheel {
+    display: none;
+  }
+}
+
+/* the project rope — a scene-spanning foreground curve (enters high at the far
+   left, sags to the card zone, lifts right). Static in viewport space; the
+   cards glide along it. Path + size are generated at 1:1 pixels by
+   clothesline.js in SCENE coordinates (svg top = scene top). */
+.pc-rope {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 50vw);
+  z-index: 0; /* under the cards (viewport comes later in the DOM) */
+  width: 100vw;
+  transform: translateY(calc(var(--pc-scene-lift) * -1));
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* ---- one hanging project: flat, front-facing, always the same size.
+   JS only slides it horizontally and drops it to the rope's height. ---- */
+.pc-card {
+  position: absolute;
+  left: 0;
+  top: 24px;
+  width: var(--pc-w);
+  transform-origin: 50% -10px; /* the rope/jaw line — sway pivots at the clips */
+  will-change: transform;
+  container-type: inline-size; /* caption type scales with the card, every tier */
+  /* only the current front project reacts to the mouse — slid-away / blurred
+     cards take no hover, no "coming soon" note and no clicks. JS toggles
+     .pc-card-active on the front card; the drag still works because it is bound
+     to .pc-viewport (events pass through the non-interactive cards to it). */
+  pointer-events: none;
+}
+
+.pc-card.pc-card-active {
+  pointer-events: auto;
+}
+
+.pc-hang {
+  position: relative;
+}
+
+/* two-part clothespin (inline SVG, drawn for this site): the BACK blade sits
+   behind the hung object, the FRONT blade presses over it — rope → back blade
+   → object → front blade. The object's top edge enters the jaw and its outline
+   is genuinely hidden under the paper-filled front blade. */
+.pc-clip {
+  position: absolute;
+  top: -20px;      /* rope crosses the card frame at −9.5px = the blade waist (35%) */
+  width: 13px;
+  height: 30px;
+  pointer-events: none;
+}
+
+.pc-clip svg,
+.pc-l1clip svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible; /* the back blade pokes above the box */
+}
+
+.pc-clip-l {
+  left: 13%;
+  transform: rotate(-2.5deg);
+}
+
+.pc-clip-r {
+  right: 10%;
+  transform: rotate(3deg);
+}
+
+.pc-clip-b {
+  z-index: 0; /* behind the card */
+}
+
+.pc-clip-f {
+  z-index: 2; /* over the card: its tip covers ~10px of the top border */
+}
+
+/* line1 clips (bun + tee): sized/positioned inline in vw so they scale 1:1
+   with the artwork; back blade under the bun (z1) and the artwork (z2),
+   front blade above both */
+.pc-l1clip {
+  position: absolute;
+  pointer-events: none;
+}
+
+.pc-l1clip-b {
+  z-index: 0;
+}
+
+.pc-l1clip-f {
+  z-index: 3;
+}
+
+/* the framed cartoon drawing on line1 (replaces the drawn tee): hangs from the
+   two existing clips at 78.41 / 81.17vw — its top edge enters both jaws (~0.5vw
+   under each front blade) and the whole sheet tilts with the rope's local slope
+   (−7.4°), pivoting from its own top edge so both clip bites stay symmetric. */
+.pc-l1pic {
+  position: absolute;
+  left: calc(50% - 50vw + 79.79vw);
+  top: 4.51vw; /* rope at this x ≈ 4.21vw — top edge 0.3vw below, inside the jaws */
+  z-index: 1;  /* over the back blades (z0), under the artwork rope (z2) and
+                  the front blades (z3) — the clip sandwich stays real */
+  width: 6.0vw;
+  max-width: none; /* the global img cap would clamp it to the content column */
+  height: auto;
+  transform: translateX(-50%) rotate(-7.4deg);
+  transform-origin: 50% 0;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 240ms ease; /* invert crossfades with the theme switch */
+}
+
+body[data-theme="dark"] .pc-l1pic {
+  filter: invert(1);
+}
+
+/* the user's star / heart / raindrop charms — crisp DOM line art hung from the
+   rope. Each PNG is its own string + shape; the string-top sits just above the
+   rope line and z1 (under the z2 top-line art) lets the drawn rope paint over
+   the attachment, so the charm reads as tied to the line, not floating in front.
+   Strokes are native-resolution + solid ink (no downscale-into-the-raster), so
+   they carry the same weight as the rope instead of the old faint/thin look. */
+.pc-l1charm {
+  position: absolute;
+  z-index: 1; /* over the back blades / behind the top-line rope art (z2) */
+  height: auto;
+  max-width: none; /* the global img cap would clamp these to the content column */
+  transform-origin: 50% 0; /* hangs from its string-top */
+  pointer-events: none;
+  user-select: none;
+  transition: filter 240ms ease; /* invert crossfades with the theme switch */
+}
+
+body[data-theme="dark"] .pc-l1charm {
+  filter: invert(1);
+}
+
+.pc-l1star {
+  left: calc(50% - 50vw + 12.82vw);
+  top: 6.65vw;
+  width: 1.24vw;
+}
+
+.pc-l1heart {
+  left: calc(50% - 50vw + 63.91vw);
+  top: 5.96vw;
+  width: 1.11vw;
+}
+
+.pc-l1drop {
+  left: calc(50% - 50vw + 94.21vw);
+  top: 1.93vw;
+  width: 0.84vw;
+}
+
+.pc-card-link {
+  position: relative;
+  z-index: 1; /* between the clip's back and front blades */
+  display: block;
+  color: var(--ink);
+  -webkit-user-drag: none;
+}
+
+.pc-card-link img {
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+/* the card itself: soft paper, thin sketchy border, uneven hand-drawn radii.
+   Landscape; a small image panel on top, title/year below it — never inside it. */
+.pc-card-body {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: clamp(8px, 4cqw, 16px);
+  aspect-ratio: 8 / 5; /* flatter landscape notes */
+  padding: clamp(10px, 5cqw, 24px);
+  background: var(--pc-card-bg);
+  border: 1.4px solid color-mix(in srgb, var(--pc-line) 82%, transparent);
+  border-radius: 26px 21px 27px 19px / 21px 27px 20px 26px;
+  /* paper + ink fade on the theme-switch clock (no hover lift — the cards
+     hang still; only the destination hint responds to hover) */
+  transition:
+    background-color 240ms ease,
+    border-color 240ms ease;
+}
+
+/* the project image sits in its own restrained panel — airy, never crowded */
+.pc-media {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 16px 13px 17px 12px / 13px 17px 12px 16px;
+  transition: background-color 240ms ease; /* theme switch */
+}
+
+.pc-media img {
+  max-width: 58%;
+  max-height: 35%;
+  object-fit: contain;
+  transition: transform 320ms ease;
+}
+
+/* pure-image cards: no lift, but the drawing zooms in slightly on hover
+   (clipped by the card's overflow:hidden so it never spills past the border) */
+.pc-card-cover .pc-card-link:not(.pc-card-static):hover .pc-media img,
+.pc-card-cover .pc-card-link:not(.pc-card-static):focus-visible .pc-media img {
+  transform: translate(var(--cover-x, 0px), var(--cover-y, 0px)) scale(calc(var(--cover-scale, 1) * 1.045));
+}
+
+/* full hand-drawn scene covers: they arrive on white paper, so the panel is
+   white and the art is contained (never cropped) — the drawing's own margin
+   blends into the panel, the letterbox bands are invisible. The image is taken
+   out of flow (absolute) so its intrinsic square size can't blow out the card's
+   grid row; it fills the panel box and object-fit keeps the whole scene visible. */
+.pc-media-wentong,
+.pc-media-voderrn,
+.pc-media-health,
+.pc-media-llm {
+  position: relative;
+  background: #fff;
+}
+
+.pc-media-wentong img,
+.pc-media-voderrn img,
+.pc-media-health img,
+.pc-media-llm img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* per-card adjust knobs (see the block right below): size + nudge */
+  transform: translate(var(--cover-x, 0px), var(--cover-y, 0px)) scale(var(--cover-scale, 1));
+  transition: transform 320ms ease, opacity 240ms ease;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ▼ PER-IMAGE ADJUST KNOBS — edit these three numbers for each card ▼
+     --cover-scale : size    (1 = default, 1.2 = 20% bigger, 0.85 = smaller)
+     --cover-x     : move L/R (positive = right, negative = left, in px)
+     --cover-y     : move U/D (positive = down,  negative = up,   in px)
+   The drawings used to run edge to edge in the card; 0.8 pulls them back off
+   the border on EVERY screen so each card reads as art pinned on paper. The
+   card box itself is untouched, so no layout moves — desktop included.
+   ════════════════════════════════════════════════════════════════════ */
+.pc-media-wentong img { --cover-scale: 0.65;  --cover-x: -2px;  --cover-y: 0px; } /* Land of Wisdom (AI reading) */
+.pc-media-voderrn img { --cover-scale: 0.65;  --cover-x: 0px;  --cover-y: 0px; } /* Voderrn (fashion mirror) */
+.pc-media-health  img { --cover-scale: 0.55;  --cover-x: 0px;  --cover-y: 0px; } /* Healthcare (dotor + teddy) */
+.pc-media-llm     img { --cover-scale: 0.7;  --cover-x: 0px;  --cover-y: 0px; } /* Coming soon (LLM scanner) */
+
+/* quiet striped placeholder */
+.pc-media-soon {
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0 30px, transparent 30px 62px),
+    var(--pc-card-bg);
+}
+
+/* DARK MODE: swap to the pre-baked dark variant of each drawing — WHITE line-art
+   on BLACK with the orange bun kept AND the eyes/sunglasses left dark (a plain CSS
+   invert whitened the eyes, which read as creepy). The light + dark <img>s are
+   stacked and crossfade on the theme toggle. */
+body[data-theme="dark"] .pc-media-wentong,
+body[data-theme="dark"] .pc-media-voderrn,
+body[data-theme="dark"] .pc-media-health,
+body[data-theme="dark"] .pc-media-llm {
+  background: #000;
+}
+
+.pc-cover-dark {
+  opacity: 0;
+}
+
+body[data-theme="dark"] .pc-cover-light {
+  opacity: 0;
+}
+
+body[data-theme="dark"] .pc-cover-dark {
+  opacity: 1;
+}
+
+/* pure-image cards: the entire card IS the hand-drawn scene — the media panel
+   fills the whole card body edge-to-edge (white ground, art contained so nothing
+   crops), the text caption and corner doodle are dropped. The card stays a link
+   (the whole drawing is clickable) and the coming-soon note still peeks from
+   behind its bottom. Light: white card; dark: swaps to the baked dark image (see below). */
+.pc-card-cover .pc-card-body {
+  grid-template-rows: 1fr;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+body[data-theme="dark"] .pc-card-cover .pc-card-body {
+  background: #000;
+}
+
+.pc-card-cover .pc-caption,
+.pc-card-cover .pc-mini {
+  display: none;
+}
+
+.pc-card-cover .pc-media {
+  border-radius: 0; /* the card body's rounded overflow does the clipping */
+}
+
+body[data-theme="dark"] .pc-media-soon {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 30px, transparent 30px 62px),
+    var(--pc-card-bg);
+}
+
+.pc-soon-note {
+  color: color-mix(in srgb, var(--ink) 32%, transparent);
+  font-size: clamp(14px, 1.15vw, 18px);
+  letter-spacing: 0.24em;
+}
+
+/* a small clean "coming soon" paper tucked BEHIND each project card. On hover it
+   slides down from behind the card's bottom edge and fades in; its top edge stays
+   hidden behind the card so the whole text reads below it. White, thin black
+   border, Gaegu, pure-black text — no shadow, icon or underline. It sits behind
+   the card link (z1) and takes no layout space, so it never shifts anything. */
+.pc-note {
+  /* how far the note slides out on hover — bigger = more of it shows below the
+     card (one place to tune the reveal amount) */
+  --pc-note-peek: 18px;
+  position: absolute;
+  left: 50%;
+  top: 100%;                          /* top edge anchored to the card's bottom */
+  z-index: 0;                         /* behind the card link — the card covers its top */
+  transform: translate(-50%, -100%);  /* rest: fully tucked up behind the card */
+  /* top padding is the slice that stays hidden behind the card; the text sits
+     clear of the card edge in the revealed band */
+  padding: 9px 14px 3px;
+  background: #ffffff;
+  border: 1px solid #111111;
+  border-radius: 5px;
+  font-family: var(--hand);
+  font-size: 14.5px;                   /* text size */
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #000000;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 250ms ease,
+    opacity 250ms ease;
+}
+
+/* hover the card: the note peeks --pc-note-peek below the bottom edge, fades to full */
+.pc-hang:hover .pc-note {
+  transform: translate(-50%, calc(-100% + var(--pc-note-peek)));
+  opacity: 1;
+}
+
+/* dark mode: keep it a refined dark paper with light ink instead of a stark
+   bright rectangle against the dark cards */
+body[data-theme="dark"] .pc-note {
+  background: #1b1917;
+  border-color: #e8e0d6;
+  color: #f3efe9;
+}
+
+/* tiny sparse doodles inside cards */
+.pc-mini {
+  position: absolute;
+  left: var(--mx, auto);
+  right: var(--mr, auto);
+  top: var(--my, auto);
+  bottom: var(--mb, auto);
+  width: 14px;
+  height: 14px;
+  opacity: 0.75;
+}
+
+.pc-mini-tag {
+  width: 17px;
+  height: 20px;
+}
+
+.pc-mini-tag path,
+.pc-mini-tag rect {
+  stroke: var(--pc-blue);
+  stroke-width: 1.4;
+  fill: none;
+}
+
+.pc-mini-tag circle {
+  fill: var(--pc-blue);
+}
+
+.pc-mini-heart path {
+  stroke: #7fae86;
+  stroke-width: 1.5;
+}
+
+/* caption inside the card, under the image panel — a handwritten two-row label:
+   title + year share the first line, subtitle + destination hint the second */
+.pc-caption {
+  display: grid;
+  gap: 3px;
+  padding: 0 2px;
+}
+
+.pc-cap-main,
+.pc-cap-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.pc-caption h3 {
+  margin: 0;
+  font-family: var(--hand);
+  font-size: clamp(12px, 5.2cqw, 22px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.pc-sub {
+  color: color-mix(in srgb, var(--ink) 58%, transparent);
+  font-size: clamp(10px, 4cqw, 17px);
+  line-height: 1.2;
+}
+
+.pc-year {
+  flex: none;
+  color: var(--orange-deep);
+  font-size: clamp(10px, 3.8cqw, 16px);
+  letter-spacing: 0.12em;
+}
+
+/* quiet destination hint — says where the card leads; warms up on hover */
+.pc-go {
+  flex: none;
+  color: color-mix(in srgb, var(--ink) 42%, transparent);
+  font-size: clamp(9px, 3.5cqw, 15px);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transition: color 200ms ease;
+}
+
+.pc-go-arr {
+  display: inline-block;
+  transition: transform 200ms ease;
+}
+
+.pc-card-link:not(.pc-card-static):hover .pc-go,
+.pc-card-link:not(.pc-card-static):focus-visible .pc-go {
+  color: var(--orange-deep);
+}
+
+.pc-card-link:not(.pc-card-static):hover .pc-go-arr,
+.pc-card-link:not(.pc-card-static):focus-visible .pc-go-arr {
+  transform: translateX(2.5px);
+}
+
+/* ---- responsive: ~2 cards desktop, ~1.5 tablet, 1 + peek phone ---- */
+@media (max-width: 1080px) {
+  .pc-scene {
+    --pc-w: clamp(195px, 16.5vw, 280px);
+    --pc-gap: clamp(40px, 5vw, 72px);
+    --pc-inset: clamp(24px, 8vw, 120px);
+  }
+}
+
+@media (max-width: 660px) {
+  .pc-scene {
+    /* Phones — proportions measured from the user's sketch at 390px and
+       expressed in ONE unit (vw) for every element, so the whole scene is a
+       uniform zoom at any width in this tier. The old mix (vw card + px-frozen
+       bun/pinwheel + vw rope art) meant a 640px window showed a huge card next
+       to a frozen bun and speck-sized charms. */
+    /* user pass 3: whole scene scaled down ~20% — 小巧精致, ratios unchanged */
+    --pc-w: 35vw;                          /* main card */
+    --pc-inset: calc(50vw - var(--pc-w) / 2); /* CENTERED, as drawn — the next
+                                                card peeks at the right edge */
+    --pc-gap: 16px;
+    --pc-fade-l: 10px;
+    --pc-fade-r: 9vw;
+  }
+
+  .pc-top {
+    height: calc(9.16vw + 14vw * 0.66 + 8px);
+    margin-top: 0;
+  }
+
+  /* mascot: pure vw, never frozen — keeps the sketch's mascot:card ratio */
+  .pc-bun {
+    width: 14vw;
+  }
+
+  /* the hanging drawing reads nearly as LARGE as the mascot in the sketch —
+     it was 6vw (a third of the bun) here. Its clips sit at fixed rope spots
+     (78.08 / 80.84vw), so the wider sheet just extends symmetrically around
+     them; top edge stays inside the jaws. */
+  .pc-l1pic {
+    width: 12.5vw;
+  }
+
+  /* charms: clearly-visible shapes in the sketch, not specks */
+  .pc-l1star { width: 3.1vw; }
+  .pc-l1heart { width: 2.7vw; }
+  .pc-l1drop { width: 2vw; }
+
+  /* the clothespins grip items ~10× their width on desktop; keep that ratio
+     for the enlarged bun/drawing (inline vw sizes need the !important).
+     Growing in place: recenter by half the width delta, jaw top stays on
+     the rope, blades reach deeper over the item — still "holding" it. */
+  .pc-l1clip {
+    width: 1.35vw !important;
+    height: 2.3vw !important;
+    margin-left: -0.31vw;
+  }
+
+  /* tall enough to hold the card at its resting drop (top + rope drop + body),
+     so the scene can never bleed into the section below now that the section
+     hugs its content */
+  .pc-track {
+    height: calc(var(--pc-w) / 1.6 + 96px);
+  }
+
+  /* phones keep the larger, legible caption type on the 72vw card */
+  .pc-card-body {
+    padding: 14px;
+  }
+
+  .pc-caption h3 {
+    font-size: 17px;
+  }
+
+  .pc-sub {
+    font-size: 13px;
+  }
+
+  .pc-year {
+    font-size: 12px;
+  }
+
+  .pc-go {
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-hang {
+    transform: none;
+  }
+
+  .pc-card-link:hover .pc-media img,
+  .pc-card-link:hover .pc-go-arr {
+    transform: none;
+  }
+}
+
+/* ===========================================================
+   Clothesline work section — portrait tablet + phone (sketch 2).
+   Desktop (landscape, >1180) never enters these queries: the wide
+   composition there is final and must not move.
+
+   The pinwheel is drawn by TWO layers whose rendered art is much bigger
+   than the .pc-pinwheel box: the rest layer is scale(3.5) from its own
+   top edge, so the drawing spans 3.5 × the box width and hangs 2.5 × the
+   box height BELOW the box. Anchoring the box at 2.5 × its size above the
+   scene floor therefore lands the drawing's feet exactly on that floor,
+   and reserving 3.5 × its size of padding gives it the band to stand in —
+   the "breathing room" under the cards in the sketch.
+   =========================================================== */
+
+/* ---- portrait tablets (iPad 768/834/1024 upright) ----
+   The ≤1080 tier was tuned for short landscape windows: it leaves a small
+   card pinned to the far LEFT with the preview stranded mid-screen. Per the
+   sketch the card grows and sits centre-right, with the next card peeking in
+   from the right edge. */
+/* Applies to every mid-size viewport: portrait tablets up to 1180 AND any
+   661–1080 window regardless of orientation — a resized ~850px browser window
+   is landscape by the numbers but needs the same composition; the orientation
+   gate alone let it fall through to the old left-pinned layout. 1081–1180
+   landscape keeps the desktop look (same boundary the old tier used). */
+@media (min-width: 661px) and (max-width: 1080px), (min-width: 661px) and (max-width: 1180px) and (orientation: portrait) {
+  .pc-scene {
+    /* user pass 3: whole scene scaled down ~20% — 小巧精致, ratios unchanged */
+    --pc-w: 34vw;      /* main project card */
+    --pc-inset: 43vw;  /* its resting left edge → card centre at 60% (sketch: 59%) */
+    --pc-gap: 5vw;
+    --pc-fade-l: 14px;
+    /* the fade must MELT the peeking card's outer edge, not erase it — at 10vw
+       it swallowed the whole 123px shoulder and the swipe affordance vanished */
+    --pc-fade-r: 5vw;
+    --pw-size: clamp(34px, 4.2vw, 48px);
+    padding-bottom: calc(var(--pw-size) * 3.5 + 26px);
+  }
+
+  /* hold the card at its resting drop so the scene hugs its own content */
+  .pc-track {
+    height: calc(var(--pc-w) / 1.6 + 110px);
+  }
+
+  /* top rope, sketch proportions at a delicate scale — same one-unit (vw)
+     rule as phones. Desktop's clamp floor (78px) freezes the bun below
+     ~950px, so mid-size windows showed a frozen mascot beside vw rope art. */
+  .pc-top {
+    height: calc(9.16vw + 9vw * 0.66 + 10px);
+  }
+
+  .pc-bun {
+    width: 9vw;
+  }
+
+  .pc-l1pic {
+    width: 8.5vw;
+  }
+
+  .pc-l1star { width: 1.9vw; }
+  .pc-l1heart { width: 1.7vw; }
+  .pc-l1drop { width: 1.3vw; }
+
+  .pc-l1clip {
+    width: 0.9vw !important;
+    height: 1.53vw !important;
+    margin-left: -0.09vw;
+  }
+
+  /* the art also overhangs 1.375 × the box to the LEFT (same scale, 55% origin),
+     so add that back — then the vw term IS the drawing's true left margin */
+  .pc-pinwheel {
+    display: block;
+    left: calc(50% - 50vw + 8vw + var(--pw-size) * 1.375);
+    bottom: calc(var(--pw-size) * 2.5);
+    width: var(--pw-size);
+  }
+}
+
+/* ---- phones: same idea, smaller. The cap tracks 6vw all the way to the
+   tier edge (a fixed cap froze it mid-tier while the card kept growing) ---- */
+@media (max-width: 660px) {
+  .pc-scene {
+    --pw-size: clamp(22px, 6vw, 40px);
+    padding-bottom: calc(var(--pw-size) * 3.5 + 16px);
+  }
+
+  .pc-pinwheel {
+    display: block;
+    left: calc(50% - 50vw + 6vw + var(--pw-size) * 1.375);
+    bottom: calc(var(--pw-size) * 2.5);
+    width: var(--pw-size);
+  }
+}
+
+/* ===========================================================
+   "What I like" — TAP-to-switch on tablet & phone (sketch 4, revised).
+   Desktop (>1080 landscape) keeps the hover scatter and is untouched.
+
+   Two things from the first draft were wrong and are fixed here:
+   1. The giant Frijole result label is anchored to the right edge, so a
+      real word ("PHOTOGRAPHY", "ANIMATION") extends far enough left to
+      land ON the list column — unavoidable overlap on any narrow screen.
+      It is a desktop-only flourish and is DROPPED on these tiers.
+   2. Scroll-stepping hijacked the page scroll. The interaction is now a
+      plain TAP on a list item (JS), matching the user's request.
+
+   Layout: a calm 2-column on tablet (active illustration+caption LEFT,
+   list RIGHT) and a stacked column on phone (illustration+caption ABOVE,
+   list BELOW). Only the active row's illustration/caption is shown — the
+   existing roll-masks already clip the other eight to nothing, so all
+   nine asides can overlap at one pinned spot.
+   =========================================================== */
+@media (max-width: 1080px), (max-width: 1180px) and (orientation: portrait) {
+  .studio-services {
+    min-height: 100svh;
+    padding: clamp(64px, 10vh, 104px) 0;
+  }
+
+  .studio-services-inner {
+    /* aside + big label are positioned against THIS box; the eyebrow is lifted
+       out of flow so the list is the only centred child. --svc-row is a FIXED
+       row pitch so `50% + (row-i − 4)·svc-row` lands exactly on each row's
+       centre (index 4 = the middle of 9 items = the list's centre). */
+    --svc-row: clamp(46px, 5.6vh, 58px);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: min(100% - clamp(48px, 12vw, 128px), 880px);
+    min-height: calc(100svh - clamp(128px, 20vh, 208px));
+    margin: 0 auto;
+  }
+
+  .studio-services-eyebrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    text-align: center;
+    font-size: clamp(15px, 1.8vw, 18px);
+  }
+
+  /* list is the centre column */
+  .studio-service-list {
+    margin-left: 34%;
+  }
+
+  .studio-service {
+    position: static;
+    display: flex;
+    align-items: center;
+    height: var(--svc-row);
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .studio-service-name {
+    margin-left: 0;
+    font-size: clamp(22px, 2.3vw, 26px); /* sketch: 22–26px */
+  }
+
+  /* every item wears a quiet dot; the active one turns solid (sketch) */
+  .studio-service-name::before {
+    top: 50%;
+    left: -1.15em;
+    transform: translateY(-50%);
+    opacity: 0.26;
+  }
+
+  .studio-service.is-active .studio-service-name {
+    transform: none; /* the desktop -48px hover shift would jiggle the column */
+    font-weight: 700;
+  }
+
+  .studio-service.is-active .studio-service-name::before {
+    opacity: 1;
+    transform: translateY(-50%);
+  }
+
+  /* active illustration + caption, stacked in the LEFT column, at the ACTIVE
+     row's own height — so illustration · item · label read as one line */
+  .studio-service-aside {
+    position: absolute;
+    top: calc(50% + (var(--row-i, 4) - 4) * var(--svc-row));
+    left: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    width: calc(34% - clamp(16px, 3vw, 36px));
+    max-width: none;
+    transform: translateY(-50%);
+  }
+
+  .studio-service-media {
+    width: clamp(128px, 18vw, 168px);  /* sketch: 140–180 square */
+    height: clamp(128px, 18vw, 168px);
+    border-radius: 12px;
+  }
+
+  .studio-service-media .studio-roll-inner,
+  .studio-service-media .studio-roll-inner img {
+    border-radius: 12px;
+  }
+
+  .studio-service-caption {
+    max-width: 100%;      /* full column width — no more one-word-per-line wraps */
+    font-size: clamp(15px, 1.7vw, 18px);
+    line-height: 1.4;
+  }
+
+  /* giant result label — back on tablets (the right side reads too empty
+     without it). LEFT-anchored just past the list so long words ("PHOTOGRAPHY")
+     extend toward the edge instead of growing leftward INTO the list (the bug
+     that made the first draft overlap). Tracks the active row's height. */
+  .studio-service-big {
+    display: block;
+    top: calc(50% + (var(--row-i, 4) - 4) * var(--svc-row));
+    left: 56%;
+    right: auto;
+    font-size: clamp(30px, 3.7vw, 46px); /* sketch: 36–48, trimmed so the
+                                            longest word clears the edge at 768 */
+    line-height: 1.1;
+    white-space: nowrap;
+    transform: translateY(-50%);
+  }
+}
+
+/* phones: single centred column — illustration + caption ABOVE the list */
+@media (max-width: 660px) {
+  .studio-services {
+    padding: clamp(56px, 8vh, 88px) 0;
+  }
+
+  .studio-services-eyebrow {
+    font-size: 15px;
+  }
+
+  /* phones are too narrow for the giant word — the user confirmed dropping it
+     here is fine; it stays only on tablet/desktop */
+  .studio-service-big {
+    display: none;
+  }
+
+  .studio-service-list {
+    /* the aside anchors to the list here; reserve its height as top padding so
+       the items sit BELOW the illustration */
+    --aside-h: clamp(196px, 52vw, 232px);
+    position: relative;
+    margin-left: 0;
+    margin-inline: auto;
+    width: max-content;
+    padding-top: calc(var(--aside-h) + clamp(16px, 3vh, 28px));
+  }
+
+  .studio-service {
+    justify-content: flex-start;
+  }
+
+  .studio-service-name {
+    font-size: clamp(18px, 5vw, 20px); /* sketch: 18–20px */
+  }
+
+  .studio-service-aside {
+    top: 0;
+    left: 50%;
+    height: var(--aside-h);
+    width: auto;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    transform: translateX(-50%);
+  }
+
+  .studio-service-media {
+    width: clamp(110px, 32vw, 130px);  /* sketch: 110–130 square */
+    height: clamp(110px, 32vw, 130px);
+  }
+
+  .studio-service-caption {
+    max-width: 82vw;
+    text-align: center;
+    font-size: clamp(16px, 4.3vw, 18px); /* sketch: 16–18px */
+  }
+}
+
+/* ===========================================================
+   Two hand-written Gaegu annotations (user request).
+   Each block below starts with its ADJUST KNOBS — edit those
+   numbers to move/resize the text; nothing else needs touching.
+   =========================================================== */
+
+/* ════ "Things I've worked on" under the project cards — pc-worked-note ADJUST KNOBS ════
+   --pc-worked-x    : horizontal CENTRE of the note, in viewport coords.
+                      Default = the front card's resting centre, so it stays
+                      under the card on desktop / tablet / phone automatically.
+                      Use any length, e.g. 50vw = screen centre, 63vw, 480px …
+   --pc-worked-gap  : vertical gap between the cards and the arrow tip (px).
+   --pc-worked-size : caption font size.
+   --pc-worked-arrow: arrow height (width follows automatically).            */
+.pc-scene {
+  --pc-worked-x: calc(var(--pc-inset) + var(--pc-w) / 2);
+  --pc-worked-gap: -10px;
+  --pc-worked-size: clamp(14px, 1.2vw, 16px);
+  --pc-worked-arrow: clamp(25px, 2vw, 35px);
+}
+
+/* in normal flow right below the carousel: the cards slide, this stays put.
+   The viewport above rides translateY(-lift), so the note rides the same
+   lift to keep the visual gap honest. */
+.pc-worked-note {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: max-content;
+  margin: var(--pc-worked-gap) 0 0 calc(50% - 50vw + var(--pc-worked-x));
+  font-family: var(--hand);
+  transform: translateX(-50%) translateY(calc(var(--pc-scene-lift) * -1));
+  pointer-events: none;
+  user-select: none;
+}
+
+.pc-worked-arrow {
+  height: var(--pc-worked-arrow);
+  width: auto;
+}
+
+.pc-worked-arrow path {
+  fill: none;
+  stroke: var(--pc-line);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pc-worked-text {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 300;
+  color: var(--pc-line);
+}
+
+/* ════ "Feel free to reach out :)" on the film-strip screen — reach-note ADJUST KNOBS ════
+   The note FLOWS right beneath the strip (it sits in the same centred flex
+   column as the strip), so the gap below the strip is CONSTANT at every screen
+   size — it tracks the strip instead of drifting off a fixed section-bottom
+   offset. The strip + note centre together as one block.
+   --reach-note-x    : distance from the RIGHT edge of the screen.
+   --reach-note-gap  : vertical gap between the strip and the note.
+   --reach-note-size : font size.                                            */
+.marquee-section {
+  position: relative;
+  --reach-note-x: 50px;
+  --reach-note-gap: 12px;
+  --reach-note-size: clamp(16px, 1.15vw, 20px);
+  font-weight: 300;
+}
+
+.reach-note {
+  align-self: flex-end;                 /* right edge of the (column) section */
+  margin: var(--reach-note-gap) var(--reach-note-x) 0 0;
+  font-family: var(--hand);
+  font-size: var(--reach-note-size);
+  line-height: 1.2;
+  color: var(--ink);
 }

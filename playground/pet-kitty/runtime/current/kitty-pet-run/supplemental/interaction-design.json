@@ -1,0 +1,26 @@
+{
+  "priority": ["task", "interaction", "idle"],
+  "idle": {
+    "selection": "random",
+    "variants": ["main:idle", "extra:rest-side-sleep"],
+    "occasional": {
+      "action": "extra:butt-pat-invite"
+    }
+  },
+  "interactions": [
+    {
+      "id": "buttPat",
+      "trigger": "double-click",
+      "hitRegion": {
+        "x": 0.5,
+        "y": 0.35,
+        "width": 0.5,
+        "height": 0.65
+      },
+      "offerAction": "extra:butt-pat-invite",
+      "responseAction": "extra:butt-pat-happy",
+      "returnTo": "previous-idle"
+    }
+  ],
+  "fallbackNote": "Requires a compatible runtime with supplemental atlas and interaction support; otherwise use main:idle."
+}
