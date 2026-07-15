@@ -571,7 +571,13 @@ body[data-theme="dark"] .home-photo::after {
   width: clamp(250px, 25vw, 430px);
   height: clamp(132px, 13.5vw, 218px);
   opacity: 1;
-  transform: translateX(-50%);
+  /* Centering lives in the `translate` PROPERTY, never in `transform`:
+     the reveal scrub writes inline `transform` on this element, and the
+     data-page/tier rules center via `translate: -50% 0` — a transform
+     translateX(-50%) here would COMPOSE with that translate and shift the
+     video left by half its width (the 2026-07-15 regression: a now-removed
+     duplicate rule had been silently neutralizing exactly that). */
+  translate: -50% 0;
 }
 
 .home-photo-a {
