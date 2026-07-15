@@ -25,7 +25,12 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260715d" />
+    <!-- fonts load in parallel with the CSS (was an @import inside styles.css,
+         which serialized: CSS download -> font-CSS download -> font download) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap" />
+    <link rel="stylesheet" href="styles.css?v=20260715e" />
   </head>
   <body data-page="case-study">
     <div class="case-hover-zone is-at-top" aria-label="Project navigation">
@@ -539,6 +544,6 @@
       <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
 
-    <script src="script.js?v=20260715d"></script>
+    <script src="script.js?v=20260715e"></script>
   </body>
 </html>

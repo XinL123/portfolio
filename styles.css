@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap");
+/* Frijole + Gaegu load via <link> in each page's <head> (parallel with this
+   file) — the old @import here serialized the font fetch behind the CSS. */
 
 :root {
   color-scheme: light;
@@ -4741,7 +4742,9 @@ body[data-theme="dark"] .art-card {
 .art-lightbox-nav {
   position: fixed;
   z-index: 2;
-  font-family: var(--body-font);
+  /* was var(--body-font) — a variable that never existed, so the intended
+     Gaegu silently fell back to the inherited font (fixed 2026-07-15) */
+  font-family: var(--body);
   color: #ffffff;
 }
 
@@ -5762,67 +5765,10 @@ body[data-theme="dark"] .about-collage-card {
     font-size: clamp(18px, 5vw, 24px);
   }
 
-  .home-gallery-screen {
-    padding: 0 20px;
-  }
-
-  .home-gallery-stage {
-    width: min(440px, 100%);
-    height: 100svh;
-    min-height: 560px;
-  }
-
-  .home-photo-tall {
-    width: clamp(92px, 24vw, 122px);
-    height: clamp(124px, 32vw, 164px);
-  }
-
-  .home-photo-wide {
-    width: clamp(118px, 34vw, 168px);
-    height: clamp(64px, 18vw, 90px);
-  }
-
-  .home-photo-small {
-    width: clamp(72px, 22vw, 102px);
-    height: clamp(50px, 15vw, 70px);
-  }
-
-  .home-photo-main {
-    width: clamp(150px, 45vw, 210px);
-    height: clamp(82px, 24vw, 112px);
-    bottom: 9%;
-  }
-
-  .home-photo-a {
-    top: 10%;
-    left: 10%;
-  }
-
-  .home-photo-b {
-    top: 13%;
-    right: 3%;
-  }
-
-  .home-photo-c {
-    top: 43%;
-    right: 0;
-  }
-
-  .home-photo-d {
-    top: 45%;
-    left: 0;
-  }
-
-  .home-photo-e {
-    top: 68%;
-    left: 8%;
-  }
-
-  .home-gallery-screen .orange-stage {
-    width: min(58vw, 230px);
-    transform: translateY(-2px) scale(0.76);
-  }
-
+  /* (the pre-canvas ≤820 collage layout that lived here was removed
+     2026-07-15: every rule was fully shadowed by the aspect-locked canvas
+     tiers, which use higher-specificity body[data-page="home"] selectors.
+     Only the vibe-note size below was still live.) */
   .home-vibe-note {
     font-size: 14px;
   }
@@ -6497,68 +6443,18 @@ body[data-page="home"] .home-gallery-screen {
   background: #ffffff;
 }
 
-/* Pull the whole collage upward and reduce vertical spread */
-body[data-page="home"] .home-gallery-stage {
-  position: relative;
-  width: min(1500px, 100%);
-  height: min(600px, calc(100svh - 210px));
-  min-height: 500px;
-  margin-top: 0;
-  transform: translateY(-4vh);
-  display: grid;
-  place-items: center;
-}
-
-/* Keep the existing orange design; only adjust its group position */
-body[data-page="home"] .home-orange-wrap {
-  transform: translateY(28px);
-}
-
-/* Move the bottom main placeholder upward so it is not clipped */
-body[data-page="home"] .home-photo-main {
-  left: 50%;
-  bottom: 0%;
-  translate: -50% 0;
-}
-
-/* Keep photos cleaner and inside the viewport */
-body[data-page="home"] .home-photo-a {
-  top: 4%;
-  left: 17%;
-}
-
-body[data-page="home"] .home-photo-b {
-  top: 7%;
-  right: 13%;
-}
-
-body[data-page="home"] .home-photo-c {
-  top: 44%;
-  right: 6%;
-}
-
-body[data-page="home"] .home-photo-d {
-  top: 46%;
-  left: 8%;
-}
-
-body[data-page="home"] .home-photo-e {
-  top: 75%;
-  left: 18%;
-}
-
-body[data-page="home"] .home-orange-wrap {
-  gap: -28px;
-}
-
 body[data-page="home"] .home-vibe-note {
   margin-top: -28px;
 }
 
-
-/* Home gallery photo layout cleanup */
+/* Desktop collage layout (consolidated 2026-07-15 from two historical blocks —
+   "position fix" + "photo layout cleanup" — that redefined every selector; the
+   effective values below are byte-identical to what the cascade produced). */
 
 body[data-page="home"] .home-gallery-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: min(1500px, 100%);
   height: min(610px, calc(100svh - 190px));
   min-height: 520px;
@@ -6616,18 +6512,9 @@ body[data-page="home"] .home-photo-e {
   height: clamp(58px, 5vw, 82px);
 }
 
-/* Bottom center main photo: smaller and lower, no overlap with orange text */
-body[data-page="home"] .home-photo-main {
-  left: 50%;
-  bottom: -10%;
-  width: clamp(210px, 18vw, 285px);
-  height: clamp(92px, 8vw, 126px);
-  translate: -50% 0;
-  transform: translate3d(0, 0, 0) scale(1);
-  z-index: 2;
-}
-
-/*北海*/
+/* Bottom center main photo (北海 video): smaller and lower, clear of the
+   orange's note. (A byte-identical earlier duplicate of this rule was removed
+   in the 2026-07-15 cleanup; its transform came from the .home-photo base.) */
 body[data-page="home"] .home-photo-main {
   left: 50%;
   bottom: -15%;
@@ -6755,16 +6642,9 @@ body[data-page="home"].home-opening-complete .work-board {
   transform: none !important;
 }
 
-body[data-page="home"].home-opening-complete .home-gallery-screen {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
-}
-
-body[data-page="home"] .work-board {
-  transform: none !important;
-}
+/* (two byte-duplicate rules removed here 2026-07-15: a repeat of the
+   .home-gallery-screen lock above — the earlier copy also carries
+   transform:none — and a repeat of the .work-board rule) */
 
 body[data-page="home"].home-opening-complete .work-section {
   position: relative !important;
@@ -8800,14 +8680,9 @@ body[data-theme="dark"] .pc-note {
   transform: translateX(2.5px);
 }
 
-/* ---- responsive: ~2 cards desktop, ~1.5 tablet, 1 + peek phone ---- */
-@media (max-width: 1080px) {
-  .pc-scene {
-    --pc-w: clamp(195px, 16.5vw, 280px);
-    --pc-gap: clamp(40px, 5vw, 72px);
-    --pc-inset: clamp(24px, 8vw, 120px);
-  }
-}
+/* (the original ≤1080 carousel tier was removed 2026-07-15: the sketch-based
+   661–1080 + ≤660 tiers later in this file re-set every variable it declared
+   at the same specificity, so it had been fully shadowed for its whole range) */
 
 @media (max-width: 660px) {
   .pc-scene {
