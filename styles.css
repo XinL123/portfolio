@@ -7142,6 +7142,18 @@ body[data-page="home"].home-opening-complete .work-section {
   z-index: 1;
 }
 
+/* Resize scroll-drift fix. The clothesline scene reflows with viewport width,
+   so the browser's scroll anchoring re-pins onto a node inside it on every
+   resize and nudges scrollY a few px each time. Resizing back and forth across
+   breakpoints (phone → tablet → desktop → phone …) compounds those nudges into
+   a visible cumulative downward drift of the whole section. The home page runs
+   its own scroll choreography, so anchoring only ever fights it — disable it
+   page-wide. overflow-anchor is not inherited, hence the descendant selector. */
+body[data-page="home"],
+body[data-page="home"] * {
+  overflow-anchor: none;
+}
+
 /* Studio → mascot handoff (desktop): the mascot screen is pulled up by one screen
    (--home-end-pull, set by JS to the last gray screen's height) so it starts exactly
    overlapping — and hidden behind — that gray screen. Once scrolled that far, it
@@ -7163,16 +7175,14 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
   height: calc(-1 * var(--home-end-pull, 0px));
 }
 
-/* ---- mobile + touch tablets: simplify to a clean stacked list, drop the
-   cover. Touch devices (iPad portrait 768/834) have no hover, so the
-   hover-revealed aside images/big labels would be unreachable there. ---- */
+/* ---- mobile + touch tablets: simplify the hover-only card affordances (the
+   revealed aside images / big labels are unreachable without a pointer). The
+   work section KEEPS its cover pin here: it sticks and the frosted studio panel
+   slides up over it, same as desktop. With min-height:auto below the section is
+   shorter than the viewport, so --work-sticky-top resolves to 0 (a positive
+   viewport−height min()s to 0) and it pins cleanly at the top — no negative
+   offset to fight. ---- */
 @media (max-width: 760px), (pointer: coarse) and (max-width: 1080px) {
-  body[data-page="home"].home-opening-complete .work-section {
-    position: relative !important;
-    top: auto !important; /* the sticky pin's negative top must not shift the relative element */
-    bottom: auto !important;
-  }
-
   /* The clothesline scene is a wide desktop composition: scaled down by vw it
      only fills the top ~40% of a phone screen, and the section's min-height
      (a full viewport, meant for the desktop pin/reveal — which is disabled
