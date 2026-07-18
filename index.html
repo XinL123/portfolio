@@ -149,16 +149,20 @@
           </defs>
         </svg>
           <div class="pc-top" aria-hidden="true">
-            <!-- the user's line2 clothesline artwork (converted to transparent line
-                 art, 2172px native — full-bleed 1:1 on typical screens, no blurry
-                 stretching): rope sags to its lowest point at the drawn clothespin
-                 (28.62%). The hanging tee/star/heart/raindrop were all removed from
-                 this raster and re-hung as crisp DOM elements below (.pc-l1pic /
-                 .pc-l1star / .pc-l1heart / .pc-l1drop) so their strokes stay sharp
-                 at the site's line weight instead of blurring in the downscale.
-                 The art paints ABOVE the bun so its drawn clip visually holds the
+            <!-- the user's line2 clothesline artwork, re-authored as a SINGLE
+                 centreline stroke in the original 2172×250 coordinate system
+                 (scripts/trace-clothesline.py). It carries stroke-width 1.5 +
+                 vector-effect:non-scaling-stroke so its on-screen weight stays
+                 1.5px at EVERY viewport — matching the lower .pc-rope exactly.
+                 (The earlier version was a traced FILL whose baked thickness
+                 shrank with width:100vw: ~1.3px at 1440 down to ~0.35px at 390,
+                 so on iPad/iPhone this line looked far thinner than the lower
+                 rope.) It still sags to its lowest point at the drawn clothespin
+                 (28.62%). The hanging tee/star/heart/raindrop live as crisp DOM
+                 elements below (.pc-l1pic / .pc-l1star / .pc-l1heart /
+                 .pc-l1drop). The art paints ABOVE the bun so the clip holds the
                  dome. -->
-            <img class="pc-top-line" src="assets/system/clothesline-top.png?v=20260712c" alt="" draggable="false" />
+            <img class="pc-top-line" src="assets/system/clothesline-top.svg?v=20260717c" alt="" draggable="false" />
 
             <!-- bun caught in the artwork's drawn clothespin at the sag -->
             <div class="pc-bun">

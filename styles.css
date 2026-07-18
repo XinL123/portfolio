@@ -7953,8 +7953,8 @@ body[data-theme="dark"] .mascot-img {
   --pc-gap: clamp(48px, 7.5vw, 125px);    /* reference 0.075 of frame */
   --pc-w: clamp(205px, 17.5vw, 292px);    /* restrained card scale */
   --pc-fade-l: clamp(14px, 2.4vw, 44px);
-  --pc-fade-r: 18vw;                      /* melts the preview card's right side */
-  --pc-scene-lift: clamp(42px, 5.5vw, 64px);
+  --pc-fade-r: 15vw;                      /* melts the preview card's right side */
+  --pc-scene-lift: clamp(36px, 4vw, 58px);
   position: relative;
   font-family: var(--hand);
 }
@@ -8009,7 +8009,7 @@ body[data-theme="dark"] .pc-top-line {
 
 .pc-rope path {
   stroke: var(--pc-line);
-  stroke-width: 1.5;
+  stroke-width: 1.0; /* match .pc-top-line (trace-clothesline.py STROKE) */
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.95;
@@ -8704,11 +8704,13 @@ body[data-theme="dark"] .pc-note {
     --pc-gap: 16px;
     --pc-fade-l: 10px;
     --pc-fade-r: 9vw;
+    --clothesline-drop: 36px;
   }
 
   .pc-top {
     height: calc(9.16vw + 14vw * 0.66 + 8px);
     margin-top: 0;
+    top: var(--clothesline-drop);
   }
 
   /* mascot: pure vw, never frozen — keeps the sketch's mascot:card ratio */
@@ -8806,14 +8808,14 @@ body[data-theme="dark"] .pc-note {
 @media (min-width: 661px) and (max-width: 1080px), (min-width: 661px) and (max-width: 1180px) and (orientation: portrait) {
   .pc-scene {
     /* user pass 3: whole scene scaled down ~20% — 小巧精致, ratios unchanged */
-    --pc-w: 34vw;      /* main project card */
+    --pc-w: 26vw;      /* main project card */
     --pc-inset: 43vw;  /* its resting left edge → card centre at 60% (sketch: 59%) */
     --pc-gap: 5vw;
     --pc-fade-l: 14px;
     /* the fade must MELT the peeking card's outer edge, not erase it — at 10vw
        it swallowed the whole 123px shoulder and the swipe affordance vanished */
     --pc-fade-r: 5vw;
-    --pw-size: clamp(34px, 4.2vw, 48px);
+    --pw-size: clamp(45px, 6.2vw, 55px);
     padding-bottom: calc(var(--pw-size) * 3.5 + 26px);
   }
 
@@ -8861,7 +8863,7 @@ body[data-theme="dark"] .pc-note {
    tier edge (a fixed cap froze it mid-tier while the card kept growing) ---- */
 @media (max-width: 660px) {
   .pc-scene {
-    --pw-size: clamp(22px, 6vw, 40px);
+    --pw-size: clamp(30px, 7.5vw, 48px);
     padding-bottom: calc(var(--pw-size) * 3.5 + 16px);
   }
 
