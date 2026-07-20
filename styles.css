@@ -652,7 +652,7 @@ body[data-theme="dark"] .home-photo::after {
   margin: 0;
   color: inherit;
   font-family: var(--hand);
-  font-size: clamp(10px, 3vw, 36px);
+  font-size: clamp(10px, 2.6vw, 31px);
   font-weight: 300;
   letter-spacing: 0.01em;
   line-height: 1;
@@ -711,13 +711,18 @@ body[data-theme="dark"] .home-photo::after {
 
 /* "play with me!" + a curly arrow aimed at the dome */
 .hh-annot {
+  /* Anchored to the DOME, not to arbitrary screen fractions: the dome's
+     visual half-width is min(10.8vw, 130px) (stage min(30vw,360px) × its
+     0.72 scale), so these offsets park the arrow TIP just off the dome's
+     upper-right shoulder at every width — the aside stays snug against the
+     creature instead of floating in space. Tuned by measurement. */
   position: absolute;
   z-index: 4;
-  left: calc(50% + clamp(140px, 15vw, 218px));
-  top: 39%;
+  left: calc(50% + min(10vw, 112px));
+  top: calc(50% - min(6.7vw, 72px));
   display: grid;
   justify-items: start;
-  gap: 2px;
+  gap: 0px;
   color: inherit;
   font-family: var(--hand);
   font-size: clamp(15px, 1.25vw, 19px);
@@ -726,11 +731,11 @@ body[data-theme="dark"] .home-photo::after {
 }
 
 .hh-annot-arrow {
-  /* the tail (right end of the drawing) tucks in under the text's first
-     letters so pen and words read as one gesture, not two floating bits */
-  width: clamp(48px, 5vw, 68px);
-  margin-top: -3px;
-  margin-left: -26px;
+  /* small and tucked: the tail (right end of the drawing) starts under the
+     text's first letters so pen and words read as one handwritten gesture */
+  width: clamp(38px, 4.2vw, 50px);
+  margin-top: -4px;
+  margin-left: -22px;
 }
 
 .hh-flowers {
@@ -857,9 +862,10 @@ body.home-work-handoff .home-gallery-stage {
   .hh-photo-3 { right: 4%; top: 66%; }
 
   .hh-annot {
-    left: auto;
-    right: 7%;
-    top: 41%;
+    /* the phone tier sizes the dome by its own rule (~17.2vw half-width),
+       so it gets its own dome-anchored offsets: tip ≈12px off the shoulder */
+    left: calc(50% + 18vw);
+    top: calc(50% - 15.3vw);
     font-size: 14px;
   }
 
