@@ -1712,7 +1712,18 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       }
     }
 
-    const nextTarget = clamp(galleryTargetProgress + delta / unit, 0, GALLERY_PROGRESS_MAX);
+    // The old collage's reveal scrub lived in progress 0→1.12 (photos
+    // dispersing, the video enlarging). The hero design paints nothing there,
+    // so that stretch is dead scroll — skip it in BOTH directions: the first
+    // forward notch already moves Projects, and reversing back past the
+    // handoff glides straight home to rest instead of grinding through
+    // ~850px of wheel where nothing visibly happens.
+    const HANDOFF_FLOOR = 1.12;
+    const base = delta > 0 && galleryTargetProgress < HANDOFF_FLOOR
+      ? HANDOFF_FLOOR
+      : galleryTargetProgress;
+    let nextTarget = clamp(base + delta / unit, 0, GALLERY_PROGRESS_MAX);
+    if (delta < 0 && nextTarget <= HANDOFF_FLOOR) nextTarget = 0;
 
     if (nextTarget >= GALLERY_RELEASE_PROGRESS) {
       // park the target at the release point; the smoother glides there and
@@ -1763,8 +1774,14 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     homeGalleryScreen?.getBoundingClientRect();
     galleryBaseRects = captureGalleryRects();
     gallerydriftStop();
-    galleryTargetProgress = 1;
-    setHomeGalleryProgress(1);
+    // Re-enter INSIDE the handoff, parked at its release point: the ride puts
+    // the work section exactly where it just sat (fixedTop(u=1) = landed top)
+    // and the hero exactly off-screen above — so this swap changes NOTHING
+    // visually, and the continued upward scroll simply plays the same ride
+    // backwards through the smoother. Entering at progress 1 instead (the old
+    // collage behaviour) hard-cut straight to the hero in one frame.
+    galleryTargetProgress = GALLERY_RELEASE_PROGRESS;
+    setHomeGalleryProgress(GALLERY_RELEASE_PROGRESS);
     showHeaderTemporarily();
 
     return true;

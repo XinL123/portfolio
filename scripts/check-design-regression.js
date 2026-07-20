@@ -172,7 +172,7 @@ expect(js.includes("reenterHomeGalleryFromProjects") && !js.includes("runHomeGal
 expect(!js.includes("homeReentryHoldUntil") && !js.includes("isReturningFromProjects") && !js.includes("isFinishingHomeOpening"), "Home reverse should not keep stale reentry patch state or undeclared finishing flags");
 expect(!js.includes("home-reentry-prep") && !css.includes("home-reentry-prep"), "Home reverse should not rely on the failed reentry-prep patch class");
 expect(/reenterHomeGalleryFromProjects\(\)[\s\S]*?event\.preventDefault\(\);\s*showHeaderTemporarily\(\);\s*return;/.test(js), "Home reverse wheel event should only enter the centered video state, then wait for the next scroll");
-expect(/const\s+reenterHomeGalleryFromProjects\s*=\s*\(\)\s*=>\s*{[\s\S]*?setHomeGalleryProgress\(1\);[\s\S]*?return true;/.test(js), "Home reverse should re-enter at the centered enlarged video state");
+expect(/const\s+reenterHomeGalleryFromProjects\s*=\s*\(\)\s*=>\s*{[\s\S]*?setHomeGalleryProgress\(GALLERY_RELEASE_PROGRESS\);[\s\S]*?return true;/.test(js), "Home reverse should re-enter parked at the handoff's release point (a pixel-identical swap) and ride back through the smoother");
 expect(js.includes("reenterHomeGalleryFromProjects"), "Home should support reverse re-entry into the gallery from the projects view");
 expect(/deltaY\s*<\s*-28[\s\S]*?reenterHomeGalleryFromProjects/.test(js), "Home reverse re-entry should trigger on a deliberate upward wheel gesture");
 expect(js.includes("skipHomeOpening") && js.includes("!window.location.hash"), "Home opening should skip cleanly when entering directly through #work");
