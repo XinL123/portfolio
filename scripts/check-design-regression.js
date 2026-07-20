@@ -159,7 +159,7 @@ expect(!html.includes("data-home-photo") && !html.includes("home-photo-main"), "
 expect(!/class="hh-photo[^>]*>[\s\S]{0,400}?<figcaption/.test(html), "Hero polaroids must stay caption-free");
 expect(/\.hh-photo\s*{[\s\S]*?touch-action:\s*none/.test(css) && /\.hh-title\s*{[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Hero CSS must be present in the stylesheet (a parallel-editor save once wiped it silently)");
 expect(/\.home-intro-screen\s*{[\s\S]*?position:\s*fixed[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Home intro screens should use the white Gaegu prototype style");
-expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(25px,\s*1\.72vw,\s*27px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (floor raised so the iPad/small-laptop band matches desktop)");
+expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(27px,\s*1\.9vw,\s*30px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (user-tuned 2026-07: 27-30px)");
 expect(/\.home-gallery-screen\s*{[\s\S]*?min-height:\s*100svh[\s\S]*?background:\s*#ffffff/.test(css), "Home gallery should be a full white screen before Projects");
 expect(/body\.home-opening-complete\s+\.home-gallery-screen\s*{[\s\S]*?display:\s*none/.test(css), "Home gallery should leave normal page flow after the opening completes");
 expect(!/body\[data-theme="dark"\]\s+\.home-intro-screen/.test(css), "Intro screens should stay white and should not have a dark mode override");

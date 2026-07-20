@@ -444,7 +444,7 @@ body.home-opening-complete .home-intro-screen {
      used to sit at the 18px floor — tiny, and a jarring 27→18 drop across the
      820px breakpoint where the ≤820 rule caps at 27. 25px keeps that band at the
      desktop size; the max (27) still governs very wide screens unchanged. */
-  font-size: clamp(25px, 1.72vw, 27px);
+  font-size: clamp(27px, 1.9vw, 30px);
   font-weight: 300;
   font-synthesis: none;
   line-height: 1.12;
@@ -458,7 +458,7 @@ body.home-opening-complete .home-intro-screen {
 #intro-3 .intro-line {
   /* same fix as .intro-line above: floor 17→22 so the longer lines 2/3 don't
      shrink to the floor across the iPad / small-laptop band */
-  font-size: clamp(22px, 1.56vw, 24px);
+  font-size: clamp(24px, 1.7vw, 27px);
 }
 
 .intro-line::after {
@@ -634,7 +634,7 @@ body[data-theme="dark"] .home-photo::after {
   margin: 0;
   color: #000000;
   font-family: var(--hand);
-  font-size: clamp(16px, 1.15vw, 20px);
+  font-size: clamp(20px, 1.3vw, 25px);
   font-weight: 300;
   line-height: 1.1;
   text-align: center;
@@ -645,7 +645,7 @@ body[data-theme="dark"] .home-photo::after {
    gallery screen's ink colour, so dark mode flips it for free. ---- */
 .hh-title {
   position: absolute;
-  top: clamp(105px, 19vh, 205px);
+  top: clamp(108px, 20vh, 208px);
   left: 50%;
   translate: -50% 0;
   z-index: 4;
@@ -726,8 +726,11 @@ body[data-theme="dark"] .home-photo::after {
 }
 
 .hh-annot-arrow {
-  width: clamp(34px, 3.6vw, 52px);
-  margin-left: -10px;
+  /* the tail (right end of the drawing) tucks in under the text's first
+     letters so pen and words read as one gesture, not two floating bits */
+  width: clamp(48px, 5vw, 68px);
+  margin-top: -3px;
+  margin-left: -26px;
 }
 
 .hh-flowers {
@@ -7280,7 +7283,7 @@ body[data-page="home"] .home-gallery-screen {
 }
 
 body[data-page="home"] .home-vibe-note {
-  margin-top: -28px;
+  margin-top: -8px;
 }
 
 /* Desktop collage layout (consolidated 2026-07-15 from two historical blocks —
