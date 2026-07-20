@@ -1166,6 +1166,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     document.documentElement.style.removeProperty("--home-work-section-opacity");
     document.documentElement.style.removeProperty("--home-work-section-y");
     document.documentElement.style.removeProperty("--home-work-fixed-top");
+    document.documentElement.style.removeProperty("--home-hero-exit-y");
+    document.documentElement.style.removeProperty("--home-hero-exit-o");
   };
 
   // Lightweight flight recorder for the opening choreography. If an arrival
@@ -1383,31 +1385,31 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       "home-work-handoff",
       workHandoffProgress > 0.001 && progress < GALLERY_PROGRESS_MAX - 0.001
     );
-    document.documentElement.style.setProperty("--home-work-section-opacity", String(workHandoffProgress));
+    // The section is solid almost immediately — the transition must read as one
+    // surface sliding in, never a translucent curtain over the hero.
+    document.documentElement.style.setProperty("--home-work-section-opacity", String(Math.min(1, workHandoffProgress * 3)));
     document.documentElement.style.setProperty("--home-work-section-y", `${260 * (1 - workHandoffEase)}px`);
 
-    // One continuous bridge: ride the fixed preview from its 64vh start down to
-    // the section's real landed position, so at release the class swap changes
-    // nothing visually (the FLIP glide then short-circuits at ≤2px). The curve's
-    // END SLOPE is matched to the wheel — at the release point the section moves
-    // exactly 1px per scrolled px, the same speed native scrolling continues at,
-    // so there is no stall-then-resume gear change. Cubic with f(0)=0, f'(0)=0,
-    // f(1)=1, f'(1)=k (monotonic for 0 <= k <= 2; k = wheel budget / travel).
+    // One continuous bridge, styled as a natural scroll: the hero glides UP and
+    // away while Projects rides in from below, both on the same ease-out curve —
+    // fast off the mark, decelerating into place (先快后慢). f'(1)≈0 means the
+    // section is essentially parked at release, so the FLIP glide short-circuits
+    // (≤2px) and native scrolling simply continues from the settled position.
     if (workHandoffProgress > 0) {
       if (workLandedTop === null) {
         workLandedTop = measureWorkLandedTop();
         traceOpening("probe", { landed: +workLandedTop.toFixed(1) });
       }
       const startTop = Math.min(window.innerHeight * 0.64, 700);
-      const travel = Math.max(startTop + 260 - workLandedTop, 1);
-      const windowWheelPx = 0.74 * GALLERY_WHEEL_UNIT;
-      const k = clamp(windowWheelPx / travel, 0, 2);
       const u = workHandoffProgress;
-      const ride = (k - 2) * u * u * u + (3 - k) * u * u;
+      const ride = easeOutCubic(u);
       const fixedTop = startTop + (workLandedTop - startTop) * ride;
       traceOpening("ride", { u: +u.toFixed(3), top: +fixedTop.toFixed(1) });
       document.documentElement.style.setProperty("--home-work-fixed-top", `${fixedTop.toFixed(1)}px`);
       document.documentElement.style.setProperty("--home-work-section-y", `${(260 * (1 - ride)).toFixed(1)}px`);
+      // the hero leaves like scrolled content: up, and gone well before landing
+      document.documentElement.style.setProperty("--home-hero-exit-y", `${(-ride * window.innerHeight * 0.42).toFixed(1)}px`);
+      document.documentElement.style.setProperty("--home-hero-exit-o", (1 - Math.min(1, u * 1.5)).toFixed(3));
       syncRideCardOpacities(260 * (1 - ride) * 0.55);
 
       // Bring the header home early in the ride — if it only reappears at the

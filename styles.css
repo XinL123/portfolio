@@ -744,6 +744,99 @@ body[data-theme="dark"][data-page="home"] .hh-photo::before {
   background: #121212;
 }
 
+/* ---- hero entrance: the screen fades in (rule above), then its furniture
+   arrives in soft steps — title, orange, photos, then the margin notes.
+   Photos enter via a ONE-SHOT keyframe, not a translate transition: dragging
+   writes inline `translate`, and any lingering transition on it would make
+   every drag frame lag behind the pointer. ---- */
+body[data-page="home"]:not(.home-gallery-active) .hh-title,
+body[data-page="home"]:not(.home-gallery-active) .home-gallery-screen .home-orange-wrap,
+body[data-page="home"]:not(.home-gallery-active) .hh-annot,
+body[data-page="home"]:not(.home-gallery-active) .hh-flowers {
+  opacity: 0;
+}
+
+body[data-page="home"]:not(.home-gallery-active) .hh-title {
+  transform: translateY(14px);
+}
+
+body[data-page="home"]:not(.home-gallery-active) .home-gallery-screen .home-orange-wrap,
+body[data-page="home"]:not(.home-gallery-active) .hh-annot,
+body[data-page="home"]:not(.home-gallery-active) .hh-flowers {
+  translate: 0 14px;
+}
+
+.hh-title {
+  transition: opacity 520ms ease 60ms, transform 600ms cubic-bezier(0.22, 1, 0.36, 1) 60ms;
+}
+
+.home-gallery-screen .home-orange-wrap {
+  transition:
+    opacity 540ms ease 140ms,
+    translate 620ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
+    filter 160ms linear,
+    transform 160ms linear;
+}
+
+.hh-annot {
+  transition: opacity 520ms ease 480ms, translate 600ms cubic-bezier(0.22, 1, 0.36, 1) 480ms;
+}
+
+.hh-flowers {
+  transition: opacity 520ms ease 540ms, translate 600ms cubic-bezier(0.22, 1, 0.36, 1) 540ms;
+}
+
+body.home-gallery-active .hh-photo {
+  animation: hh-photo-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+body.home-gallery-active .hh-photo-1 { animation-delay: 260ms; }
+body.home-gallery-active .hh-photo-2 { animation-delay: 340ms; }
+body.home-gallery-active .hh-photo-3 { animation-delay: 420ms; }
+
+@keyframes hh-photo-in {
+  from { opacity: 0; transform: translateY(14px) rotate(var(--tilt, 0deg)); }
+  to { opacity: 1; transform: rotate(var(--tilt, 0deg)); }
+}
+
+/* ---- handoff exit: the hero leaves like scrolled content — it glides UP and
+   fades while Projects slides in from below (both on the same ease-out ride
+   the JS drives). No transition while the class is on: the scrub must track
+   the wheel 1:1. When the class drops (reverse, or the release swap) the
+   stage eases back through the base transition. ---- */
+.home-gallery-stage {
+  transition: opacity 220ms ease, translate 220ms ease;
+}
+
+body.home-work-handoff .home-gallery-stage {
+  transition: none;
+  translate: 0 var(--home-hero-exit-y, 0px);
+  opacity: var(--home-hero-exit-o, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="home"]:not(.home-gallery-active) .hh-title,
+  body[data-page="home"]:not(.home-gallery-active) .home-gallery-screen .home-orange-wrap,
+  body[data-page="home"]:not(.home-gallery-active) .hh-annot,
+  body[data-page="home"]:not(.home-gallery-active) .hh-flowers {
+    opacity: 1;
+    transform: none;
+    translate: none;
+  }
+
+  body.home-gallery-active .hh-photo {
+    animation: none;
+  }
+
+  .hh-title,
+  .home-gallery-screen .home-orange-wrap,
+  .hh-annot,
+  .hh-flowers,
+  .home-gallery-stage {
+    transition: none;
+  }
+}
+
 @media (max-width: 660px) {
   .hh-title {
     top: clamp(64px, 12vh, 110px);
