@@ -1948,6 +1948,9 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   window.addEventListener(
     "touchmove",
     (event) => {
+      // a finger dragging a hero polaroid is repositioning it, not scrolling —
+      // it must never page the opening no matter how far it travels
+      if (event.target instanceof Element && event.target.closest(".hh-photo")) return;
       if (isWorkLanding()) {
         event.preventDefault();
         if (homeTouchStartY === null) return;
@@ -2442,4 +2445,76 @@ if (revealSections.length && !prefersReducedMotion.matches) {
   }, { threshold: 0 });
 
   io.observe(section);
+})();
+
+/* ============================================================
+   Hero polaroids (home): free drag / reposition.
+   Dragging writes the independent `translate` property, so the frames'
+   resting rotate (in `transform`) is never touched. The frame is clamped so
+   at least half of it always stays inside the stage — a photo can be tossed
+   around but never lost. Nothing persists: a reload deals the desk afresh.
+   ============================================================ */
+(() => {
+  if (document.body.dataset.page !== "home") return;
+  const stage = document.querySelector(".home-gallery-stage");
+  const photos = Array.from(document.querySelectorAll(".hh-photo"));
+  if (!stage || !photos.length) return;
+
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  let zTop = 10; // the last-touched photo rises above its siblings
+
+  photos.forEach((photo) => {
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let baseX = 0;
+    let baseY = 0;
+    let originLeft = 0; // the frame's untranslated screen spot at grab time
+    let originTop = 0;
+    let w = 0;
+    let h = 0;
+
+    photo.addEventListener("pointerdown", (event) => {
+      if (event.button) return;
+      dragging = true;
+      startX = event.clientX;
+      startY = event.clientY;
+      baseX = parseFloat(photo.dataset.dx || "0");
+      baseY = parseFloat(photo.dataset.dy || "0");
+      const rect = photo.getBoundingClientRect();
+      w = rect.width;
+      h = rect.height;
+      originLeft = rect.left - baseX;
+      originTop = rect.top - baseY;
+      photo.classList.add("is-dragging");
+      photo.style.zIndex = String(++zTop);
+      try { photo.setPointerCapture(event.pointerId); } catch (e) { /* older browsers */ }
+      event.preventDefault(); // no text selection / native image drag
+    });
+
+    photo.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      const sr = stage.getBoundingClientRect();
+      const dx = clamp(
+        baseX + (event.clientX - startX),
+        sr.left - originLeft - w * 0.5,
+        sr.right - originLeft - w * 0.5
+      );
+      const dy = clamp(
+        baseY + (event.clientY - startY),
+        sr.top - originTop - h * 0.5,
+        sr.bottom - originTop - h * 0.5
+      );
+      photo.dataset.dx = String(dx);
+      photo.dataset.dy = String(dy);
+      photo.style.translate = `${dx}px ${dy}px`;
+    });
+
+    const release = () => {
+      dragging = false;
+      photo.classList.remove("is-dragging");
+    };
+    photo.addEventListener("pointerup", release);
+    photo.addEventListener("pointercancel", release);
+  });
 })();

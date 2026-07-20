@@ -640,6 +640,139 @@ body[data-theme="dark"] .home-photo::after {
   text-align: center;
 }
 
+/* ---- hero (2026-07 redesign): handwritten title, playable orange, three
+   draggable polaroids, a couple of ink doodles. Everything inherits the
+   gallery screen's ink colour, so dark mode flips it for free. ---- */
+.hh-title {
+  position: absolute;
+  top: clamp(48px, 13vh, 128px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 4;
+  margin: 0;
+  color: inherit;
+  font-family: var(--hand);
+  font-size: clamp(32px, 4.4vw, 54px);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* a loose polaroid: paper frame, ink border, pin at the top. The resting spot
+   comes from left/top + rotate(var(--tilt)); dragging writes the independent
+   `translate`, so position and tilt never fight. */
+.hh-photo {
+  position: absolute;
+  z-index: 6;
+  width: clamp(122px, 13.5vw, 198px);
+  margin: 0;
+  padding: 7px 7px 26px;
+  border: 1.5px solid currentColor;
+  border-radius: 6px;
+  background: #ffffff;
+  transform: rotate(var(--tilt, 0deg));
+  cursor: grab;
+  touch-action: none; /* a finger dragging a photo must not scroll/page */
+  user-select: none;
+}
+
+.hh-photo::before {
+  /* the drawn pin holding it to the page */
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  translate: -50% 0;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.hh-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1.04;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.hh-photo.is-dragging {
+  cursor: grabbing;
+}
+
+.hh-photo-1 { left: 7%; top: 30%; }
+.hh-photo-2 { right: 6.5%; top: 13%; }
+.hh-photo-3 { right: 9%; top: 57%; }
+
+/* "play with me!" + a curly arrow aimed at the dome */
+.hh-annot {
+  position: absolute;
+  z-index: 4;
+  left: calc(50% + clamp(140px, 15vw, 218px));
+  top: 39%;
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  color: inherit;
+  font-family: var(--hand);
+  font-size: clamp(15px, 1.25vw, 19px);
+  font-weight: 300;
+  pointer-events: none;
+}
+
+.hh-annot-arrow {
+  width: clamp(34px, 3.6vw, 52px);
+  margin-left: -10px;
+}
+
+.hh-flowers {
+  position: absolute;
+  z-index: 3;
+  left: 9%;
+  bottom: 9%;
+  width: clamp(60px, 7vw, 96px);
+  color: inherit;
+  pointer-events: none;
+}
+
+body[data-theme="dark"][data-page="home"] .hh-photo,
+body[data-theme="dark"][data-page="home"] .hh-photo::before {
+  background: #121212;
+}
+
+@media (max-width: 660px) {
+  .hh-title {
+    top: clamp(64px, 12vh, 110px);
+    font-size: clamp(26px, 7.6vw, 34px);
+  }
+
+  .hh-photo {
+    width: clamp(84px, 22vw, 108px);
+    padding: 5px 5px 16px;
+  }
+
+  .hh-photo-1 { left: 3%; top: 20%; }
+  .hh-photo-2 { right: 3%; top: 14%; }
+  .hh-photo-3 { right: 4%; top: 66%; }
+
+  .hh-annot {
+    left: auto;
+    right: 7%;
+    top: 41%;
+    font-size: 14px;
+  }
+
+  .hh-flowers {
+    left: 7%;
+    bottom: 5%;
+    width: 54px;
+  }
+}
+
 body.home-gallery-revealing .site-header {
   opacity: 0;
   pointer-events: none;

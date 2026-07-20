@@ -33,7 +33,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap" />
-    <link rel="stylesheet" href="styles.css?v=20260719a" />
+    <link rel="stylesheet" href="styles.css?v=20260719b" />
     <link rel="stylesheet" href="orange-buddy.css?v=20260715f" />
   </head>
   <body data-page="home">
@@ -81,40 +81,56 @@
         <p class="intro-line" data-text="I bring designs to life through code"></p>
       </section>
 
-      <section class="home-gallery-screen" id="home" data-intro-index="3" aria-label="Portfolio opening collage">
+      <section class="home-gallery-screen" id="home" data-intro-index="3" aria-label="Portfolio home hero">
+        <!-- Hero (2026-07 redesign, sketch-inspired): a quiet hand-drawn desk.
+             Handwritten title, the orange creature centre-stage ("play with
+             me!"), and three loose polaroids the visitor can DRAG anywhere
+             (pointer-drag writes `translate`; the frames' rotate lives in
+             `transform`, so the two never collide). No captions, no CTAs — the
+             menu already routes everywhere. Scrolling on simply hands off to
+             Projects exactly as before; the old collage's reveal choreography
+             idles harmlessly (its photo hooks no longer exist in the DOM). -->
         <div class="home-gallery-stage">
-          <div class="home-photo home-photo-tall home-photo-a has-image" data-home-photo="a" aria-hidden="true">
-            <img src="assets/home/pic1.jpg" alt="" />
+          <h1 class="hh-title">Hi, I'm Xin.</h1>
+
+          <figure class="hh-photo hh-photo-1" style="--tilt: -3.2deg" aria-label="Draggable photo">
+            <img src="assets/home/pic1.jpg" alt="" draggable="false" />
+          </figure>
+          <figure class="hh-photo hh-photo-2" style="--tilt: 3.4deg" aria-label="Draggable photo">
+            <img src="assets/home/pic2.jpg" alt="" draggable="false" />
+          </figure>
+          <figure class="hh-photo hh-photo-3" style="--tilt: -2.1deg" aria-label="Draggable photo">
+            <img src="assets/home/pic3.jpg" alt="" draggable="false" />
+          </figure>
+
+          <div class="hh-annot" aria-hidden="true">
+            <span class="hh-annot-text">play with me!</span>
+            <svg class="hh-annot-arrow" viewBox="0 0 56 40" fill="none">
+              <path d="M52 7 C 36 1, 16 8, 7 28" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M4 20 L 7 29 L 15 25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            </svg>
           </div>
-          <div class="home-photo home-photo-wide home-photo-b has-image" data-home-photo="b" aria-hidden="true">
-            <video
-              class="home-inline-video"
-              src="assets/home/cancun.mov"
-              autoplay
-              muted
-              loop
-              playsinline
-            ></video>
-          </div>
-          <div class="home-photo home-photo-wide home-photo-c has-image" data-home-photo="c" aria-hidden="true">
-            <img src="assets/home/pic4.jpg" alt="" />
-          </div>
-          <div class="home-photo home-photo-wide home-photo-d has-image" data-home-photo="d" aria-hidden="true">
-            <img src="assets/home/pic2.jpg" alt="" />
-          </div>
-          <div class="home-photo home-photo-small home-photo-e has-image" data-home-photo="e" aria-hidden="true">
-            <img src="assets/home/pic3.jpg" alt="" />
-          </div>
-          <div class="home-photo home-photo-main" data-home-photo="main" aria-hidden="true">
-            <video
-              class="home-photo-video"
-              src="assets/home/home video.mov"
-              autoplay
-              muted
-              loop
-              playsinline
-            ></video>
-          </div>
+
+          <svg class="hh-flowers" viewBox="0 0 96 74" fill="none" aria-hidden="true">
+            <!-- two loose line-art flowers + grass ticks, same ink as the site -->
+            <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M34 70 C 33 56, 34 46, 33 34" />
+              <circle cx="33" cy="26" r="3" />
+              <circle cx="26.5" cy="22" r="4.6" />
+              <circle cx="33" cy="16.5" r="4.6" />
+              <circle cx="39.5" cy="22" r="4.6" />
+              <circle cx="29" cy="31" r="4.6" />
+              <circle cx="37" cy="31" r="4.6" />
+              <path d="M62 71 C 62 62, 61 56, 62 49" />
+              <circle cx="62" cy="44" r="2.2" />
+              <circle cx="57.5" cy="41" r="3.4" />
+              <circle cx="62" cy="37.5" r="3.4" />
+              <circle cx="66.5" cy="41" r="3.4" />
+              <circle cx="59.5" cy="47" r="3.4" />
+              <circle cx="64.5" cy="47" r="3.4" />
+              <path d="M14 71 C 18 66, 19 64, 20 60 M22 71 C 24 68, 25 66, 25 64 M76 72 C 79 68, 80 66, 81 62 M86 72 C 88 69, 89 68, 90 65" />
+            </g>
+          </svg>
 
           <div class="home-orange-wrap">
             <div class="orange-stage" aria-label="Interactive orange character">
@@ -602,7 +618,7 @@
          over it (position: sticky has nothing to hold onto without this). -->
     <div class="home-reveal-spacer" aria-hidden="true"></div>
 
-    <script src="script.js?v=20260719a"></script>
+    <script src="script.js?v=20260719b"></script>
     <script src="orange-buddy.js?v=20260715f"></script>
     <script src="clothesline.js?v=20260715f"></script>
   </body>

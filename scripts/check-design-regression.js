@@ -150,8 +150,14 @@ expect(html.includes('class="pc-bun"') && html.includes('pc-bun-eye-l'), "The or
 expect(js.includes("const workCards = Array.from") && js.includes("syncVisibleWorkCards") && js.includes("(enterLine - top) / (enterLine - settleLine)"), "Work card reveal should be scroll-scrubbed (position-driven progress, glide-compensated), settling into .is-visible — never a triggered pop animation");
 expect(html.includes('class="home-intro-screen is-active"') && html.includes('data-text="Hi, I\'m Xin.L"'), "Home should start with the prototype intro sequence");
 expect(html.includes('data-text="Currently a senior @ Vanderbilt University"') && html.includes('data-text="I bring designs to life through code"'), "Home intro should keep all three requested lines");
-expect(html.includes('class="home-gallery-screen"') && html.includes('class="orange-stage"'), "Home opening should include the collage screen while reusing the existing orange character");
-expect(html.includes('class="home-vibe-note">All made with vibe coding ;)'), "Home gallery should include the small vibe-coding note below the orange character");
+expect(html.includes('class="home-gallery-screen"') && html.includes('class="orange-stage"'), "Home opening should include the hero screen while reusing the existing orange character");
+expect(html.includes('class="home-vibe-note">All made with vibe coding ;)'), "Home hero should include the small vibe-coding note below the orange character");
+expect(html.includes('class="hh-title">Hi, I\'m Xin.</h1>'), "Home hero should greet with the static handwritten title (no subtitle line)");
+expect(html.includes(">play with me!<") && html.includes('class="hh-annot-arrow"'), "The orange should carry the play-with-me annotation with its drawn arrow");
+expect((html.match(/class="hh-photo hh-photo-\d"/g) || []).length === 3 && js.includes('querySelectorAll(".hh-photo")') && js.includes("setPointerCapture"), "Home hero should hang exactly three draggable polaroids driven by the pointer-drag module");
+expect(!html.includes("data-home-photo") && !html.includes("home-photo-main"), "The old collage photos and main video must stay retired from the home markup");
+expect(!/class="hh-photo[^>]*>[\s\S]{0,400}?<figcaption/.test(html), "Hero polaroids must stay caption-free");
+expect(/\.hh-photo\s*{[\s\S]*?touch-action:\s*none/.test(css) && /\.hh-title\s*{[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Hero CSS must be present in the stylesheet (a parallel-editor save once wiped it silently)");
 expect(/\.home-intro-screen\s*{[\s\S]*?position:\s*fixed[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Home intro screens should use the white Gaegu prototype style");
 expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(25px,\s*1\.72vw,\s*27px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (floor raised so the iPad/small-laptop band matches desktop)");
 expect(/\.home-gallery-screen\s*{[\s\S]*?min-height:\s*100svh[\s\S]*?background:\s*#ffffff/.test(css), "Home gallery should be a full white screen before Projects");
