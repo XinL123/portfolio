@@ -645,15 +645,15 @@ body[data-theme="dark"] .home-photo::after {
    gallery screen's ink colour, so dark mode flips it for free. ---- */
 .hh-title {
   position: absolute;
-  top: clamp(48px, 13vh, 128px);
+  top: clamp(105px, 19vh, 205px);
   left: 50%;
   translate: -50% 0;
   z-index: 4;
   margin: 0;
   color: inherit;
   font-family: var(--hand);
-  font-size: clamp(32px, 4.4vw, 54px);
-  font-weight: 400;
+  font-size: clamp(10px, 3vw, 36px);
+  font-weight: 300;
   letter-spacing: 0.01em;
   line-height: 1;
   white-space: nowrap;
@@ -691,7 +691,8 @@ body[data-theme="dark"] .home-photo::after {
   background: #ffffff;
 }
 
-.hh-photo img {
+.hh-photo img,
+.hh-photo video {
   display: block;
   width: 100%;
   aspect-ratio: 1 / 1.04;
@@ -5624,7 +5625,7 @@ body[data-theme="dark"] .collage-peek img {
   flex-wrap: nowrap;
   align-items: baseline;
   gap: 12px;
-  font-size: clamp(21px, 1.65vw, 29px);
+  font-size: clamp(21px / 1.65vw / 29px);
   white-space: nowrap;
 }
 
