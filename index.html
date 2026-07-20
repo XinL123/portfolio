@@ -33,7 +33,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap" />
-    <link rel="stylesheet" href="styles.css?v=20260715f" />
+    <link rel="stylesheet" href="styles.css?v=20260719a" />
     <link rel="stylesheet" href="orange-buddy.css?v=20260715f" />
   </head>
   <body data-page="home">
@@ -118,10 +118,17 @@
 
           <div class="home-orange-wrap">
             <div class="orange-stage" aria-label="Interactive orange character">
-              <img class="orange-body" src="assets/system/orange-body-no-eyes.png" alt="" />
-              <div class="orange-eye-group" aria-hidden="true">
-                <span class="orange-eye orange-eye-left"></span>
-                <span class="orange-eye orange-eye-right"></span>
+              <!-- .orange-dough carries every soft-body deformation (press, pet
+                   lean, hop, squish...). It stretches to the stage's exact box so
+                   the eye-group's stage-calibrated % anchors stay valid, and it
+                   keeps the deformations off .orange-stage, whose transform slot
+                   belongs to the opening reveal scrub. -->
+              <div class="orange-dough">
+                <img class="orange-body" src="assets/system/orange-body-no-eyes.png" alt="" />
+                <div class="orange-eye-group" aria-hidden="true">
+                  <span class="orange-eye orange-eye-left"></span>
+                  <span class="orange-eye orange-eye-right"></span>
+                </div>
               </div>
             </div>
             <p class="home-vibe-note">All made with vibe coding ;)</p>
@@ -595,7 +602,7 @@
          over it (position: sticky has nothing to hold onto without this). -->
     <div class="home-reveal-spacer" aria-hidden="true"></div>
 
-    <script src="script.js?v=20260715f"></script>
+    <script src="script.js?v=20260719a"></script>
     <script src="orange-buddy.js?v=20260715f"></script>
     <script src="clothesline.js?v=20260715f"></script>
   </body>

@@ -852,6 +852,243 @@ body[data-theme="dark"] .orange-body {
   }
 }
 
+/* ---- 面饼 interactions: a shy, soft little creature ------------------------
+   The cursor is an invisible finger; the dome notices it, leans into it and
+   deforms like dough when touched. EVERY deformation lives on .orange-dough
+   (an inner wrapper stretched to the stage's exact box), because the stage's
+   own transform belongs to the opening reveal scrub — the two can never fight.
+   The dough's transform-origin sits low so squashes read as "the base stays
+   put, the top gives way": a soft bun, not a scaling button.
+   JS (script.js) toggles the classes; nothing here loops forever. */
+.orange-stage {
+  cursor: pointer;
+  touch-action: manipulation; /* taps shouldn't double-tap-zoom the dome */
+  -webkit-touch-callout: none; /* long-press = squish, not the iOS image sheet */
+}
+
+.orange-body {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.orange-dough {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  justify-self: stretch;
+  transform-origin: 50% 86%;
+  /* the ever-present way home: any released state (pet lean, held squish,
+     rapid-click flatten) springs softly back to rest through this */
+  transition: transform 300ms cubic-bezier(0.34, 1.45, 0.5, 1);
+  will-change: transform;
+}
+
+/* hover — a finger pressing into soft dough: brief squash (top gives, base
+   holds), two soft wobbles, done in ~560ms. Never loops. */
+.orange-dough.is-pressing {
+  animation: dough-press 560ms cubic-bezier(0.33, 1.2, 0.55, 1) both;
+}
+
+@keyframes dough-press {
+  0% { transform: none; }
+  20% { transform: scaleX(1.04) scaleY(0.96); }
+  44% { transform: scaleX(1.03) scaleY(0.97) rotate(-1.5deg); }
+  68% { transform: scaleX(1.015) scaleY(0.99) rotate(1.1deg); }
+  86% { transform: rotate(-0.4deg); }
+  100% { transform: none; }
+}
+
+/* petting (rubbing the top): the dome leans a touch toward the hand and dips —
+   JS steers --pet-lean/--pet-dip from the pointer, the short transition keeps
+   the follow doughy rather than rigid. Class off => the base spring above
+   carries it back to rest in ~300ms. */
+.orange-dough.is-petted {
+  transition: transform 170ms ease-out;
+  transform: rotate(var(--pet-lean, 0deg)) scaleY(var(--pet-dip, 1));
+}
+
+/* happy-but-bashful ∩ eyes while petted: slower than a blink on purpose —
+   they ease shut, not snap (random blinks pause in JS meanwhile). Keeping the
+   JS-written --eye-translate carries the gaze into the squint smoothly. */
+.orange-stage.is-petted .orange-eye {
+  border-radius: 999px 999px 10px 10px;
+  transform: var(--eye-translate) translateY(-16%) scaleY(0.55);
+  transition:
+    transform 380ms ease,
+    border-radius 380ms ease;
+}
+
+/* click reaction A — startled: eyes pop wide for a beat while the dough
+   compresses and hops 12px, landing with a small wobble */
+.orange-stage.is-startled .orange-eye {
+  transform: var(--eye-translate) scale(1.22);
+  transition: transform 90ms ease-out;
+}
+
+.orange-dough.is-hop {
+  animation: dough-hop 640ms cubic-bezier(0.3, 1.15, 0.5, 1) both;
+}
+
+@keyframes dough-hop {
+  0% { transform: none; }
+  18% { transform: scaleX(1.05) scaleY(0.9); }
+  46% { transform: translateY(-12px) scaleX(0.985) scaleY(1.03); }
+  68% { transform: translateY(0) scaleX(1.03) scaleY(0.97) rotate(1.1deg); }
+  85% { transform: rotate(-0.7deg); }
+  100% { transform: none; }
+}
+
+/* click reaction B — shy: pupils sneak toward each other while the dough does
+   a small embarrassed twist (the note briefly says `hehe :)` via JS) */
+.orange-stage.is-shy .orange-eye-left {
+  transform: var(--eye-translate) translateX(calc(5px * var(--eye-scale, 1)));
+  transition: transform 260ms ease;
+}
+
+.orange-stage.is-shy .orange-eye-right {
+  transform: var(--eye-translate) translateX(calc(-5px * var(--eye-scale, 1)));
+  transition: transform 260ms ease;
+}
+
+.orange-dough.is-twist {
+  animation: dough-twist 900ms ease-in-out both;
+}
+
+@keyframes dough-twist {
+  0% { transform: none; }
+  26% { transform: rotate(-2.6deg); }
+  56% { transform: rotate(2deg); }
+  80% { transform: rotate(-0.8deg); }
+  100% { transform: none; }
+}
+
+/* click reaction C — playing dead: eyes flatten to two lines while the dough
+   slowly deflates... then it snaps back like nothing happened (is-pop) */
+.orange-stage.is-dead .orange-eye {
+  border-radius: 999px;
+  transform: var(--eye-translate) scaleY(0.12);
+  transition: transform 140ms ease-in, border-radius 140ms ease-in;
+}
+
+.orange-dough.is-flat {
+  transform: scaleX(1.04) scaleY(0.9);
+  transition: transform 620ms ease-out;
+}
+
+.orange-dough.is-pop {
+  animation: dough-pop 280ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes dough-pop {
+  0% { transform: scaleX(1.04) scaleY(0.9); }
+  55% { transform: scaleX(0.98) scaleY(1.04); }
+  100% { transform: none; }
+}
+
+/* long-press (touch): the dough slowly gives under the finger; release lets
+   the base spring (or is-pop) carry it back */
+.orange-dough.is-held {
+  transform: scaleX(1.06) scaleY(0.86);
+  transition: transform 900ms cubic-bezier(0.25, 0.6, 0.35, 1);
+}
+
+/* double-poke — "hey! :)": squashed flat for a beat, then it POPS 16px into
+   the air with a little mid-air tilt, lands, and jiggles softly twice.
+   User-specified rhythm: 按扁100ms → 弹起220ms → 落地180ms → 软晃300ms (800ms). */
+.orange-dough.is-pounce {
+  animation: dough-pounce 800ms cubic-bezier(0.3, 0.9, 0.4, 1) both;
+}
+
+@keyframes dough-pounce {
+  0% { transform: none; }
+  12.5% { transform: scaleX(1.06) scaleY(0.88); }                              /* 按扁 */
+  40% { transform: translateY(-16px) rotate(-2deg) scaleX(0.98) scaleY(1.04); } /* 弹起+空中歪 */
+  62.5% { transform: translateY(0) scaleX(1.05) scaleY(0.95); }                 /* 落地 */
+  76% { transform: rotate(1.6deg); }                                            /* 软晃 */
+  89% { transform: rotate(-1.1deg); }
+  100% { transform: none; }
+}
+
+/* third rapid poke — it leaps properly awake ("okay okay, I'm awake :)");
+   the flatten intro is baked in so it works from any state */
+.orange-dough.is-spring {
+  animation: dough-spring 780ms cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+@keyframes dough-spring {
+  0% { transform: none; }
+  14% { transform: scaleX(1.08) scaleY(0.8); }
+  40% { transform: translateY(-14px) scaleX(0.97) scaleY(1.06); }
+  62% { transform: translateY(0) scaleX(1.04) scaleY(0.96); }
+  80% { transform: rotate(1deg); }
+  100% { transform: none; }
+}
+
+/* idle life — an occasional single breath (scheduled sparsely by JS; this is
+   deliberately NOT an infinite float, which would read as page decoration) */
+.orange-dough.is-breath {
+  animation: dough-breath 1700ms ease-in-out both;
+}
+
+@keyframes dough-breath {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-2.5px) scaleY(1.012); }
+}
+
+/* the caption gets gently knocked about by the dome's bigger moves — rotate is
+   the independent property, so it composes with any base transform */
+.home-vibe-note.is-nudged {
+  animation: note-nudge 560ms ease both;
+}
+
+@keyframes note-nudge {
+  0% { rotate: 0deg; translate: 0 0; }
+  35% { rotate: -2.4deg; translate: 0 1.5px; }
+  100% { rotate: 0deg; translate: 0 0; }
+}
+
+/* a single bashful heart — only after the petting has gone on a while */
+.orange-heart {
+  position: absolute;
+  z-index: 3;
+  top: 12%;
+  color: var(--orange);
+  font-size: calc(26px * var(--eye-scale, 1));
+  line-height: 1;
+  pointer-events: none;
+  animation: orange-heart-float 980ms ease-out both;
+}
+
+@keyframes orange-heart-float {
+  0% { opacity: 0; translate: 0 6px; scale: 0.5; }
+  22% { opacity: 1; scale: 1; }
+  100% { opacity: 0; translate: 0 calc(-46px * var(--eye-scale, 1)); scale: 0.92; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orange-dough,
+  .orange-dough.is-pressing,
+  .orange-dough.is-petted,
+  .orange-dough.is-hop,
+  .orange-dough.is-twist,
+  .orange-dough.is-flat,
+  .orange-dough.is-pop,
+  .orange-dough.is-held,
+  .orange-dough.is-pounce,
+  .orange-dough.is-spring,
+  .orange-dough.is-breath,
+  .home-vibe-note.is-nudged {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
+  .orange-heart {
+    display: none;
+  }
+}
+
 .work-section,
 .story-strip,
 .about-teaser,
@@ -5315,6 +5552,26 @@ body[data-theme="dark"] .collage-peek img {
   transform: translateY(0);
 }
 
+/* The reveal (syncVisibleAboutPhotoWall) lights only the wall whose CENTRE is
+   nearest the viewport centre. At the bottom of the page the viewport centre
+   stops at docHeight − 50vh, so a final wall sitting closer to the end than
+   that could never win and stayed invisible forever — Favorite Podcasts never
+   faded in, at ANY breakpoint. Sizing the last wall so its centre lands exactly
+   50vh above the document end fixes that AND parks it dead centre on the final
+   screen: scrolling comes to rest with it centred and nothing empty below.
+   A plain 100vh was one --about-tail too tall, which is what pushed it high up
+   the screen with dead space underneath. --about-tail = everything already
+   below its centre (main's bottom padding + the footer); retune if those
+   change. The ≤1080 block overrides this for iPad/iPhone. */
+.about-page .photo-wall:last-of-type {
+  --about-tail: 244px;
+  min-height: max(240px, calc(100vh - 2 * var(--about-tail)));
+  min-height: max(240px, calc(100svh - 2 * var(--about-tail)));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .about-page .photo-wall .photo-card {
   --photo-delay: 0ms;
   opacity: 0;
@@ -5628,7 +5885,7 @@ body[data-theme="dark"] .about-collage-card {
 
   .about-collage {
     justify-self: center;
-    width: min(100%, 400px);
+    width: min(100%, 300px);
   }
 
   .about-intro-copy {
@@ -5638,6 +5895,14 @@ body[data-theme="dark"] .about-collage-card {
 
   .about-intro-copy h1 {
     justify-content: center;
+  }
+
+  /* iPad/tablet: the intro paragraph reads as a tidy justified block —
+     both edges flush (两端对齐), last/short line centred (局中) so it stays
+     balanced under the centred title. Only the <p>; h1 and facts unchanged. */
+  .about-intro-copy p {
+    text-align: justify;
+    text-align-last: center;
   }
 
   .intro-facts {
@@ -5693,6 +5958,125 @@ body[data-theme="dark"] .about-collage-card {
 
   .toolbox-grid {
     gap: 12px;
+  }
+}
+
+/* iPad only — one clear control for the About introduction's reading width.
+   Make this number smaller for a narrower paragraph, or larger for a wider one. */
+@media (min-width: 661px) and (max-width: 1080px) {
+  /* The tablet header uses a 1fr centre column. Without an explicit
+     shrink-to-content width, the nav pill stretches across that whole column. */
+  .main-nav {
+    justify-self: center;
+    width: fit-content;
+    max-width: calc(100vw - 56px);
+  }
+
+  /* Change only this value to move the About introduction closer to/further
+     from the collage: smaller = closer, larger = further apart. */
+  .about-hero {
+    --about-hero-ipad-gap: 18px;
+    row-gap: var(--about-hero-ipad-gap);
+  }
+
+  .about-intro-copy {
+    --about-intro-ipad-width: 680px;
+    width: min(100%, var(--about-intro-ipad-width));
+  }
+
+  /* Only these requested iPad walls use wider rows. All other walls above
+     continue to inherit the tablet's normal three-column layout. */
+  .photo-wall-moments .grid-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .photo-wall[aria-labelledby="passion-title"] .grid-five,
+  .photo-wall[aria-labelledby="screen-title"] .grid-five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  /* Books and Podcasts keep four centred covers, but each cover uses exactly
+     the same width as a Screen Picks cover (a five-column row). Their own
+     media aspect ratios — book poster and square podcast cover — stay intact. */
+  .photo-wall[aria-labelledby="books-title"] .grid-four,
+  .photo-wall[aria-labelledby="podcasts-title"] .grid-four {
+    --about-ipad-screen-card-width: calc(
+      (100% - var(--about-grid-gap) - var(--about-grid-gap) - var(--about-grid-gap) - var(--about-grid-gap)) / 5
+    );
+    grid-template-columns: repeat(4, minmax(0, var(--about-ipad-screen-card-width)));
+  }
+
+  /* iPad Playground: same card width and 24px rhythm as About's five-up
+     Screen Picks row. Artwork retains its natural image proportions. */
+  .playground-page {
+    --art-ipad-gap: clamp(24px, 2.4vw, 34px);
+  }
+
+  .art-year-2026 .art-row,
+  .art-year-2025 .art-row,
+  .art-year-2024 .art-row,
+  .art-year-before .art-row {
+    display: grid;
+    justify-content: center;
+    align-items: start;
+    gap: var(--art-ipad-gap);
+    width: 100%;
+    max-width: none;
+  }
+
+  .art-year-2026 .art-row {
+    grid-template-columns: repeat(4, minmax(0, calc(
+      (100% - var(--art-ipad-gap) - var(--art-ipad-gap) - var(--art-ipad-gap) - var(--art-ipad-gap)) / 5
+    )));
+  }
+
+  /* 2026: balance the two portrait pieces at the outer edges, with the
+     landscapes forming a calm centre band. The second row stays centred. */
+  .art-year-2026 .art-row .art-card {
+    --lift: 0px;
+  }
+
+  .art-year-2026 .art-card:nth-child(5) {
+    grid-row: 1;
+    grid-column: 4;
+  }
+
+  .art-year-2026 .art-card:nth-child(4) {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .art-year-2026 .art-card:nth-child(6) {
+    grid-row: 2;
+    grid-column: 3;
+  }
+
+  .art-year-2025 .art-row {
+    grid-template-columns: repeat(2, minmax(0, calc(
+      (100% - var(--art-ipad-gap) - var(--art-ipad-gap) - var(--art-ipad-gap) - var(--art-ipad-gap)) / 5
+    )));
+  }
+
+  .art-year-2024 .art-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .art-year-before .art-row {
+    grid-template-columns: repeat(4, minmax(0, calc(
+      (100% - var(--art-ipad-gap) - var(--art-ipad-gap) - var(--art-ipad-gap) - var(--art-ipad-gap)) / 5
+    )));
+  }
+
+  .art-year-2026 .art-card,
+  .art-year-2025 .art-card,
+  .art-year-2024 .art-card,
+  .art-year-before .art-card,
+  .art-year-2026 .art-card.landscape,
+  .art-year-2025 .art-card.landscape,
+  .art-year-2024 .art-card.landscape,
+  .art-year-before .art-card.landscape {
+    width: 100%;
+    flex: none;
   }
 }
 
@@ -5777,6 +6161,14 @@ body[data-theme="dark"] .about-collage-card {
      Only the vibe-note size below was still live.) */
   .home-vibe-note {
     font-size: 14px;
+  }
+}
+
+/* This narrower iPad tier otherwise overrides the row-gap above with
+   `gap: 42px`; keep it connected to the same editable iPad variable. */
+@media (min-width: 661px) and (max-width: 820px) {
+  .about-hero {
+    gap: var(--about-hero-ipad-gap);
   }
 }
 
@@ -5913,9 +6305,13 @@ body[data-theme="dark"] .about-collage-card {
     padding: 104px 28px max(28px, env(safe-area-inset-bottom));
     border: 0;
     border-radius: 0;
-    background: #ffffff;
+    /* Theme-aware: this full-screen sheet had a hardcoded #ffffff, so in dark
+       mode it stayed white while its links took the dark --ink (#f9f3eb) —
+       cream on white, i.e. an invisible menu. --paper is #ffffff in light, so
+       light mode renders exactly as before. */
+    background: var(--paper);
     font-family: var(--hand);
-    font-size: clamp(23px, 6.6vw, 30px);
+    font-size: clamp(20px, 5.6vw, 25px);
     line-height: 1.05;
     opacity: 0;
     transform: translateY(-10px);
@@ -6245,6 +6641,90 @@ body[data-theme="dark"] .about-collage-card {
     flex-basis: calc(var(--art-unit) * 1.12);
   }
 
+  /* iPhone artwork archive — use the same 12px rhythm and three-up card width
+     as the About photo wall. Landscape artwork keeps its own aspect ratio, but
+     no longer claims extra horizontal space. */
+  .art-year-2026 .art-row,
+  .art-year-2025 .art-row,
+  .art-year-2024 .art-row {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px 12px;
+    width: 100%;
+  }
+
+  .art-year-2026 .art-card,
+  .art-year-2025 .art-card,
+  .art-year-2024 .art-card,
+  .art-year-2026 .art-card.landscape,
+  .art-year-2025 .art-card.landscape,
+  .art-year-2024 .art-card.landscape {
+    grid-column: span 2;
+    width: 100%;
+    flex: none;
+  }
+
+  /* Cancel the desktop-only centring slots so 2026 flows as a clean 3 + 3. */
+  .art-year-2026 .art-card:nth-child(5),
+  .art-year-2026 .art-card:nth-child(6) {
+    grid-column: span 2;
+  }
+
+  /* 2025 has two pieces: keep the pair centred on its single row. */
+  .art-year-2025 .art-card:nth-child(1) {
+    grid-column: 2 / span 2;
+  }
+
+  .art-year-2025 .art-card:nth-child(2) {
+    grid-column: 4 / span 2;
+  }
+
+  /* 2024 has five pieces: its final pair occupies the middle four tracks. */
+  .art-year-2024 .art-card:nth-child(4) {
+    grid-row: 2;
+    grid-column: 2 / span 2;
+  }
+
+  .art-year-2024 .art-card:nth-child(5) {
+    grid-row: 2;
+    grid-column: 4 / span 2;
+  }
+
+  .art-year-before .art-row {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px 12px;
+    width: 100%;
+  }
+
+  .art-year-before .art-card,
+  .art-year-before .art-card.landscape {
+    grid-column: span 2;
+    width: 100%;
+    flex: none;
+  }
+
+  /* Before 2024: move the final photo into the upper-left gap. */
+  .art-year-before .art-card:nth-child(4) {
+    grid-row: 1;
+    grid-column: 2 / span 2;
+  }
+
+  .art-year-before .art-card:nth-child(2) {
+    grid-row: 1;
+    grid-column: 4 / span 2;
+  }
+
+  .art-year-before .art-card:nth-child(3) {
+    grid-row: 2;
+    grid-column: 2 / span 2;
+  }
+
+  .art-year-before .art-card:nth-child(1) {
+    grid-row: 2;
+    grid-column: 4 / span 2;
+  }
+
   .art-card.filled:hover {
     transform: translateY(var(--lift)) rotate(var(--tilt));
   }
@@ -6327,7 +6807,7 @@ body[data-theme="dark"] .about-collage-card {
 
   .about-collage {
     aspect-ratio: 3 / 4;
-    width: min(calc(100% - 28px), 360px);
+    width: min(calc(100% - 28px), 280px);
   }
 
   .collage-back {
@@ -6348,7 +6828,7 @@ body[data-theme="dark"] .about-collage-card {
   .about-intro-copy h1 {
     flex-wrap: wrap;
     gap: 8px 12px;
-    font-size: clamp(25px, 8vw, 34px);
+    font-size: clamp(18px, 5vw, 24px);
     white-space: normal;
   }
 
@@ -6389,7 +6869,130 @@ body[data-theme="dark"] .about-collage-card {
 
   .photo-wall h2 {
     margin-bottom: 32px;
-    font-size: clamp(25px, 8vw, 34px);
+    font-size: clamp(18px, 5vw, 24px);
+  }
+
+  /* Phone: one section per screen. The walls collapse to ~0.2 of a screen here
+     (a title plus one short row), so several shared the viewport at once and the
+     "nearest centre wins" reveal thrashed — Favorite Books flashed in and out in
+     ~320px of scroll and Podcasts never got its turn. A full screen each gives
+     every wall its own beat, matching the one-at-a-time rhythm of the wider
+     layouts. svh keeps it steady while the mobile URL bar collapses. */
+  .about-page .photo-wall:not([aria-labelledby="books-title"]):not([aria-labelledby="podcasts-title"]) {
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+/* ---- iPad + iPhone: Favorite Books / Favorite Podcasts follow the PLAYGROUND
+   art-year-group standard instead of the About wall standard. Playground rests
+   its groups at 0.36 rather than 0, so the heading stays faintly present and
+   the section eases up to full instead of appearing out of nothing, and it
+   spaces them with padding rather than a screen-tall box — which is why its
+   rhythm reads right where the About versions felt mistimed and misplaced.
+   Values mirror .art-year-group exactly (0.36 / 30px / 420ms / 520ms, and the
+   same padding per tier). The inner .photo-card timing already matches
+   .art-card.filled (420ms / 560ms), so only the section level changes here.
+   Placed after the phone block so it wins the equal-specificity ties. ---- */
+@media (max-width: 1080px) {
+  .about-page .photo-wall[aria-labelledby="books-title"],
+  .about-page .photo-wall[aria-labelledby="podcasts-title"] {
+    display: block;
+    min-height: 0;
+    padding-block: clamp(58px, 8vw, 88px);
+    opacity: 0.36;
+    transform: translateY(30px);
+    transition:
+      opacity 420ms ease,
+      transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .about-page .photo-wall[aria-labelledby="books-title"].is-visible,
+  .about-page .photo-wall[aria-labelledby="podcasts-title"].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Podcasts is the last thing on the page. Compact padding alone leaves its
+     centre below the viewport centre at max scroll, so it could never win the
+     "nearest centre" reveal — it would sit at the 0.36 rest state forever with
+     its covers (which rest at 0) never fading in at all. This runway after it
+     lets the viewport centre reach it, so it lights up AND comes to rest dead
+     centre. --about-runway-trim = everything already below its centre (its own
+     lower half + main's bottom padding + the footer); retune if those change. */
+  .about-page .photo-wall[aria-labelledby="podcasts-title"] {
+    --about-runway-trim: 325px;
+    margin-bottom: max(0px, calc(50svh - var(--about-runway-trim)));
+  }
+}
+
+@media (max-width: 660px) {
+  /* phone tier of the same standard — .art-year-group's own phone padding */
+  .about-page .photo-wall[aria-labelledby="books-title"],
+  .about-page .photo-wall[aria-labelledby="podcasts-title"] {
+    padding: 30px 0 36px;
+  }
+
+  /* the phone tier sits lower (smaller padding + shorter rows), so less of the
+     page already falls below the podcasts centre — trim the runway to match */
+  .about-page .photo-wall[aria-labelledby="podcasts-title"] {
+    --about-runway-trim: 263px;
+  }
+
+  /* Books and Podcasts are compact four-cover rows on iPhone. This must come
+     after the generic phone .grid-four two-column fallback. */
+  .photo-wall[aria-labelledby="books-title"] .grid-four,
+  .photo-wall[aria-labelledby="podcasts-title"] .grid-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* iPhone-only editorial grids. Six internal tracks make a standard card span
+   two tracks: full rows show three cards, while final pairs sit centred. */
+@media (max-width: 660px) {
+  /* Those Moments: 3 + 3 + centred 2. */
+  .photo-wall-moments .grid-four {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .photo-wall-moments .photo-card {
+    grid-column: span 2;
+  }
+
+  .photo-wall-moments .photo-card:nth-child(7) {
+    grid-row: 3;
+    grid-column: 2 / span 2;
+  }
+
+  .photo-wall-moments .photo-card:nth-child(8) {
+    grid-row: 3;
+    grid-column: 4 / span 2;
+  }
+
+  /* My Passion + Screen Picks: 3 + centred 2. */
+  .photo-wall[aria-labelledby="passion-title"] .grid-five,
+  .photo-wall[aria-labelledby="screen-title"] .grid-five {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .photo-wall[aria-labelledby="passion-title"] .photo-card,
+  .photo-wall[aria-labelledby="screen-title"] .photo-card {
+    grid-column: span 2;
+  }
+
+  .photo-wall[aria-labelledby="passion-title"] .photo-card:nth-child(4),
+  .photo-wall[aria-labelledby="screen-title"] .photo-card:nth-child(4) {
+    grid-row: 2;
+    grid-column: 2 / span 2;
+  }
+
+  .photo-wall[aria-labelledby="passion-title"] .photo-card:nth-child(5),
+  .photo-wall[aria-labelledby="screen-title"] .photo-card:nth-child(5) {
+    grid-row: 2;
+    grid-column: 4 / span 2;
   }
 }
 

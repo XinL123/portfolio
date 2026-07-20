@@ -449,6 +449,9 @@ if (orangeStage) {
   const EYE_IDLE_DELAY = 10000;
 
   const blinkOnce = () => {
+    // while petted the eyes hold their happy ∩ squint — a blink animation
+    // would override it with the round-eye keyframes for a frame and flash
+    if (orangeStage.classList.contains("is-petted")) return;
     eyes.forEach((eye) => {
       eye.classList.remove("is-blinking");
       void eye.offsetWidth;
@@ -506,6 +509,14 @@ if (orangeStage) {
     }
   };
 
+  /* The gaze is a shy sideways notice, not a stare-follow: the pupils only
+     engage inside a sensing bubble around the dome (~1.35× its box), and even
+     then they travel at GAZE_SOFTEN of the old rig's range. Outside the
+     bubble it drifts back to its resting look — "咦，它注意到我了" instead of
+     cartoon eye-tracking. */
+  const GAZE_SOFTEN = 0.5;
+  const SENSE_RADIUS_FACTOR = 1.35;
+
   const updateEyeTarget = (event) => {
 
     if (!eyeTrackingEnabled) return;
@@ -514,6 +525,15 @@ if (orangeStage) {
     const rect = orangeStage.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
+
+    const senseRadius = Math.max(rect.width, rect.height) * SENSE_RADIUS_FACTOR;
+    if (Math.hypot(event.clientX - centerX, event.clientY - centerY) > senseRadius) {
+      // the hand is far away — lose interest and drift home
+      window.clearTimeout(eyeIdleTimer);
+      resetEyes();
+      return;
+    }
+
     let relativeX = (event.clientX - centerX) / (rect.width / 2);
     let relativeY = (event.clientY - centerY) / (rect.height / 2);
 
@@ -525,12 +545,12 @@ if (orangeStage) {
 
     const yMultiplier = relativeY < 0 ? upBoost : downReduce;
     const sideAmount = Math.abs(relativeX);
-    const directionalConvergence = sideAmount * convergence;
+    const directionalConvergence = sideAmount * convergence * GAZE_SOFTEN;
     const leftReach = relativeX < 0 ? Math.abs(relativeX) * leftReachBoost : 0;
     const lowerLeftReach = relativeX < 0 && relativeY > 0 ? Math.min(relativeY, 1) * downReachBoost : 0;
 
-    eyeState.targetX = (neutralEyeX + relativeX * maxX - leftReach) * eyeScale;
-    eyeState.targetY = (neutralEyeY + relativeY * maxY * yMultiplier + lowerLeftReach) * eyeScale;
+    eyeState.targetX = (neutralEyeX + (relativeX * maxX - leftReach) * GAZE_SOFTEN) * eyeScale;
+    eyeState.targetY = (neutralEyeY + (relativeY * maxY * yMultiplier + lowerLeftReach) * GAZE_SOFTEN) * eyeScale;
     eyeState.targetLeftInner =
       (relativeX < 0 ? -directionalConvergence * 0.35 : directionalConvergence) * eyeScale;
     eyeState.targetRightInner = -directionalConvergence * eyeScale;
@@ -640,7 +660,331 @@ if (wasGalleryActive) {
     window.clearTimeout(eyeIdleTimer);
     resetEyes();
   });
-  
+
+  /* ---- the shy-little-creature driver ------------------------------------
+     The cursor plays an invisible finger. The dome notices it from nearby
+     (proximity gaze, softened travel), gives like dough when touched (hover
+     press), quietly enjoys being petted (top rub → lean + slow ∩ eyes, one
+     bashful heart if it goes on), and answers pokes with ONE small random
+     reaction. Body deformations live on .orange-dough; eye expressions live
+     on the stage. Nothing loops forever — idle life is sparse and one-shot. */
+  const dough = orangeStage.querySelector(".orange-dough") || orangeStage;
+  const vibeNote = document.querySelector(".home-vibe-note");
+
+  const DOUGH_STATES = ["is-pressing", "is-petted", "is-hop", "is-twist", "is-flat", "is-pop", "is-held", "is-pounce", "is-spring", "is-breath"];
+  const EYE_STATES = ["is-petted", "is-startled", "is-shy", "is-dead"];
+
+  let reactionUntil = 0;      // while now < this, a click reaction owns the body
+  let hoverCooldownUntil = 0; // re-entering the dome shouldn't machine-gun presses
+  let suppressClickUntil = 0; // a long-press release must not read as a click
+  let lastInteractionAt = 0;
+
+  const reactionTimers = new Set();
+  const later = (fn, ms) => {
+    const t = window.setTimeout(() => { reactionTimers.delete(t); fn(); }, ms);
+    reactionTimers.add(t);
+    return t;
+  };
+
+  const clearBody = () => {
+    reactionTimers.forEach((t) => window.clearTimeout(t));
+    reactionTimers.clear();
+    DOUGH_STATES.forEach((c) => dough.classList.remove(c));
+    EYE_STATES.forEach((c) => orangeStage.classList.remove(c));
+    dough.style.removeProperty("--pet-lean");
+    dough.style.removeProperty("--pet-dip");
+  };
+
+  const busy = () => performance.now() < reactionUntil;
+  const petting = () => orangeStage.classList.contains("is-petted");
+
+  /* the caption is part of the act: it can be nudged by the dome's bigger
+     moves and briefly ventriloquised ("hehe :)" / "okay okay, I'm awake :)") */
+  let noteTimer = null;
+  const noteOriginal = vibeNote ? vibeNote.textContent : "";
+  const setNote = (text, ms) => {
+    if (!vibeNote) return;
+    window.clearTimeout(noteTimer);
+    vibeNote.textContent = text;
+    noteTimer = window.setTimeout(() => { vibeNote.textContent = noteOriginal; }, ms);
+  };
+  const nudgeNote = () => {
+    if (!vibeNote) return;
+    vibeNote.classList.remove("is-nudged");
+    void vibeNote.offsetWidth;
+    vibeNote.classList.add("is-nudged");
+  };
+  vibeNote?.addEventListener("animationend", () => vibeNote.classList.remove("is-nudged"));
+
+  const spawnHeart = () => {
+    if (prefersReducedMotion.matches) return;
+    const heart = document.createElement("span");
+    heart.className = "orange-heart";
+    heart.textContent = "♥";
+    heart.style.left = `${18 + Math.random() * 64}%`;
+    heart.style.rotate = `${(Math.random() * 28 - 14).toFixed(1)}deg`;
+    orangeStage.appendChild(heart);
+    heart.addEventListener("animationend", () => heart.remove());
+  };
+
+  /* ---- petting: rubbing the TOP of the dome. Strokes must change direction
+     (a pass-through is not a pet); it leans a little toward the hand, eyes
+     ease into the ∩, and everything springs back ~300ms after the hand stops.
+     Rubs are horizontal, so on touch they stay under the opening's 60px
+     vertical paging threshold. ---- */
+  const PET_REVERSALS_NEEDED = 2;
+  const PET_LINGER_MS = 300;
+  const RUB_MIN_STEP = 3;      // px; below this is pointer jitter, not a stroke
+  const HEART_AFTER_MS = 1600; // it only dares show the heart if this goes on
+
+  let petLingerTimer = null;
+  let petHeartTimer = null;
+  let lastRubX = null;
+  let lastRubDir = 0;
+  let rubReversals = 0;
+
+  const stopPetting = () => {
+    window.clearTimeout(petLingerTimer);
+    window.clearTimeout(petHeartTimer);
+    orangeStage.classList.remove("is-petted");
+    dough.classList.remove("is-petted");
+    dough.style.removeProperty("--pet-lean");
+    dough.style.removeProperty("--pet-dip");
+    lastRubX = null;
+    lastRubDir = 0;
+    rubReversals = 0;
+  };
+
+  const startPetting = () => {
+    if (busy() || petting()) return;
+    clearBody();
+    orangeStage.classList.add("is-petted");
+    dough.classList.add("is-petted");
+    petHeartTimer = window.setTimeout(spawnHeart, HEART_AFTER_MS);
+  };
+
+  orangeStage.addEventListener("pointermove", (event) => {
+    lastInteractionAt = performance.now();
+    const rect = orangeStage.getBoundingClientRect();
+    const x = event.clientX;
+    const inTopZone = event.clientY < rect.top + rect.height * 0.55;
+
+    if (inTopZone && lastRubX !== null && Math.abs(x - lastRubX) > RUB_MIN_STEP) {
+      const dir = Math.sign(x - lastRubX);
+      if (lastRubDir && dir !== lastRubDir) {
+        rubReversals += 1;
+        if (rubReversals >= PET_REVERSALS_NEEDED) startPetting();
+      }
+      lastRubDir = dir;
+    }
+    if (lastRubX === null || Math.abs(x - lastRubX) > RUB_MIN_STEP) lastRubX = x;
+
+    if (petting()) {
+      // lean a touch toward the hand, dip under it — the dent of a soft press
+      const rel = clamp((x - (rect.left + rect.width / 2)) / (rect.width / 2), -1, 1);
+      dough.style.setProperty("--pet-lean", `${(rel * 2.2).toFixed(2)}deg`);
+      dough.style.setProperty("--pet-dip", "0.975");
+      window.clearTimeout(petLingerTimer);
+      petLingerTimer = window.setTimeout(stopPetting, PET_LINGER_MS);
+    }
+  });
+
+  orangeStage.addEventListener("pointerleave", stopPetting);
+
+  /* ---- hover (mouse only): a finger pressing into soft dough — quick
+     squash, two wobbles, a startled little blink, the caption sways ---- */
+  orangeStage.addEventListener("pointerenter", (event) => {
+    if (event.pointerType !== "mouse") return;
+    const now = performance.now();
+    lastInteractionAt = now;
+    if (now < hoverCooldownUntil || busy() || petting()) return;
+    hoverCooldownUntil = now + 900;
+    dough.classList.remove("is-pressing");
+    void dough.offsetWidth;
+    dough.classList.add("is-pressing");
+    blinkOnce();
+    nudgeNote();
+  });
+
+  /* ---- long-press: slowly squished under the finger; release = spring back.
+     (The touch mapping for hover, mostly — but a held mouse works too.) ---- */
+  let holdTimer = null;
+  let holdActive = false;
+  let pressStart = null;
+
+  const releaseHold = () => {
+    window.clearTimeout(holdTimer);
+    holdTimer = null;
+    if (holdActive) {
+      holdActive = false;
+      dough.classList.remove("is-held");
+      dough.classList.add("is-pop");
+      suppressClickUntil = performance.now() + 300;
+    }
+  };
+
+  orangeStage.addEventListener("pointerdown", (event) => {
+    lastInteractionAt = performance.now();
+    pressStart = { x: event.clientX, y: event.clientY };
+    window.clearTimeout(holdTimer);
+    holdTimer = window.setTimeout(() => {
+      if (pressStart && !petting() && !busy()) {
+        holdActive = true;
+        clearBody();
+        dough.classList.add("is-held");
+      }
+    }, 380);
+  });
+
+  orangeStage.addEventListener("pointermove", (event) => {
+    if (pressStart && Math.hypot(event.clientX - pressStart.x, event.clientY - pressStart.y) > 10) {
+      window.clearTimeout(holdTimer); // moving finger = a rub, not a hold
+    }
+  });
+
+  orangeStage.addEventListener("pointerup", () => {
+    pressStart = null;
+    releaseHold();
+  });
+
+  orangeStage.addEventListener("pointercancel", () => {
+    pressStart = null;
+    releaseHold();
+    stopPetting();
+  });
+
+  /* ---- click: ONE small random reaction — startled, shy, or playing dead.
+     Rapid clicking instead packs it flatter, and the third press wakes it
+     ("okay okay, I'm awake :)"). ---- */
+  let lastClickAt = -1e6;
+  let clickChain = 0;
+  let lastReaction = -1;
+
+  const reactStartled = () => {
+    reactionUntil = performance.now() + 700;
+    orangeStage.classList.add("is-startled");
+    dough.classList.add("is-hop");
+    later(() => orangeStage.classList.remove("is-startled"), 380);
+  };
+
+  const reactShy = () => {
+    reactionUntil = performance.now() + 1000;
+    orangeStage.classList.add("is-shy");
+    dough.classList.add("is-twist");
+    setNote("hehe :)", 1200);
+    later(() => orangeStage.classList.remove("is-shy"), 1000);
+  };
+
+  const reactPlayDead = () => {
+    reactionUntil = performance.now() + 1100;
+    orangeStage.classList.add("is-dead");
+    dough.classList.add("is-flat");
+    later(() => {
+      orangeStage.classList.remove("is-dead");
+      dough.classList.remove("is-flat");
+      dough.classList.add("is-pop"); // ...and suddenly it's fine again
+    }, 700);
+  };
+
+  const reactions = [reactStartled, reactShy, reactPlayDead];
+
+  orangeStage.addEventListener("click", (event) => {
+    const now = performance.now();
+    if (now < suppressClickUntil) return;
+    lastInteractionAt = now;
+    clickChain = now - lastClickAt < 650 ? clickChain + 1 : 1;
+    lastClickAt = now;
+
+    // every poke: the eyes dart to the poking finger (soft range, quick lerp)
+    if (Number.isFinite(event.clientX)) {
+      const rect = orangeStage.getBoundingClientRect();
+      const relX = clamp((event.clientX - (rect.left + rect.width / 2)) / (rect.width / 2), -1, 1);
+      const relY = clamp((event.clientY - (rect.top + rect.height / 2)) / (rect.height / 2), -1, 1);
+      eyeState.targetX = (neutralEyeX + relX * maxX * 0.5) * eyeScale;
+      eyeState.targetY = (neutralEyeY + relY * maxY * 0.5) * eyeScale;
+      scheduleEyes();
+    }
+
+    /* second quick poke — "被戳到后突然弹起": squash 100ms, pop up 16px with a
+       mid-air tilt, land, two soft jiggles; both eyes blink on landing and the
+       caption blurts "hey! :)" for a moment. Interrupting whatever reaction
+       click 1 started is the point — this IS the follow-up. */
+    if (clickChain === 2) {
+      clearBody();
+      stopPetting();
+      dough.classList.add("is-pounce");
+      setNote("hey! :)", 900);
+      later(blinkOnce, 500); // lands at ~500ms into the 800ms arc
+      reactionUntil = now + 850;
+      return;
+    }
+    if (clickChain >= 3) {
+      clearBody();
+      dough.classList.add("is-spring");
+      setNote("okay okay, I'm awake :)", 2000);
+      blinkOnce();
+      clickChain = 0;
+      reactionUntil = now + 800;
+      return;
+    }
+
+    if (busy() || petting()) return;
+    clearBody();
+    let pick = Math.floor(Math.random() * reactions.length);
+    if (pick === lastReaction) pick = (pick + 1) % reactions.length; // don't repeat
+    lastReaction = pick;
+    reactions[pick]();
+  });
+
+  /* finished one-shots drop their class */
+  dough.addEventListener("animationend", (event) => {
+    if (event.target !== dough) return;
+    if (["dough-press", "dough-hop", "dough-twist", "dough-pop", "dough-pounce", "dough-spring", "dough-breath"].includes(event.animationName)) {
+      dough.classList.remove("is-pressing", "is-hop", "is-twist", "is-pop", "is-pounce", "is-spring", "is-breath");
+    }
+  });
+
+  /* A finished blink must drop its class: orange-blink-once fills `both`,
+     and a filled animation outranks normal rules in the cascade — leaving
+     .is-blinking on would pin the eyes round forever and silently veto every
+     squint/expression. Its last keyframe equals the resting look, so removing
+     the class here changes nothing visually. */
+  orangeStage.addEventListener("animationend", (event) => {
+    if (event.animationName === "orange-blink-once") {
+      event.target.classList.remove("is-blinking");
+    }
+  });
+
+  /* ---- idle life: every 3–6s, IF nobody has touched it lately — one soft
+     breath, or a glance toward the photos at its sides. One-shots only;
+     constant floating would read as page decoration, not a creature. ---- */
+  const IDLE_QUIET_MS = 4000;
+  let idleTimer = null;
+
+  const idleTick = () => {
+    window.clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => {
+      const quiet = performance.now() - lastInteractionAt > IDLE_QUIET_MS;
+      const onStage = document.body.classList.contains("home-gallery-active");
+      if (
+        quiet && onStage && !busy() && !petting() && !holdActive &&
+        document.visibilityState === "visible" && !prefersReducedMotion.matches
+      ) {
+        if (Math.random() < 0.55) {
+          dough.classList.add("is-breath");
+        } else {
+          const side = Math.random() < 0.5 ? -1 : 1;
+          eyeState.targetX = (neutralEyeX + side * maxX * 0.35) * eyeScale;
+          eyeState.targetY = (neutralEyeY - 6) * eyeScale;
+          scheduleEyes();
+          later(resetEyes, 900);
+        }
+      }
+      idleTick();
+    }, 3200 + Math.random() * 3000);
+  };
+  idleTick();
+
   scheduleBlink(900 + Math.random() * 1800);
 }
 
