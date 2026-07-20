@@ -1296,6 +1296,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     if (isGallery) {
       window.clearTimeout(introTypingTimer);
       galleryProgress = 0;
+      galleryTargetProgress = 0;
+      gallerydriftStop();
       galleryArmed = false;
       galleryReadyAt = Date.now() + 950;
       setHomeGalleryProgress(0);
@@ -1554,6 +1556,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // Finalize the opening's own state so no later event (resize etc.) can see
     // a lingering mid-choreography progress value and wake the ride back up.
     galleryProgress = 0;
+    galleryTargetProgress = 0;
+    gallerydriftStop();
     homeRevealProgress = 0;
     rideReverseAccum = 0;
 
@@ -1635,6 +1639,65 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   let rideReverseAccum = 0;
   const RIDE_REVERSE_THRESHOLD = 90;
 
+  /* Input smoothing: wheel/touch deltas only move a TARGET; a rAF loop eases
+     the displayed progress toward it (frame-rate-independent lerp). This is
+     what makes the transition feel like real page scrolling instead of
+     teleporting — a notched mouse wheel jumps the target by ~0.16 progress
+     per click, and without this layer every click was a visible lurch. It
+     also collapses the per-event style writes (which used to run several
+     times per frame, each forcing layout through syncRideCardOpacities'
+     rect reads) into exactly one write per animation frame. */
+  let galleryTargetProgress = 0;
+  let galleryPendingRelease = false;
+  let gallerySmoothFrame = null;
+  let gallerySmoothTimer = null;
+  let gallerySmoothLastT = 0;
+
+  const gallerydriftStop = () => {
+    if (gallerySmoothFrame) cancelAnimationFrame(gallerySmoothFrame);
+    gallerySmoothFrame = null;
+    window.clearTimeout(gallerySmoothTimer);
+    gallerySmoothTimer = null;
+    gallerySmoothLastT = 0;
+    galleryPendingRelease = false;
+  };
+
+  // rAF while visible; timeout heartbeat while hidden (rAF pauses there) —
+  // same convention as the clothesline and buddy renderers
+  const scheduleGallerySmooth = () => {
+    if (gallerySmoothFrame || gallerySmoothTimer !== null) return;
+    if (document.visibilityState === "hidden") {
+      gallerySmoothTimer = window.setTimeout(() => {
+        gallerySmoothTimer = null;
+        gallerySmoothStep(performance.now());
+      }, 50);
+    } else {
+      gallerySmoothFrame = requestAnimationFrame(gallerySmoothStep);
+    }
+  };
+
+  const gallerySmoothStep = (t) => {
+    gallerySmoothFrame = null;
+    const dt = Math.min(48, gallerySmoothLastT ? t - gallerySmoothLastT : 16.7);
+    gallerySmoothLastT = t;
+    const diff = galleryTargetProgress - galleryProgress;
+
+    if (Math.abs(diff) < 0.0008) {
+      if (diff !== 0) setHomeGalleryProgress(galleryTargetProgress);
+      gallerySmoothLastT = 0;
+      if (galleryPendingRelease && galleryProgress >= GALLERY_RELEASE_PROGRESS - 0.001) {
+        galleryPendingRelease = false;
+        finishHomeOpening(0);
+      }
+      return;
+    }
+
+    // ~0.18 per 60fps frame ≈ a 150-200ms glide — the feel of native smooth scroll
+    const ease = 1 - Math.pow(1 - 0.18, dt / 16.7);
+    setHomeGalleryProgress(galleryProgress + diff * ease);
+    scheduleGallerySmooth();
+  };
+
   const applyHomeGalleryDelta = (delta, unit = GALLERY_WHEEL_UNIT) => {
 
     if (!galleryArmed || Date.now() < galleryReadyAt) return;
@@ -1649,21 +1712,20 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       }
     }
 
-    const nextProgress = galleryProgress + delta / unit;
+    const nextTarget = clamp(galleryTargetProgress + delta / unit, 0, GALLERY_PROGRESS_MAX);
 
-    if (nextProgress >= GALLERY_RELEASE_PROGRESS) {
-      const carryDelta = Math.max(nextProgress - GALLERY_RELEASE_PROGRESS, 0) * unit;
-
-      setHomeGalleryProgress(GALLERY_RELEASE_PROGRESS);
-      finishHomeOpening(carryDelta);
-      return;
+    if (nextTarget >= GALLERY_RELEASE_PROGRESS) {
+      // park the target at the release point; the smoother glides there and
+      // completes on arrival — the ease-out ride is already ~stationary then,
+      // so the settle-then-native-scroll baton pass has no visible seam
+      galleryTargetProgress = GALLERY_RELEASE_PROGRESS;
+      galleryPendingRelease = true;
+    } else {
+      galleryTargetProgress = nextTarget;
+      galleryPendingRelease = false;
     }
 
-    setHomeGalleryProgress(nextProgress);
-
-    if (galleryProgress >= GALLERY_PROGRESS_MAX - 0.002) {
-      finishHomeOpening(Math.abs(delta));
-    }
+    scheduleGallerySmooth();
   };
 
   const reenterHomeGalleryFromProjects = () => {
@@ -1700,6 +1762,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     resetHomeGalleryStyles();
     homeGalleryScreen?.getBoundingClientRect();
     galleryBaseRects = captureGalleryRects();
+    gallerydriftStop();
+    galleryTargetProgress = 1;
     setHomeGalleryProgress(1);
     showHeaderTemporarily();
 
@@ -1871,9 +1935,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
           isLogoReturnAnimation = false;
 
           document.body.classList.remove("home-gallery-revealing");
-  
+
           // 归位后恢复主页原有滚动操作
           galleryProgress = 0;
+          galleryTargetProgress = 0;
+          gallerydriftStop();
           galleryArmed = false;
           galleryReadyAt = Date.now() + 500;
   
