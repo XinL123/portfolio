@@ -667,7 +667,9 @@ body[data-theme="dark"] .home-photo::after {
   z-index: 6;
   width: clamp(122px, 13.5vw, 198px);
   margin: 0;
-  padding: 7px 7px 26px;
+  /* the bottom lip is only a touch deeper than the top — not the classic
+     fat polaroid band */
+  padding: 7px 7px 10px;
   border: 1.5px solid currentColor;
   border-radius: 6px;
   background: #ffffff;
@@ -678,14 +680,15 @@ body[data-theme="dark"] .home-photo::after {
 }
 
 .hh-photo::before {
-  /* the drawn pin holding it to the page */
+  /* the drawn pin holding it to the page — it dips past the frame's top lip
+     and presses onto the photo itself, like it's actually pinned through */
   content: "";
   position: absolute;
-  top: -7px;
+  top: -2px;
   left: 50%;
   translate: -50% 0;
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   border: 1.5px solid currentColor;
   border-radius: 50%;
   background: #ffffff;
@@ -846,7 +849,11 @@ body.home-work-handoff .home-gallery-stage {
 
   .hh-photo {
     width: clamp(84px, 22vw, 108px);
-    padding: 5px 5px 16px;
+    padding: 5px 5px 7px;
+  }
+
+  .hh-photo::before {
+    top: -4px; /* thinner lip here — keep the pin's press on the photo ~2px */
   }
 
   .hh-photo-1 { left: 3%; top: 20%; }
