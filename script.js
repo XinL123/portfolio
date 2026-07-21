@@ -20,12 +20,24 @@ if (isPageReload) {
   }
 }
 
+const THEME_KEY = "portfolio-theme";
+
 const applyTheme = (theme) => {
   document.body.dataset.theme = theme;
   // keep <html> in sync with <body>: the head boot script stamps <html> before
   // first paint, and the html[data-theme="dark"] CSS keys off it — a stale
   // value there would fight the body theme after a pull-chain toggle
   document.documentElement.dataset.theme = theme;
+
+  // Remembered for the rest of this visit, so navigating home -> about ->
+  // playground keeps the choice. sessionStorage (not localStorage) on purpose:
+  // it dies with the tab, and the <head> boot script also clears it on a
+  // reload, so restarting the site always opens light with the intro lines.
+  try {
+    sessionStorage.setItem(THEME_KEY, theme);
+  } catch (e) {
+    /* storage blocked (private mode) — the toggle still works for this view */
+  }
 
   if (themeButton) {
     const isDark = theme === "dark";
@@ -37,11 +49,12 @@ const applyTheme = (theme) => {
   }
 };
 
-// Theme is NOT persisted across page loads: every refresh / navigation starts
-// in light mode. The pull-chain still toggles dark live (see themeButton), but
-// the choice is deliberately not remembered — a refresh always returns to light,
-// which also sidesteps the dark-mode flash during the opening scroll.
-applyTheme("light");
+// The <head> boot script already resolved the theme before first paint — the
+// stored choice, or light if this load is a reload — and stamped it on <html>,
+// with a script at the top of <body> mirroring it there. Adopt that decision
+// instead of overriding it; forcing "light" here is what used to drop the theme
+// on every navigation.
+applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 
 if ("scrollRestoration" in history) {
   history.scrollRestoration = "manual";
@@ -678,6 +691,7 @@ if (wasGalleryActive) {
   let hoverCooldownUntil = 0; // re-entering the dome shouldn't machine-gun presses
   let suppressClickUntil = 0; // a long-press release must not read as a click
   let lastInteractionAt = 0;
+  let photoSquished = false;  // a polaroid is parked on the dome (see listener below)
 
   const reactionTimers = new Set();
   const later = (fn, ms) => {
@@ -703,7 +717,7 @@ if (wasGalleryActive) {
   let noteTimer = null;
   const noteOriginal = vibeNote ? vibeNote.textContent : "";
   const setNote = (text, ms) => {
-    if (!vibeNote) return;
+    if (!vibeNote || photoSquished) return; // squished: the caption is occupied
     window.clearTimeout(noteTimer);
     vibeNote.textContent = text;
     noteTimer = window.setTimeout(() => { vibeNote.textContent = noteOriginal; }, ms);
@@ -756,7 +770,7 @@ if (wasGalleryActive) {
   };
 
   const startPetting = () => {
-    if (busy() || petting()) return;
+    if (busy() || petting() || photoSquished) return;
     clearBody();
     orangeStage.classList.add("is-petted");
     dough.classList.add("is-petted");
@@ -797,7 +811,7 @@ if (wasGalleryActive) {
     if (event.pointerType !== "mouse") return;
     const now = performance.now();
     lastInteractionAt = now;
-    if (now < hoverCooldownUntil || busy() || petting()) return;
+    if (now < hoverCooldownUntil || busy() || petting() || photoSquished) return;
     hoverCooldownUntil = now + 900;
     dough.classList.remove("is-pressing");
     void dough.offsetWidth;
@@ -828,7 +842,7 @@ if (wasGalleryActive) {
     pressStart = { x: event.clientX, y: event.clientY };
     window.clearTimeout(holdTimer);
     holdTimer = window.setTimeout(() => {
-      if (pressStart && !petting() && !busy()) {
+      if (pressStart && !petting() && !busy() && !photoSquished) {
         holdActive = true;
         clearBody();
         dough.classList.add("is-held");
@@ -891,6 +905,7 @@ if (wasGalleryActive) {
   orangeStage.addEventListener("click", (event) => {
     const now = performance.now();
     if (now < suppressClickUntil) return;
+    if (photoSquished) { nudgeNote(); return; } // pinned — only the caption sways
     lastInteractionAt = now;
     clickChain = now - lastClickAt < 650 ? clickChain + 1 : 1;
     lastClickAt = now;
@@ -967,7 +982,7 @@ if (wasGalleryActive) {
       const quiet = performance.now() - lastInteractionAt > IDLE_QUIET_MS;
       const onStage = document.body.classList.contains("home-gallery-active");
       if (
-        quiet && onStage && !busy() && !petting() && !holdActive &&
+        quiet && onStage && !busy() && !petting() && !holdActive && !photoSquished &&
         document.visibilityState === "visible" && !prefersReducedMotion.matches
       ) {
         if (Math.random() < 0.55) {
@@ -985,6 +1000,37 @@ if (wasGalleryActive) {
   };
   idleTick();
 
+  /* ---- photo squish: a dragged polaroid covering the dome. The polaroid
+     drag module (bottom of this file) measures coverage and dispatches
+     "orange-photo-squish" when it crosses the enter/exit thresholds. This is
+     STATE, not a timed reaction: a photo parked on the dome keeps the
+     creature pressed flat and quietly protesting until it is moved away —
+     then it pops straight back and gets its caption back. ---- */
+  const SQUISH_NOTE = "Hey! You're squishing me!";
+  window.addEventListener("orange-photo-squish", (event) => {
+    const on = !!(event.detail && event.detail.squished);
+    if (on === photoSquished) return;
+
+    if (on) {
+      stopPetting();
+      clearBody();
+      reactionUntil = 0;
+      photoSquished = true; // after clearBody/setNote paths, before the swap
+      dough.classList.add("is-photo-squish");
+      orangeStage.classList.add("is-photo-squish");
+      window.clearTimeout(noteTimer);
+      if (vibeNote) vibeNote.textContent = SQUISH_NOTE;
+      nudgeNote(); // the caption sways as the weight lands
+    } else {
+      photoSquished = false;
+      dough.classList.remove("is-photo-squish");
+      orangeStage.classList.remove("is-photo-squish");
+      dough.classList.add("is-pop"); // freed — pops back like after play-dead
+      window.clearTimeout(noteTimer);
+      if (vibeNote) vibeNote.textContent = noteOriginal;
+    }
+  });
+
   scheduleBlink(900 + Math.random() * 1800);
 }
 
@@ -995,10 +1041,6 @@ const workCards = Array.from(document.querySelectorAll('body[data-page="home"] .
 const aboutPhotoWalls = Array.from(document.querySelectorAll('body[data-page="about"] .photo-wall.reveal-section'));
 const homeIntroScreens = Array.from(document.querySelectorAll('body[data-page="home"] .home-intro-screen'));
 const homeGalleryScreen = document.querySelector('body[data-page="home"] .home-gallery-screen');
-const homeGalleryStage = document.querySelector('body[data-page="home"] .home-gallery-stage');
-const homeGalleryPhotos = Array.from(document.querySelectorAll('body[data-page="home"] [data-home-photo]'));
-const homeMainPhoto = document.querySelector('body[data-page="home"] [data-home-photo="main"]');
-const homeOrangeWrap = document.querySelector('body[data-page="home"] .home-orange-wrap');
 
 const isHomePage = document.body.dataset.page === "home";
 
@@ -1087,40 +1129,19 @@ const syncVisibleWorkCards = () => {
   });
 };
 
-// Scroll-linked fade for the Selected-projects (clothesline) scene: it eases in
-// as you slide toward it and eases out as it leaves — a gentle 渐隐渐入. Opacity is
-// a pure function of the SCENE's own viewport position (the section itself pins
-// via position:sticky, so its rect.top is not a reliable travel signal; the scene
-// still scrolls up and off before the pin). Scrubs with the wheel, never plays on
-// its own; the opening choreography owns opacity while it runs.
+// The clothesline scene used to fade out as it rose off the top of the screen —
+// a leftover of the era when the work section PINNED and the studio panel slid
+// up over it: pinned content sits still, so it needed a fade to leave. The page
+// is now one continuous canvas that simply scrolls, and a camera pan does not
+// dissolve its scenery: the scene stays fully solid and just travels out of
+// frame, so the clothesline is still crisp at the seam where the horizon line
+// and the peeking orange appear. (An earlier fade-IN branch was removed for the
+// same reason — it re-dimmed the scene right after the opening delivered it.)
+// Kept as a function so every call site stays valid and any stale inline
+// opacity from an interrupted state gets cleared.
 const syncWorkSceneFade = () => {
-  if (!workScene || !workRevealSection) return;
-  if (document.body.classList.contains("home-opening-active")) return;
-  if (prefersReducedMotion.matches) {
-    workScene.style.removeProperty("opacity");
-    return;
-  }
-  const vh = window.innerHeight || 1;
-  // During the completion landing the section carries a temporary translateY
-  // (finishHomeOpening's FLIP glide). Measure the scene AS IF settled — otherwise
-  // its rect.top reads a screenful too low, this fade computes op<1, and the
-  // scene dips then restores as the glide lands: a second flicker on top of the
-  // handoff's fade-in. Same compensation syncVisibleWorkCards already applies.
-  let glideY = 0;
-  if (workRevealSection) {
-    const t = getComputedStyle(workRevealSection).transform;
-    if (t && t !== "none") {
-      const m = t.match(/matrix\(([^)]+)\)/);
-      if (m) glideY = parseFloat(m[1].split(",")[5]) || 0;
-    }
-  }
-  const top = workScene.getBoundingClientRect().top - glideY;
-  // Full while the scene rests in the upper viewport (its landed top ≈ 90px);
-  // fade out as it rises off the top, fade in as it drops in from below.
-  const op = top <= 0
-    ? Math.max(0, Math.min(1, 1 + top / (vh * 0.5)))
-    : Math.max(0, Math.min(1, 1 - (top - vh * 0.15) / (vh * 0.6)));
-  workScene.style.opacity = op.toFixed(3);
+  if (!workScene) return;
+  if (workScene.style.opacity) workScene.style.removeProperty("opacity");
 };
 
 const syncVisibleAboutPhotoWall = () => {
@@ -1152,15 +1173,18 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   let introTypingTimer = null;
   let galleryProgress = 0;
   let homeRevealProgress = 0;
-  let galleryBaseRects = null;
   let galleryArmed = false;
   let galleryReadyAt = 0;
   let headerHideTimer = null;
-  let isLogoReturnAnimation = false;
   const GALLERY_PROGRESS_MAX = 1.9;
   const GALLERY_RELEASE_PROGRESS = 1.86;
-  const GALLERY_WHEEL_UNIT = 760;
-  const GALLERY_TOUCH_UNIT = 620;
+  // Progress below which the page paints nothing. The handoff maths below is
+  // `(progress - 1 - 0.12) / 0.74`, so the transition only starts at 1.12 —
+  // everything under it belonged to the deleted collage reveal. Derived from
+  // those same numbers so the two can never drift apart.
+  const HANDOFF_START = 0.12;
+  const HANDOFF_SPAN = 0.74;
+  const HANDOFF_FLOOR = 1 + HANDOFF_START;
 
   const clearHomeHandoffVars = () => {
     document.documentElement.style.removeProperty("--home-work-section-opacity");
@@ -1211,28 +1235,6 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     return top;
   };
 
-  // During the handoff ride, drive each card's opacity with the SAME
-  // as-if-settled scrub formula syncVisibleWorkCards uses after completion
-  // (measured against where the section will land, not where it currently
-  // rides). Without this, cards below the settle line sat at full handoff
-  // opacity during the ride and then SNAPPED dimmer at the release swap — the
-  // "one version of the projects appears, then another replaces it" artifact.
-  // The section-level handoff fade still multiplies on top via the parent.
-  const syncRideCardOpacities = (cardLag = 0) => {
-    if (!workCards.length || !workRevealSection || workLandedTop === null) return;
-    const vh = window.innerHeight;
-    const enterLine = vh * 0.92;
-    const settleLine = vh * 0.66;
-    const rideOffset = workRevealSection.getBoundingClientRect().top - workLandedTop;
-    workCards.forEach((card) => {
-      // cardLag = the card's own handoff translateY (y * 0.55) — it is part of
-      // the measured rect but must not count against the settled position.
-      const top = card.getBoundingClientRect().top - rideOffset - cardLag;
-      const progress = clamp((enterLine - top) / (enterLine - settleLine), 0, 1);
-      card.style.transition = "none";
-      card.style.opacity = progress.toFixed(3);
-    });
-  };
 
   const getWorkHandoffViewportY = () => {
     const styles = getComputedStyle(document.documentElement);
@@ -1315,52 +1317,6 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     window.setTimeout(() => typeIntroLine(incomingLine), 620);
   };
 
-  const captureGalleryRects = () => {
-    if (!homeGalleryStage) return null;
-    const stageRect = homeGalleryStage.getBoundingClientRect();
-    const rects = {};
-
-    homeGalleryPhotos.forEach((photo) => {
-      const rect = photo.getBoundingClientRect();
-      rects[photo.dataset.homePhoto] = {
-        width: rect.width,
-        height: rect.height,
-        centerX: rect.left + rect.width / 2,
-        centerY: rect.top + rect.height / 2
-      };
-    });
-
-    const orangeRect = homeOrangeWrap?.getBoundingClientRect() || orangeStage?.getBoundingClientRect();
-    if (orangeRect) {
-      rects.orange = {
-        width: orangeRect.width,
-        height: orangeRect.height,
-        centerX: orangeRect.left + orangeRect.width / 2,
-        centerY: orangeRect.top + orangeRect.height / 2
-      };
-    }
-
-    return { stageRect, rects };
-  };
-
-  const resetHomeGalleryStyles = () => {
-    homeGalleryPhotos.forEach((photo) => {
-      photo.style.transform = "";
-      photo.style.filter = "";
-      photo.style.opacity = "";
-      photo.style.zIndex = "";
-    });
-
-    if (homeOrangeWrap) {
-      homeOrangeWrap.style.opacity = "";
-      homeOrangeWrap.style.transform = "";
-      homeOrangeWrap.style.filter = "";
-    } else if (orangeStage?.closest(".home-gallery-screen")) {
-      orangeStage.style.opacity = "";
-      orangeStage.style.transform = "";
-      orangeStage.style.filter = "";
-    }
-  };
 
   function setHomeGalleryProgress(nextProgress) {
     // State-machine lock: once the opening is complete (and we're not back in an
@@ -1373,12 +1329,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       return;
     }
     const progress = clamp(nextProgress, 0, GALLERY_PROGRESS_MAX);
-    const revealProgress = clamp(progress, 0, 1);
     const exitProgress = clamp(progress - 1, 0, 1);
-    const eased = easeOutCubic(revealProgress);
-    const exitEase = easeOutCubic(exitProgress);
-    const workHandoffProgress = clamp((exitProgress - 0.12) / 0.74, 0, 1);
-    const workHandoffEase = easeOutCubic(workHandoffProgress);
+    const workHandoffProgress = clamp((exitProgress - HANDOFF_START) / HANDOFF_SPAN, 0, 1);
 
     galleryProgress = progress;
     homeRevealProgress = progress;
@@ -1390,7 +1342,6 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // The section is solid almost immediately — the transition must read as one
     // surface sliding in, never a translucent curtain over the hero.
     document.documentElement.style.setProperty("--home-work-section-opacity", String(Math.min(1, workHandoffProgress * 3)));
-    document.documentElement.style.setProperty("--home-work-section-y", `${260 * (1 - workHandoffEase)}px`);
 
     // One continuous bridge, styled as a natural scroll: the hero glides UP and
     // away while Projects rides in from below, both on the same ease-out curve —
@@ -1412,7 +1363,6 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       // the hero leaves like scrolled content: up, and gone well before landing
       document.documentElement.style.setProperty("--home-hero-exit-y", `${(-ride * window.innerHeight * 0.42).toFixed(1)}px`);
       document.documentElement.style.setProperty("--home-hero-exit-o", (1 - Math.min(1, u * 1.5)).toFixed(3));
-      syncRideCardOpacities(260 * (1 - ride) * 0.55);
 
       // Bring the header home early in the ride — if it only reappears at the
       // completion swap, its slide-in reads as a top-of-screen mode switch right
@@ -1423,69 +1373,12 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       }
     }
 
-    if (!homeGalleryStage || !homeMainPhoto) return;
-
-    if (progress > 0.001 && !galleryBaseRects) {
-      galleryBaseRects = captureGalleryRects();
-    }
-
+    // Returning to rest (reverse handoff finished): drop every var the ride
+    // wrote, so the hero is styled purely by the stylesheet again. This used to
+    // sit below a dead early return (the old collage hooks) and never ran.
     if (progress <= 0.001) {
-      galleryBaseRects = null;
-      resetHomeGalleryStyles();
       clearHomeHandoffVars();
       document.body.classList.remove("home-work-handoff");
-      return;
-    }
-
-    const base = galleryBaseRects || captureGalleryRects();
-    if (!base) return;
-
-    const { stageRect, rects } = base;
-    const stageCenterX = stageRect.left + stageRect.width / 2;
-    const viewportWidth = window.innerWidth || stageRect.width;
-    const targetMainWidth = Math.min(viewportWidth * 0.84, stageRect.width * 0.9, 1320);
-    const targetCenterX = stageCenterX;
-    const targetCenterY = stageRect.top + stageRect.height * 0.44;
-
-    homeGalleryPhotos.forEach((photo) => {
-      const key = photo.dataset.homePhoto;
-      const rect = rects[key];
-      if (!rect) return;
-
-      if (key === "main") {
-        const scale = 1 + ((targetMainWidth / rect.width) - 1) * eased;
-        const dx = (targetCenterX - rect.centerX) * eased;
-        const revealDy = (targetCenterY - rect.centerY) * eased;
-        const exitDy = -stageRect.height * 1.14 * exitEase;
-        photo.style.transform = `translate(${dx}px, ${revealDy + exitDy}px) scale(${scale})`;
-        photo.style.filter = "blur(0px)";
-        photo.style.opacity = String(clamp(1 - exitProgress * 1.2, 0, 1));
-        photo.style.zIndex = "9";
-        return;
-      }
-
-      const directionX = rect.centerX < stageCenterX ? -1 : 1;
-      const directionY = rect.centerY < stageRect.top + stageRect.height / 2 ? -1 : 1;
-      const distanceX = stageRect.width * (0.12 + Math.abs(rect.centerX - stageCenterX) / stageRect.width * 0.26);
-      const distanceY = stageRect.height * (0.12 + Math.abs(rect.centerY - (stageRect.top + stageRect.height / 2)) / stageRect.height * 0.24);
-      photo.style.transform = `translate(${directionX * distanceX * eased}px, ${directionY * distanceY * eased}px) scale(${1 - 0.14 * eased})`;
-      photo.style.filter = isLogoReturnAnimation
-         ? "blur(0px)"
-         : `blur(${18 * revealProgress}px)`;
-      photo.style.opacity = isLogoReturnAnimation
-         ? "1"
-         : String(clamp(1 - revealProgress, 0, 1));
-      photo.style.zIndex = "2";
-    });
-
-    if (homeOrangeWrap) {
-      homeOrangeWrap.style.opacity = String(clamp(1 - revealProgress * 1.15, 0, 1));
-      homeOrangeWrap.style.transform = `translateY(${-42 * eased}px) scale(${1 - 0.08 * eased})`;
-      homeOrangeWrap.style.filter = `blur(${8 * revealProgress}px)`;
-    } else if (orangeStage?.closest(".home-gallery-screen")) {
-      orangeStage.style.opacity = String(clamp(1 - revealProgress * 1.15, 0, 1));
-      orangeStage.style.transform = `translateY(${-42 * eased}px) scale(${0.72 - 0.08 * eased})`;
-      orangeStage.style.filter = `blur(${8 * revealProgress}px)`;
     }
   }
 
@@ -1639,27 +1532,52 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   let rideReverseAccum = 0;
   const RIDE_REVERSE_THRESHOLD = 90;
 
-  /* Input smoothing: wheel/touch deltas only move a TARGET; a rAF loop eases
-     the displayed progress toward it (frame-rate-independent lerp). This is
-     what makes the transition feel like real page scrolling instead of
-     teleporting — a notched mouse wheel jumps the target by ~0.16 progress
-     per click, and without this layer every click was a visible lurch. It
-     also collapses the per-event style writes (which used to run several
-     times per frame, each forcing layout through syncRideCardOpacities'
-     rect reads) into exactly one write per animation frame. */
+  // Forward deltas must add up to a real push before the handoff launches.
+  let launchAccum = 0;
+  const LAUNCH_THRESHOLD = 55;
+
+  /* One deliberate gesture launches a TIME-BASED glide between the two scenes.
+     This used to lerp progress toward a target each frame, which sounds smooth
+     but stacked TWO ease-outs: the lerp is itself an ease-out, and the ride
+     then applies easeOutCubic on top. Measured result — 45% of the travel
+     landed in the FIRST frame and 95% inside 84ms, so the transition read as
+     an instant snap with a long invisible tail ("一瞬间"). Now progress is
+     tweened LINEARLY over an explicit duration and the ride's easeOutCubic is
+     the single ease: calm start, most of the motion in the first half, a long
+     gentle settle (先快后慢). GLIDE_MS is the one dial for the whole feel. */
+  const HANDOFF_GLIDE_MS = 900;
+  const HANDOFF_TRAVEL = GALLERY_RELEASE_PROGRESS - HANDOFF_FLOOR;
   let galleryTargetProgress = 0;
   let galleryPendingRelease = false;
+  let galleryPendingHome = false;
   let gallerySmoothFrame = null;
   let gallerySmoothTimer = null;
-  let gallerySmoothLastT = 0;
+  let glideFrom = 0;
+  let glideStartedAt = 0;
+  let glideDuration = HANDOFF_GLIDE_MS;
+  let glideActive = false;
 
   const gallerydriftStop = () => {
     if (gallerySmoothFrame) cancelAnimationFrame(gallerySmoothFrame);
     gallerySmoothFrame = null;
     window.clearTimeout(gallerySmoothTimer);
     gallerySmoothTimer = null;
-    gallerySmoothLastT = 0;
+    glideActive = false;
     galleryPendingRelease = false;
+    galleryPendingHome = false;
+    launchAccum = 0;
+  };
+
+  // Glide from wherever we are to `to`, scaling the duration by how far we
+  // actually travel so an interrupted/partial move isn't slowed to a crawl.
+  const startGalleryGlide = (to) => {
+    glideFrom = galleryProgress;
+    galleryTargetProgress = to;
+    glideStartedAt = performance.now();
+    glideDuration = HANDOFF_GLIDE_MS *
+      clamp(Math.abs(to - glideFrom) / HANDOFF_TRAVEL, 0.3, 1);
+    glideActive = true;
+    scheduleGallerySmooth();
   };
 
   // rAF while visible; timeout heartbeat while hidden (rAF pauses there) —
@@ -1678,65 +1596,85 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 
   const gallerySmoothStep = (t) => {
     gallerySmoothFrame = null;
-    const dt = Math.min(48, gallerySmoothLastT ? t - gallerySmoothLastT : 16.7);
-    gallerySmoothLastT = t;
-    const diff = galleryTargetProgress - galleryProgress;
+    if (!glideActive) return;
 
-    if (Math.abs(diff) < 0.0008) {
-      if (diff !== 0) setHomeGalleryProgress(galleryTargetProgress);
-      gallerySmoothLastT = 0;
-      if (galleryPendingRelease && galleryProgress >= GALLERY_RELEASE_PROGRESS - 0.001) {
-        galleryPendingRelease = false;
-        finishHomeOpening(0);
-      }
+    // Linear in time — the ride's easeOutCubic supplies the ONE ease. Being
+    // time-based (not a per-frame lerp) also means a throttled or dropped frame
+    // resumes at the right place instead of stretching the whole transition.
+    const u = clamp((t - glideStartedAt) / glideDuration, 0, 1);
+    setHomeGalleryProgress(glideFrom + (galleryTargetProgress - glideFrom) * u);
+
+    if (u < 1) {
+      scheduleGallerySmooth();
       return;
     }
 
-    // ~0.18 per 60fps frame ≈ a 150-200ms glide — the feel of native smooth scroll
-    const ease = 1 - Math.pow(1 - 0.18, dt / 16.7);
-    setHomeGalleryProgress(galleryProgress + diff * ease);
-    scheduleGallerySmooth();
+    glideActive = false;
+    if (galleryPendingRelease) {
+      galleryPendingRelease = false;
+      finishHomeOpening(0);
+    } else if (galleryPendingHome) {
+      // Arrived at the bottom of the visible range — drop the rest in one step
+      // (nothing paints below the floor) so the hero is fully at rest.
+      galleryPendingHome = false;
+      setHomeGalleryProgress(0);
+      galleryTargetProgress = 0;
+    }
   };
 
-  const applyHomeGalleryDelta = (delta, unit = GALLERY_WHEEL_UNIT) => {
+  const applyHomeGalleryDelta = (delta) => {
 
     if (!galleryArmed || Date.now() < galleryReadyAt) return;
 
+    // ONE deliberate gesture plays the whole transition. The old behaviour
+    // scrubbed progress with the wheel (each event capped at 90px against a
+    // 760px unit), so reaching Projects took ~7 hard notches — the reported
+    // "have to keep flicking, feels stuck".
     if (delta > 0) {
       rideReverseAccum = 0;
-    } else if (delta < 0 && galleryProgress > 1.12) {
+      if (glideActive || galleryPendingRelease) return; // already on its way
+
+      // A gesture, not a graze. One stray wheel tick (or trackpad momentum
+      // dribbling out of the intro paging) must not fire the whole transition —
+      // that read as "微微一碰就迅速滑走". Accumulate until the push is clearly
+      // intentional; a real swipe crosses this within its first 2-3 events, so
+      // it still feels like a single gesture.
+      launchAccum += delta;
+      if (launchAccum < LAUNCH_THRESHOLD) return;
+      launchAccum = 0;
+
+      // Start AT the floor: progress 0→FLOOR is a leftover of the old collage's
+      // reveal scrub and now paints nothing at all, so easing across it just
+      // spent the first ~80ms of the glide on a still frame (read as lag on the
+      // first flick). Jumping it is invisible by construction, and the whole
+      // ease is then real motion.
+      if (galleryProgress < HANDOFF_FLOOR) setHomeGalleryProgress(HANDOFF_FLOOR);
+      galleryPendingRelease = true;
+      galleryPendingHome = false;
+      startGalleryGlide(GALLERY_RELEASE_PROGRESS);
+      return;
+    }
+
+    launchAccum = 0; // any upward motion cancels a part-built forward gesture
+
+    // Reverse: swallow trackpad lift-off wobble during the ride, then glide
+    // all the way home — same single-gesture rule in the other direction.
+    if (galleryProgress > HANDOFF_FLOOR) {
       rideReverseAccum += -delta;
       if (rideReverseAccum < RIDE_REVERSE_THRESHOLD) {
         traceOpening("wobble-swallowed", { delta: Math.round(delta), accum: Math.round(rideReverseAccum) });
         return;
       }
     }
+    if (glideActive && galleryPendingHome) return; // already gliding home
 
-    // The old collage's reveal scrub lived in progress 0→1.12 (photos
-    // dispersing, the video enlarging). The hero design paints nothing there,
-    // so that stretch is dead scroll — skip it in BOTH directions: the first
-    // forward notch already moves Projects, and reversing back past the
-    // handoff glides straight home to rest instead of grinding through
-    // ~850px of wheel where nothing visibly happens.
-    const HANDOFF_FLOOR = 1.12;
-    const base = delta > 0 && galleryTargetProgress < HANDOFF_FLOOR
-      ? HANDOFF_FLOOR
-      : galleryTargetProgress;
-    let nextTarget = clamp(base + delta / unit, 0, GALLERY_PROGRESS_MAX);
-    if (delta < 0 && nextTarget <= HANDOFF_FLOOR) nextTarget = 0;
-
-    if (nextTarget >= GALLERY_RELEASE_PROGRESS) {
-      // park the target at the release point; the smoother glides there and
-      // completes on arrival — the ease-out ride is already ~stationary then,
-      // so the settle-then-native-scroll baton pass has no visible seam
-      galleryTargetProgress = GALLERY_RELEASE_PROGRESS;
-      galleryPendingRelease = true;
-    } else {
-      galleryTargetProgress = nextTarget;
-      galleryPendingRelease = false;
-    }
-
-    scheduleGallerySmooth();
+    // Aim at the floor, not 0, for the same reason: below it nothing paints, so
+    // targeting 0 would spend the ease's visible portion in its first ~40ms and
+    // the rest settling invisibly — the reverse would read as a snap. The
+    // glide drops to 0 once it arrives (see gallerySmoothStep).
+    galleryPendingRelease = false;
+    galleryPendingHome = true;
+    startGalleryGlide(HANDOFF_FLOOR);
   };
 
   const reenterHomeGalleryFromProjects = () => {
@@ -1770,9 +1708,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     }
 
     clearHomeHandoffVars();
-    resetHomeGalleryStyles();
     homeGalleryScreen?.getBoundingClientRect();
-    galleryBaseRects = captureGalleryRects();
     gallerydriftStop();
     // Re-enter INSIDE the handoff, parked at its release point: the ride puts
     // the work section exactly where it just sat (fixedTop(u=1) = landed top)
@@ -1787,7 +1723,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     return true;
   };
 
-  const pageHomeOpening = (direction, delta = 0, unit = GALLERY_WHEEL_UNIT) => {
+  const pageHomeOpening = (direction, delta = 0) => {
     if (isIntroPaging) return;
 
     if (activeIntroIndex < homeIntroScreens.length) {
@@ -1808,7 +1744,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       return;
     }
 
-    applyHomeGalleryDelta(delta || direction * 180, unit);
+    applyHomeGalleryDelta(delta || direction * 180);
   };
 
   const resetHomeOpening = () => {
@@ -1917,55 +1853,21 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     activeIntroIndex = homeIntroScreens.length;
     galleryArmed = false;
   
-    // 先获得照片原始位置
-    resetHomeGalleryStyles();
-    galleryBaseRects = null;
-  
-    requestAnimationFrame(() => {
-      galleryBaseRects = captureGalleryRects();
+    // The logo return used to reverse-play the collage's disperse animation.
+    // With the hero design there is nothing in the 0→1 progress range to play
+    // back (the old photo hooks are gone), so the 650ms rAF sweep it ran was a
+    // pure no-op that only delayed re-arming the scroll. Land on the hero
+    // directly — visually identical, minus the dead choreography.
+    setHomeGalleryProgress(0);
+    document.body.classList.remove("home-gallery-revealing");
 
-      isLogoReturnAnimation = true;
-  
-      // 先直接呈现滚动扩散后的状态
-      setHomeGalleryProgress(1);
-  
-      requestAnimationFrame(() => {
-        const duration = 650;
-        const startTime = performance.now();
-  
-        const reverseGalleryAnimation = (currentTime) => {
-          const elapsed = currentTime - startTime;
-          const rawProgress = clamp(elapsed / duration, 0, 1);
-  
-          // 先快后慢
-          const easedProgress = 1 - Math.pow(1 - rawProgress, 4);
-  
-          // 从 progress 1 倒放至 progress 0
-          setHomeGalleryProgress(1 - easedProgress);
-  
-          if (rawProgress < 1) {
-            requestAnimationFrame(reverseGalleryAnimation);
-            return;
-          }
-  
-          setHomeGalleryProgress(0);
-          isLogoReturnAnimation = false;
+    galleryProgress = 0;
+    galleryTargetProgress = 0;
+    gallerydriftStop();
+    galleryArmed = false;
+    galleryReadyAt = Date.now() + 500;
 
-          document.body.classList.remove("home-gallery-revealing");
-
-          // 归位后恢复主页原有滚动操作
-          galleryProgress = 0;
-          galleryTargetProgress = 0;
-          gallerydriftStop();
-          galleryArmed = false;
-          galleryReadyAt = Date.now() + 500;
-  
-          showHeaderTemporarily();
-        };
-  
-        requestAnimationFrame(reverseGalleryAnimation);
-      });
-    });
+    showHeaderTemporarily();
   };
 
   window.addEventListener(
@@ -1993,11 +1895,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
         const smoothDelta =
           Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 90);
 
-        pageHomeOpening(
-          smoothDelta > 0 ? 1 : -1,
-          smoothDelta,
-          GALLERY_WHEEL_UNIT
-        );
+        pageHomeOpening(smoothDelta > 0 ? 1 : -1, smoothDelta);
 
         if (galleryProgress <= 0.001) showHeaderTemporarily();
         return;
@@ -2049,7 +1947,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       const delta = homeTouchStartY - currentY;
       if (Math.abs(delta) < 60) return;
       event.preventDefault();
-      pageHomeOpening(delta > 0 ? 1 : -1, delta, GALLERY_TOUCH_UNIT);
+      pageHomeOpening(delta > 0 ? 1 : -1, delta);
       homeTouchStartY = currentY;
     },
     { passive: false }
@@ -2065,7 +1963,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     }
     if (!document.body.classList.contains("home-opening-active")) return;
     event.preventDefault();
-    pageHomeOpening(direction, direction * 240, GALLERY_WHEEL_UNIT);
+    pageHomeOpening(direction, direction * 240);
   });
 
   // Scroll listener does double duty:
@@ -2108,8 +2006,6 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // choreography. Re-running it re-probed and re-applied ride vars on the
     // settled page: the exact "landed, then shifted again" artifact.
     if (document.body.classList.contains("home-opening-complete")) return;
-    if (galleryProgress > 0.001) resetHomeGalleryStyles();
-    galleryBaseRects = null;
     setHomeGalleryProgress(galleryProgress);
   });
 
@@ -2381,8 +2277,10 @@ if (revealSections.length && !prefersReducedMotion.matches) {
 /* ============================================================
    Work-section cover pin (home only). The sticky pin offset is
    viewportHeight - workHeight (a negative number) so the work section
-   scrolls normally until its bottom reaches the viewport bottom, then
-   pins — letting the gray studio panel slide up over it from below.
+   scrolls normally until its bottom reaches the viewport bottom, then pins
+   and HOLDS while the studio screens rise over it. What rises is no longer a
+   panel — the studio block is page-white — so the visitor sees only the
+   hand-drawn horizon line sweeping up over the held scene.
    ============================================================ */
 (() => {
   if (document.body.dataset.page !== "home") return;
@@ -2533,11 +2431,22 @@ if (revealSections.length && !prefersReducedMotion.matches) {
 })();
 
 /* ============================================================
-   Hero polaroids (home): free drag / reposition.
+   Hero polaroids (home): free drag / reposition, with a fridge-magnet feel.
    Dragging writes the independent `translate` property, so the frames'
    resting rotate (in `transform`) is never touched. The frame is clamped so
    at least half of it always stays inside the stage — a photo can be tossed
    around but never lost. Nothing persists: a reload deals the desk afresh.
+
+   The magnet feel is one spring, retuned per phase:
+     hold    — pressed but still "on the fridge": the frame gives only a
+               fraction of the finger's motion (magnetic resistance)
+     peel    — past the give threshold it pops free: the spring catches the
+               frame up to the finger, reading as the detach
+     carry   — the spring follows the finger with a slight lag + a touch of
+               velocity tilt: weight, not float
+     attach  — on release the spring stiffens and re-grips at the CURRENT
+               spot (no grid, no return home) with a small overshoot and a
+               brief press past scale 1 — the magnet clicking back on
    ============================================================ */
 (() => {
   if (document.body.dataset.page !== "home") return;
@@ -2548,20 +2457,126 @@ if (revealSections.length && !prefersReducedMotion.matches) {
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
   let zTop = 10; // the last-touched photo rises above its siblings
 
+  /* ---- the feel, in four dials ---- */
+  const HOLD_GIVE = 0.32;   // how much the frame budges while still attached
+  const PEEL_PX = 11;       // finger travel that peels it off the fridge
+  const CARRY = { k: 360, c: 27 };  // follow spring: ~24px lag at a normal drag speed
+  const ATTACH = { k: 420, c: 26 }; // settle spring: ζ≈0.63 → ~7% overshoot, done in ~300ms
+  const LAND_KICK = 90;     // px/s downward impulse on release ≈ a 3px sit-down dip
+  const TILT_GAIN = 0.010;  // deg per px/s of horizontal velocity while carried
+  const TILT_MAX = 3.5;
+
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- squishing the resident: how much of the dome a photo covers.
+     coverage = intersection(photo frame, dome box) / dome area, taken as the
+     MAX across all three photos (two half-covers don't add up to a squish).
+     Hysteresis so the caption can't flicker at the boundary: enters at 30%,
+     recovers below 15%. Evaluated per animation frame while any photo is in
+     flight and at every release — so a photo PARKED on the dome keeps the
+     state, and it lifts the moment the photo is carried away. The creature's
+     own module listens for the event and does the acting. ---- */
+  const orangeBody = document.querySelector(".home-orange-wrap .orange-body");
+  const SQUISH_ENTER = 0.30;
+  const SQUISH_EXIT = 0.15;
+  let orangeSquished = false;
+
+  const syncOrangeSquish = () => {
+    if (!orangeBody) return;
+    const ob = orangeBody.getBoundingClientRect();
+    const area = ob.width * ob.height;
+    if (!area) return; // dome not on stage right now — keep the last state
+    let cover = 0;
+    for (const p of photos) {
+      const r = p.getBoundingClientRect();
+      const w = Math.min(r.right, ob.right) - Math.max(r.left, ob.left);
+      const h = Math.min(r.bottom, ob.bottom) - Math.max(r.top, ob.top);
+      if (w > 0 && h > 0) cover = Math.max(cover, (w * h) / area);
+    }
+    const next = orangeSquished ? cover >= SQUISH_EXIT : cover >= SQUISH_ENTER;
+    if (next === orangeSquished) return;
+    orangeSquished = next;
+    window.dispatchEvent(new CustomEvent("orange-photo-squish", { detail: { squished: next } }));
+  };
+
   photos.forEach((photo) => {
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
-    let baseX = 0;
-    let baseY = 0;
-    let originLeft = 0; // the frame's untranslated screen spot at grab time
-    let originTop = 0;
-    let w = 0;
-    let h = 0;
+    // rendered state (what's on screen) vs target (where the finger says to be)
+    let x = parseFloat(photo.dataset.dx || "0");
+    let y = parseFloat(photo.dataset.dy || "0");
+    let vx = 0, vy = 0;
+    let tx = x, ty = y;
+    let scale = 1, scaleV = 0, scaleT = 1;
+
+    let phase = "rest"; // rest | hold | carry | attach
+    let startX = 0, startY = 0;
+    let baseX = 0, baseY = 0;
+    let originLeft = 0, originTop = 0; // untranslated screen spot at grab time
+    let w = 0, h = 0;
+    let frame = null;
+    let lastT = 0;
+
+    const clampToStage = (nx, ny) => {
+      const sr = stage.getBoundingClientRect();
+      return [
+        clamp(nx, sr.left - originLeft - w * 0.5, sr.right - originLeft - w * 0.5),
+        clamp(ny, sr.top - originTop - h * 0.5, sr.bottom - originTop - h * 0.5)
+      ];
+    };
+
+    const paint = () => {
+      photo.style.translate = `${x.toFixed(2)}px ${y.toFixed(2)}px`;
+      photo.style.setProperty("--mag-scale", scale.toFixed(4));
+      const tilt = phase === "carry" ? clamp(vx * TILT_GAIN, -TILT_MAX, TILT_MAX) : 0;
+      photo.style.setProperty("--mag-tilt", `${tilt.toFixed(2)}deg`);
+    };
+
+    const stop = () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = null;
+      lastT = 0;
+    };
+
+    const settled = () =>
+      phase === "attach" &&
+      Math.abs(tx - x) < 0.3 && Math.abs(ty - y) < 0.3 &&
+      Math.abs(vx) + Math.abs(vy) < 6 &&
+      Math.abs(scaleT - scale) < 0.002 && Math.abs(scaleV) < 0.02;
+
+    const tick = (t) => {
+      frame = null;
+      const dt = Math.min(32, lastT ? t - lastT : 16.7) / 1000;
+      lastT = t;
+      const s = phase === "carry" ? CARRY : ATTACH;
+
+      // semi-implicit Euler on both springs — stable at these stiffnesses
+      vx += (s.k * (tx - x) - s.c * vx) * dt;
+      vy += (s.k * (ty - y) - s.c * vy) * dt;
+      x += vx * dt;
+      y += vy * dt;
+      scaleV += (ATTACH.k * (scaleT - scale) - ATTACH.c * scaleV) * dt;
+      scale += scaleV * dt;
+
+      if (settled()) {
+        x = tx; y = ty; vx = vy = 0;
+        scale = scaleT; scaleV = 0;
+        phase = "rest";
+        paint();
+        photo.style.removeProperty("--mag-tilt");
+        syncOrangeSquish();
+        stop();
+        return;
+      }
+      paint();
+      syncOrangeSquish();
+      frame = requestAnimationFrame(tick);
+    };
+
+    const run = () => {
+      if (frame === null) frame = requestAnimationFrame(tick);
+    };
 
     photo.addEventListener("pointerdown", (event) => {
       if (event.button) return;
-      dragging = true;
       startX = event.clientX;
       startY = event.clientY;
       baseX = parseFloat(photo.dataset.dx || "0");
@@ -2569,35 +2584,71 @@ if (revealSections.length && !prefersReducedMotion.matches) {
       const rect = photo.getBoundingClientRect();
       w = rect.width;
       h = rect.height;
-      originLeft = rect.left - baseX;
-      originTop = rect.top - baseY;
-      photo.classList.add("is-dragging");
+      originLeft = rect.left - rect.width * (scale - 1) / 2 - x; // undo scale's rect inflation
+      originTop = rect.top - rect.height * (scale - 1) / 2 - y;
+      phase = "hold";
+      scaleT = 0.985; // pressed against the fridge
       photo.style.zIndex = String(++zTop);
       try { photo.setPointerCapture(event.pointerId); } catch (e) { /* older browsers */ }
       event.preventDefault(); // no text selection / native image drag
+      if (!reduceMotion) run();
     });
 
     photo.addEventListener("pointermove", (event) => {
-      if (!dragging) return;
-      const sr = stage.getBoundingClientRect();
-      const dx = clamp(
-        baseX + (event.clientX - startX),
-        sr.left - originLeft - w * 0.5,
-        sr.right - originLeft - w * 0.5
-      );
-      const dy = clamp(
-        baseY + (event.clientY - startY),
-        sr.top - originTop - h * 0.5,
-        sr.bottom - originTop - h * 0.5
-      );
-      photo.dataset.dx = String(dx);
-      photo.dataset.dy = String(dy);
-      photo.style.translate = `${dx}px ${dy}px`;
+      if (phase !== "hold" && phase !== "carry") return;
+      const fdx = event.clientX - startX;
+      const fdy = event.clientY - startY;
+
+      if (reduceMotion) { // plain 1:1 drag, no physics
+        [tx, ty] = clampToStage(baseX + fdx, baseY + fdy);
+        x = tx; y = ty;
+        photo.dataset.dx = String(tx);
+        photo.dataset.dy = String(ty);
+        photo.style.translate = `${tx}px ${ty}px`;
+        phase = "carry";
+        syncOrangeSquish();
+        return;
+      }
+
+      if (phase === "hold") {
+        if (Math.hypot(fdx, fdy) < PEEL_PX) {
+          // still gripped: the frame strains toward the finger but holds on
+          [tx, ty] = clampToStage(baseX + fdx * HOLD_GIVE, baseY + fdy * HOLD_GIVE);
+          return;
+        }
+        // pop! free of the fridge — lift, shadow, and let the spring catch up
+        phase = "carry";
+        photo.classList.add("is-dragging");
+        scaleT = 1.03;
+      }
+
+      [tx, ty] = clampToStage(baseX + fdx, baseY + fdy);
     });
 
     const release = () => {
-      dragging = false;
+      if (phase === "rest") return;
       photo.classList.remove("is-dragging");
+
+      if (reduceMotion) {
+        phase = "rest";
+        return;
+      }
+
+      if (phase === "hold") {
+        // never peeled off — it stays put and relaxes back onto the fridge
+        tx = baseX;
+        ty = baseY;
+      } else {
+        vy += LAND_KICK;   // the little downward "sit" as the magnet re-grips
+        scaleV -= 1.1;     // and a brief press past 1 (dips to ~0.994) — the click
+      }
+      // re-attach AT the release spot: free placement, no grid, no homing
+      photo.dataset.dx = String(tx);
+      photo.dataset.dy = String(ty);
+      scaleT = 1;
+      phase = "attach";
+      run();
+      syncOrangeSquish();
     };
     photo.addEventListener("pointerup", release);
     photo.addEventListener("pointercancel", release);

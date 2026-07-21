@@ -665,16 +665,22 @@ body[data-theme="dark"] .home-photo::after {
 .hh-photo {
   position: absolute;
   z-index: 6;
-  width: clamp(122px, 13.5vw, 198px);
+  width: var(--hh-photo-width, clamp(122px, 13.5vw, 198px));
   margin: 0;
   /* the bottom lip is only a touch deeper than the top — not the classic
      fat polaroid band */
   padding: 7px 7px 10px;
   border: 1.5px solid currentColor;
-  border-radius: 6px;
+  border-radius: 0px;
   background: #ffffff;
-  transform: rotate(var(--tilt, 0deg));
+  /* --mag-tilt / --mag-scale are the fridge-magnet drag channels, written per
+     frame by the spring driver in script.js: a touch of velocity tilt while
+     carried, a lift while held, a tiny press past 1 as it re-attaches. The
+     resting --tilt is untouched. */
+  transform: rotate(calc(var(--tilt, 0deg) + var(--mag-tilt, 0deg))) scale(var(--mag-scale, 1));
   cursor: grab;
+  /* only the shadow eases via CSS — position/tilt/scale are spring-driven */
+  transition: box-shadow 200ms ease;
   touch-action: none; /* a finger dragging a photo must not scroll/page */
   user-select: none;
 }
@@ -684,11 +690,12 @@ body[data-theme="dark"] .home-photo::after {
      and presses onto the photo itself, like it's actually pinned through */
   content: "";
   position: absolute;
-  top: -2px;
+  top: -7px;
   left: 50%;
   translate: -50% 0;
-  width: 13px;
-  height: 13px;
+  z-index: 2;
+  width: 12.5px;
+  height: 12.5px;
   border: 1.5px solid currentColor;
   border-radius: 50%;
   background: #ffffff;
@@ -698,29 +705,63 @@ body[data-theme="dark"] .home-photo::after {
 .hh-photo video {
   display: block;
   width: 100%;
-  aspect-ratio: 1 / 1.04;
+  aspect-ratio: var(--hh-photo-aspect, 1 / 1.04);
   object-fit: cover;
+  /* Moves only the image inside its frame; the frame and pin stay put. */
+  position: relative;
+  top: var(--hh-photo-image-y, 0px);
   pointer-events: none;
   -webkit-user-drag: none;
 }
 
 .hh-photo.is-dragging {
   cursor: grabbing;
+  /* peeled off the fridge: floats a little above the page */
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16), 0 3px 7px rgba(0, 0, 0, 0.1);
 }
 
-.hh-photo-1 { left: 7%; top: 30%; }
-.hh-photo-2 { right: 6.5%; top: 13%; }
-.hh-photo-3 { right: 9%; top: 57%; }
+/* Per-photo controls: change only the variables for the photo you want to tune. */
+.hh-photo-1 {
+  --hh-photo-width: clamp(132px, 14.5vw, 212px);
+  --hh-photo-width-mobile: clamp(92px, 24vw, 116px);
+  --hh-photo-aspect: 4 / 2.9;
+  --hh-photo-image-y: -2px;
+  left: 7%;
+  top: 30%;
+}
+
+.hh-photo-2 {
+  --hh-photo-width: clamp(102px, 11vw, 178px);
+  --hh-photo-width-mobile: clamp(78px, 21vw, 100px);
+  --hh-photo-aspect: 1 / 1.14;
+  --hh-photo-image-y: -2px;
+  right: 6.5%;
+  top: 13%;
+}
+
+.hh-photo-3 {
+  --hh-photo-width: clamp(115px, 13vw, 190px);
+  --hh-photo-width-mobile: clamp(80px, 21vw, 104px);
+  --hh-photo-aspect: 1 / 1.2;
+  --hh-photo-image-y: -2px;
+  right: 9%;
+  top: 57%;
+}
+
+.hh-annot-text {
+  position: relative;
+  left: -2px; /* 往左：负数更大 */
+  top: 8px;    /* 往下：正数更大 */
+}
 
 /* "play with me!" + a curly arrow aimed at the dome */
 .hh-annot {
   position: absolute;
   z-index: 4;
-  left: calc(50% + clamp(140px, 15vw, 218px));
+  left: calc(50% + clamp(125px, 14vw, 205px));
   top: 39%;
   display: grid;
   justify-items: start;
-  gap: 2px;
   color: inherit;
   font-family: var(--hand);
   font-size: clamp(15px, 1.25vw, 19px);
@@ -728,9 +769,15 @@ body[data-theme="dark"] .home-photo::after {
   pointer-events: none;
 }
 
+/* Reading order is text → arrow → orange: the label sits up-right, then the
+   spiral arrow drops BELOW and to the LEFT (toward the orange) with a clear
+   gap, so it reads as a caption pointing at the creature — never touching the
+   text. margin-top opens the gap; the negative margin-left carries the arrow
+   out toward the orange. */
 .hh-annot-arrow {
-  width: clamp(34px, 3.6vw, 52px);
-  margin-left: -10px;
+  width: clamp(34px, 3.7vw, 52px);
+  margin-top: -7px;
+  margin-left: clamp(-64px, -4.6vw, -42px);
 }
 
 .hh-flowers {
@@ -848,7 +895,7 @@ body.home-work-handoff .home-gallery-stage {
   }
 
   .hh-photo {
-    width: clamp(84px, 22vw, 108px);
+    width: var(--hh-photo-width-mobile, var(--hh-photo-width));
     padding: 5px 5px 7px;
   }
 
@@ -1227,6 +1274,28 @@ body[data-theme="dark"] .orange-body {
   transition: transform 900ms cubic-bezier(0.25, 0.6, 0.35, 1);
 }
 
+/* a polaroid parked on top ("Hey! You're squishing me!"): a quick protest
+   squash with two tiny wobbles, then it HOLDS the flattened pose — the
+   keyframe fills `both`, so the pose lasts exactly as long as the class.
+   Freed, the JS swaps this for .is-pop and it bounces straight back. */
+.orange-dough.is-photo-squish {
+  animation: dough-photo-squish 600ms cubic-bezier(0.3, 1.1, 0.5, 1) both;
+}
+
+@keyframes dough-photo-squish {
+  0% { transform: none; }
+  30% { transform: scaleX(1.09) scaleY(0.82); }
+  52% { transform: scaleX(1.05) scaleY(0.88) rotate(-1.2deg); }
+  74% { transform: scaleX(1.08) scaleY(0.84) rotate(0.8deg); }
+  100% { transform: scaleX(1.07) scaleY(0.85); }
+}
+
+/* the eyes squeeze into a put-upon squint under the weight */
+.orange-stage.is-photo-squish .orange-eye {
+  transform: var(--eye-translate) translateY(12%) scaleY(0.35);
+  transition: transform 220ms ease;
+}
+
 /* double-poke — "hey! :)": squashed flat for a beat, then it POPS 16px into
    the air with a little mid-air tilt, lands, and jiggles softly twice.
    User-specified rhythm: 按扁100ms → 弹起220ms → 落地180ms → 软晃300ms (800ms). */
@@ -1312,6 +1381,7 @@ body[data-theme="dark"] .orange-body {
   .orange-dough.is-pounce,
   .orange-dough.is-spring,
   .orange-dough.is-breath,
+  .orange-dough.is-photo-squish,
   .home-vibe-note.is-nudged {
     animation: none;
     transition: none;
@@ -5632,7 +5702,7 @@ body[data-theme="dark"] .collage-peek img {
   flex-wrap: nowrap;
   align-items: baseline;
   gap: 12px;
-  font-size: clamp(21px / 1.65vw / 29px);
+  font-size: clamp(21px, 1.65vw, 29px);
   white-space: nowrap;
 }
 
@@ -7813,153 +7883,37 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
   }
 }
 
-/* ---- one continuous frosted-glass panel that the work section reveals, then slides up to cover ----
-   v4: the WHOLE pane is real glass. The backdrop blur lives on .studio-block itself
-   (full height), ::before is only a translucent warm tint + blobs painted over the
-   blurred backdrop, and ::after is just the bright lip at the top edge. Nothing under
-   the panel can ghost: the pinned work section showing through softened IS the effect,
-   and the mascot marquee's opacity is scroll-driven to 0 until the panel uncovers it. */
+/* ---- the studio screens are NOT a panel ----
+   This used to be a frosted-glass sheet: 32px top radii, three drop shadows,
+   a bright lip highlight and a backdrop blur, sliding up over a pinned work
+   section. Those three traits together read as a Bottom Sheet popping open
+   instead of the page simply continuing.
+   Now it IS the page — the same --paper as <body>, no radius, no shadow, no
+   blur — so nothing "rises". The only thing visible at the seam is ::after:
+   one hand-drawn horizon line, with the peeker orange poking above it. The
+   solid background is also what hides the peeker's lower half (it is painted
+   beneath this block: peeker z-index 2 < 3). */
 .studio-block {
   z-index: 3;
-  border-radius: 32px 32px 0 0;
-  background: none;
-  box-shadow:
-    0 -6px 18px rgba(20, 18, 15, 0.05),
-    0 -28px 60px rgba(20, 18, 15, 0.06),
-    0 12px 36px rgba(20, 18, 15, 0.05);
-  /* own compositor layer: the glass + shadows otherwise re-rasterise while
-     sliding over the pinned work section (scroll jank) */
-  transform: translateZ(0);
-  -webkit-backdrop-filter: blur(22px) saturate(1.18);
-  backdrop-filter: blur(22px) saturate(1.18);
+  background: var(--paper);
 }
 
-.studio-block::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    /* diagonal light streak — a soft reflection sweeping the upper-left */
-    linear-gradient(
-      115deg,
-      rgba(255, 255, 255, 0) 12%,
-      rgba(255, 255, 255, 0.2) 26%,
-      rgba(255, 255, 255, 0) 42%
-    ),
-    /* thin uniform veil — kept flat so it can never band across text lines */
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.95) 0%,
-      rgba(255, 255, 255, 1) 40%,
-      rgba(255, 255, 255, 1) 60%,
-      rgba(255, 255, 255, 1) 80%,
-      rgba(255, 255, 255, 0.2) 100%
-    ),
-    /* warm blobs floating in the glass — peach / butter / matcha / coral */
-    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(245, 222, 210, 0.10), transparent 70%),
-    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(245, 235, 210, 0.12), transparent 70%),
-    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(220, 230, 210, 0.12), transparent 70%),
-    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(242, 228, 224, 0.10), transparent 70%)
-}
-
+/* The horizon: a 1.5px ink line with a gentle hand-drawn wobble, tiled so it
+   spans any width seamlessly (the tile starts and ends at the same y, so the
+   joins are invisible). Drawn as a MASK, so the colour comes from --ink and
+   flips with the theme for free. Centred ON the block's top edge (top:-3px in
+   a 6px box) so the orange reads as peeking from behind the line. */
 .studio-block::after {
   content: "";
   position: absolute;
-  top: 0;
+  top: -3px;
   left: 0;
   right: 0;
-  height: 120px;
-  border-radius: 32px 32px 0 0;
+  height: 6px;
   pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.35) 0%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  /* bright hairline where light catches the lip of the glass */
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
-}
-
-/* no backdrop-filter support -> translucent tints over sharp content would be a
-   mess of ghosted text; fall back to the old opaque warm panel */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .studio-block::before {
-    background:
-      linear-gradient(
-        115deg,
-        rgba(255, 255, 255, 0) 12%,
-        rgba(255, 255, 255, 0.34) 26%,
-        rgba(255, 255, 255, 0) 42%
-      ),
-      linear-gradient(
-        180deg,
-        rgba(255, 255, 255, 0.6) 0%,
-        rgba(255, 255, 255, 0.34) 14%,
-        rgba(255, 255, 255, 0.42) 100%
-      ),
-      radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 186, 145, 0.7), transparent 70%),
-      radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 219, 143, 0.6), transparent 70%),
-      radial-gradient(ellipse 50% 19% at 88% 58%, rgba(178, 207, 148, 0.58), transparent 70%),
-      radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 199, 178, 0.52), transparent 70%)
-      #f4f2ee;
-  }
-
-  body[data-theme="dark"] .studio-block::before {
-    background:
-      linear-gradient(115deg, rgba(255, 255, 255, 0) 12%, rgba(255, 255, 255, 0.05) 26%, rgba(255, 255, 255, 0) 42%),
-      linear-gradient(180deg, rgba(28, 26, 23, 0.6) 0%, rgba(24, 23, 21, 0.4) 14%, rgba(24, 23, 21, 0.46) 100%),
-      radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 160, 100, 0.22), transparent 70%),
-      radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 205, 120, 0.17), transparent 70%),
-      radial-gradient(ellipse 50% 19% at 88% 58%, rgba(160, 195, 125, 0.16), transparent 70%),
-      radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 170, 140, 0.14), transparent 70%)
-      #171512;
-  }
-}
-
-/* panel text sits above both glass layers (and stays crisp — the rim only blurs
-   what is stacked beneath it) */
-.studio-screen {
-  position: relative;
-  z-index: 1;
-}
-
-body[data-theme="dark"] .studio-block {
-  box-shadow:
-    0 -6px 18px rgba(0, 0, 0, 0.35),
-    0 -28px 60px rgba(0, 0, 0, 0.3),
-    0 12px 36px rgba(0, 0, 0, 0.3);
-}
-
-body[data-theme="dark"] .studio-block::before {
-  background:
-    linear-gradient(
-      115deg,
-      rgba(255, 255, 255, 0) 12%,
-      rgba(255, 255, 255, 0.04) 26%,
-      rgba(255, 255, 255, 0) 42%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(24, 22, 20, 0.3) 0%,
-      rgba(22, 21, 19, 0.16) 16%,
-      rgba(22, 21, 19, 0.22) 100%
-    ),
-    radial-gradient(ellipse 52% 20% at 82% 8%, rgba(255, 160, 100, 0.14), transparent 70%),
-    radial-gradient(ellipse 46% 17% at 10% 28%, rgba(255, 205, 120, 0.11), transparent 70%),
-    radial-gradient(ellipse 50% 19% at 88% 58%, rgba(160, 195, 125, 0.1), transparent 70%),
-    radial-gradient(ellipse 56% 21% at 16% 92%, rgba(255, 170, 140, 0.09), transparent 70%)
-    rgba(18, 17, 15, 0.42);
-}
-
-body[data-theme="dark"] .studio-block::after {
-  background: linear-gradient(
-    180deg,
-    rgba(26, 24, 21, 0.35) 0%,
-    rgba(26, 24, 21, 0) 100%
-  );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  background-color: var(--ink);
+  -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='6' viewBox='0 0 360 6'><path d='M0 3 C 40 2.4, 78 3.6, 120 3.05 C 162 2.5, 198 3.7, 240 3.1 C 282 2.55, 318 3.5, 360 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/></svg>") repeat-x left center / 360px 6px;
+  mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='6' viewBox='0 0 360 6'><path d='M0 3 C 40 2.4, 78 3.6, 120 3.05 C 162 2.5, 198 3.7, 240 3.1 C 282 2.55, 318 3.5, 360 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/></svg>") repeat-x left center / 360px 6px;
 }
 
 /* content sits higher than dead-center to trim the empty space above the text */
@@ -7968,10 +7922,14 @@ body[data-theme="dark"] .studio-block::after {
   padding-top: clamp(96px, 16vh, 200px);
 }
 
-/* Work scrolls normally (all cards pass) until its bottom reaches the viewport bottom,
-   then it pins so the gray panel slides up over it from below. The pin offset
-   (viewportHeight - workHeight, a negative number) is set by JS. It never engages near
-   scrollY 0, so the opening glide is left untouched. */
+/* Work scrolls normally (all cards pass) until its bottom reaches the viewport
+   bottom, then it PINS and holds still while the studio screens rise over it.
+   The pin offset (viewportHeight - workHeight, a negative number) is set by JS.
+   It never engages near scrollY 0, so the opening glide is left untouched.
+   What rises is no longer a panel: the studio block is the same white as the
+   page, so the visitor sees only a hand-drawn horizon line sweeping up over the
+   held scene, with the orange peeking over it. z-index keeps this under the
+   studio block, which has to hide the peeker's lower half at the seam. */
 body[data-page="home"].home-opening-complete .work-section {
   position: sticky !important;
   top: var(--work-sticky-top, 0px) !important;
@@ -8790,8 +8748,10 @@ body[data-theme="dark"] .mascot-img {
    clothesline.js (drag/snap/sway/depth/wink).
    =========================================================== */
 .pc-scene {
-  --pc-line: #333333;
-  --pc-line-soft: rgba(51, 51, 51, 0.6);
+  /* Near-black ink to match the hero's line-art clarity (photo borders + pins
+     are 1.5px on pure ink). Was #333 gray — the clothesline scene read light. */
+  --pc-line: #111111;
+  --pc-line-soft: rgba(17, 17, 17, 0.6);
   --pc-card-bg: #fdfbf6;
   --pc-blue: #6ba8ff;
   /* The smaller, flatter notes stay right-weighted, preserving the generous
@@ -8807,8 +8767,10 @@ body[data-theme="dark"] .mascot-img {
 }
 
 body[data-theme="dark"] .pc-scene {
-  --pc-line: #e8e0d6;
-  --pc-line-soft: rgba(232, 224, 214, 0.55);
+  /* #eee = exactly invert(1) of the #111 top-rope SVG, so both clotheslines
+     stay identical in dark mode too (the top rope flips via a CSS invert). */
+  --pc-line: #eeeeee;
+  --pc-line-soft: rgba(238, 238, 238, 0.6);
   --pc-card-bg: #121212;
 }
 
@@ -8856,10 +8818,9 @@ body[data-theme="dark"] .pc-top-line {
 
 .pc-rope path {
   stroke: var(--pc-line);
-  stroke-width: 1.0; /* match .pc-top-line (trace-clothesline.py STROKE) */
+  stroke-width: 1.5; /* one weight with .pc-top-line — both clotheslines match */
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.95;
   transition: stroke 240ms ease; /* theme switch */
 }
 
@@ -8945,10 +8906,41 @@ body[data-theme="dark"] .pc-bun img {
   cursor: grabbing;
 }
 
-.pc-viewport:focus-visible {
-  outline: 1.5px dashed var(--pc-line-soft);
-  outline-offset: -6px;
-  border-radius: 18px;
+/* ---- desktop swipe hint, ONLY at the two ends, ONLY over the live image ----
+   On the FIRST project a small right arrow says "keep going that way"; on the
+   LAST a left arrow says "back the other way". Every card in between keeps the
+   ordinary pointer — the hint belongs at the ends, where there is only one
+   direction to travel.
+
+   Scope matters more than the drawing here. An earlier version put the cursor
+   on .pc-viewport, which is the full 100vw carousel strip, so the arrow
+   appeared far away from any image and over the blurred neighbours too. It now
+   sits on `.pc-card-active .pc-media` — the live card's image panel and nothing
+   else — so it turns on exactly at the artwork's edge and off the moment the
+   pointer leaves it. Blurred/slid-away cards are `pointer-events: none`, so
+   they can never show it at all.
+
+   • Pointer devices only; a custom cursor means nothing on touch.
+   • :not(.is-dragging) lets `grabbing` keep winning while a drag is live.
+   • A cursor is an IMAGE and cannot inherit --ink, hence a cream variant for
+     dark mode, where these cards are black.
+   • 12 12 = the hotspot, dead centre of the 24x24 drawing. ---- */
+@media (hover: hover) and (pointer: fine) {
+  .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active .pc-media {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3.4 12.6 C 8 11.9, 13.5 12.7, 18.4 12.1'/><path d='M13.6 8.1 C 15.6 9.6, 17.4 11, 18.9 12.2 C 17.2 13.5, 15.4 14.9, 13.9 16.6'/></g></svg>") 12 12, pointer;
+  }
+
+  .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active .pc-media {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 12.6 C 16 11.9, 10.5 12.7, 5.6 12.1'/><path d='M10.4 8.1 C 8.4 9.6, 6.6 11, 5.1 12.2 C 6.8 13.5, 8.6 14.9, 10.1 16.6'/></g></svg>") 12 12, pointer;
+  }
+
+  body[data-theme="dark"] .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active .pc-media {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23f9f3eb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3.4 12.6 C 8 11.9, 13.5 12.7, 18.4 12.1'/><path d='M13.6 8.1 C 15.6 9.6, 17.4 11, 18.9 12.2 C 17.2 13.5, 15.4 14.9, 13.9 16.6'/></g></svg>") 12 12, pointer;
+  }
+
+  body[data-theme="dark"] .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active .pc-media {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23f9f3eb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 12.6 C 16 11.9, 10.5 12.7, 5.6 12.1'/><path d='M10.4 8.1 C 8.4 9.6, 6.6 11, 5.1 12.2 C 6.8 13.5, 8.6 14.9, 10.1 16.6'/></g></svg>") 12 12, pointer;
+  }
 }
 
 .pc-track {
@@ -9246,13 +9238,26 @@ body[data-theme="dark"] .pc-l1charm {
   aspect-ratio: 8 / 5; /* flatter landscape notes */
   padding: clamp(10px, 5cqw, 24px);
   background: var(--pc-card-bg);
-  border: 1.4px solid color-mix(in srgb, var(--pc-line) 82%, transparent);
+  /* Paper edge, deliberately finer than the 1.5px rope + clips: the card is a
+     large shape, so its outline carries far more ink at the same width than a
+     hairline rope does.
+     CSS border-width SNAPS to whole device pixels — on a 2× display the only
+     steps are 1 / 1.5 / 2px, and 1.5 read heavy while 1 read light. So the
+     line is drawn in TWO parts: a crisp device-aligned 1px border plus a
+     0.25px ring hugging it from outside (box-shadow spread is painted, not
+     laid out, so it antialiases at fractional widths and follows the same
+     uneven radii). Together they read as one ~1.25px stroke.
+     --pc-card-edge is the knob: 0 = plain 1px, 0.5 = ~1.5px. */
+  --pc-card-edge: 0.25px;
+  border: 1px solid var(--pc-line);
+  box-shadow: 0 0 0 var(--pc-card-edge) var(--pc-line);
   border-radius: 26px 21px 27px 19px / 21px 27px 20px 26px;
   /* paper + ink fade on the theme-switch clock (no hover lift — the cards
      hang still; only the destination hint responds to hover) */
   transition:
     background-color 240ms ease,
-    border-color 240ms ease;
+    border-color 240ms ease,
+    box-shadow 240ms ease;
 }
 
 /* the project image sits in its own restrained panel — airy, never crowded */
@@ -9340,16 +9345,63 @@ body[data-theme="dark"] .pc-media-llm {
   background: #000;
 }
 
-.pc-cover-dark {
-  opacity: 0;
-}
+/* Both covers are FULLY OPAQUE (verified: 0% transparent pixels; the light one
+   has a baked #fff ground, the dark one a baked #000 ground) and the dark <img>
+   is the later sibling, so it paints ON TOP of the light one.
 
-body[data-theme="dark"] .pc-cover-light {
+   Two failure modes had to be dodged at once:
+   • Cross-fading them in OPPOSITE directions (light 1→0 while dark 0→1) drops
+     the combined coverage to 1-(1-.5)(1-.5) = 0.75 at the midpoint, so the
+     panel behind bleeds through and each drawing flashes pale mid-toggle.
+   • Simply parking the light cover at opacity 1 underneath fixes that, but the
+     covers are scaled (--cover-scale), so the dark one's edge lands on
+     fractional pixels and antialiases — letting the white ground beneath show
+     as a hairline. Pure white on pure black reads as a hard white frame.
+
+   So the light cover is a BASE LAYER that is only ever removed once the dark
+   one is already solid: it snaps ON instantly when leaving dark (giving the
+   fading dark cover something opaque to sit on) and snaps OFF only after the
+   dark cover's 240ms fade has finished (so it can never halo through). Both
+   switches are 0s — invisible, because at each moment the other layer fully
+   covers it. Coverage is 1 throughout, and nothing white survives underneath. */
+.pc-cover-dark {
   opacity: 0;
 }
 
 body[data-theme="dark"] .pc-cover-dark {
   opacity: 1;
+}
+
+img.pc-cover-light {
+  opacity: 1;
+}
+
+body[data-theme="dark"] img.pc-cover-light {
+  opacity: 0;
+}
+
+/* ATOMIC SWAP — do not cross-fade these covers.
+   Both are opaque and tonally inverted, and they are scaled (--cover-scale), so
+   the top one's edge antialiases. Any frame in which it is partially
+   transparent shows the other cover's ground through that edge — pure white on
+   pure black, which reads as a hard frame. Fading them in opposite directions
+   instead drops coverage to 0.75 mid-way and the panel bleeds through. Both
+   were tried; both flash. There is no crossfade of two opaque inverted images
+   that avoids it, so the artwork and its ground switch in ONE frame together:
+   no opacity transition on the covers, no background transition on the panel
+   or on the pure-image card body. Nothing is ever partially transparent, so
+   there is no intermediate state to flash. */
+img.pc-cover-light,
+img.pc-cover-dark {
+  transition: transform 320ms ease; /* opacity deliberately not transitioned */
+}
+
+.pc-media-wentong,
+.pc-media-voderrn,
+.pc-media-health,
+.pc-media-llm,
+.pc-card-cover .pc-card-body {
+  transition: none;
 }
 
 /* pure-image cards: the entire card IS the hand-drawn scene — the media panel
@@ -9931,7 +9983,9 @@ body[data-theme="dark"] .pc-note {
 .pc-scene {
   --pc-worked-x: calc(var(--pc-inset) + var(--pc-w) / 2);
   --pc-worked-gap: -10px;
-  --pc-worked-size: clamp(14px, 1.2vw, 16px);
+  /* identical to the hero's "play with me!" label (.hh-annot) so the two
+     hand-written annotations read as the same pen at every viewport */
+  --pc-worked-size: clamp(15px, 1.25vw, 19px);
   --pc-worked-arrow: clamp(25px, 2vw, 35px);
 }
 
@@ -9960,13 +10014,19 @@ body[data-theme="dark"] .pc-note {
 .pc-worked-arrow path {
   fill: none;
   stroke: var(--pc-line);
-  stroke-width: 1.3;
+  /* User units, NOT screen px: this SVG scales its stroke (no
+     vector-effect), viewBox 22x46 drawn at ~25.6px tall => scale ≈0.556.
+     1.7 × 0.556 ≈ 0.95px on screen — the same rendered weight as the hero's
+     "play with me!" arrow (1.6 user units at its own ≈0.592 scale). This is
+     annotation weight and deliberately lighter than the 1.5px structural
+     clothesline lines. */
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .pc-worked-text {
-  font-size: 18px;
+  font-size: var(--pc-worked-size); /* = the hero label's size (knob above) */
   line-height: 1.2;
   font-weight: 300;
   color: var(--pc-line);

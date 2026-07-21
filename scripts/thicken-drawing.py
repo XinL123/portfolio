@@ -17,10 +17,10 @@ ROOT = os.path.dirname(HERE)
 SRC = os.path.join(HERE, "charm-sources", "画.png")
 OUT = os.path.join(ROOT, "assets", "system", "hanging-drawing.png")
 
-INK = (30, 30, 30)
+INK = (17, 17, 17)
 DISP_VW = 6.0               # .pc-l1pic width in vw
 VW_PX = 1280 / 100.0        # 1 vw at the reference viewport
-TARGET_DISP_STROKE = 0.8   # <-- KNOB: stroke width in px on a 1280 viewport
+TARGET_DISP_STROKE = 1.0   # <-- KNOB: stroke width in px on a 1280 viewport
 
 
 def to_alpha_solid(path):

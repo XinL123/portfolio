@@ -94,36 +94,49 @@
        half-viewport mark, then retracts COMPLETELY as the scroll continues. Pure
        function of the panel's real position — scrolling back replays it. */
     if (lip && lipWrap && studio) {
-      const sr = studio.getBoundingClientRect();
-      const st = sr.top;
-      /* glue the peeker's anchor to the panel's top edge in document space
-         (the panel is in-flow, so this only actually changes on layout shifts) */
-      const docTop = sr.top + y - (studio.offsetParent ? studio.offsetParent.getBoundingClientRect().top + y : 0);
-      if (Math.abs(docTop - lastLipDocTop) > 0.5) {
-        lastLipDocTop = docTop;
-        setVar(lipWrap, "--obx-lip-top", `${docTop.toFixed(1)}px`);
-      }
-      const emerge = 0.1 + 0.57 * smooth(vh * 0.95, vh * 0.48, st); /* sliver 0.10 → 2/3 out */
-      const duck = 1 - smooth(vh * 0.44, vh * 0.12, st);            /* … → fully hidden */
-      /* opening gate: while the opening choreography is still playing (or the
-         page is mid-ride), the glass panel itself is hidden/out of place — the
-         peeker must not exist yet, or it floats detached in white space. Only
-         once the opening is complete does the normal curve apply (the panel
-         visibly rising over the cards is untouched). */
+      /* Opening gate. While the opening choreography runs, the work section is
+         position:fixed and the glass panel is hidden, so the panel's measured
+         position is meaningless — gluing the peeker to it teleports the anchor
+         to the top of the page. Bail out ENTIRELY (no glue, no curve) and hard-
+         zero the state: lerping toward 0 is not enough, because the rest state
+         on Projects is a 0.10 sliver whose --obx-lip-o is already 1.0, so the
+         decay left the orange fully opaque for the first frames of the reverse
+         handoff — the "small orange appears upper-right" artifact. CSS hides
+         the wrap on the same condition; this keeps the state clean too, so the
+         peeker re-enters from rest rather than resuming mid-decay. */
       const openingDone =
         document.body.classList.contains("home-opening-complete") &&
         !document.body.classList.contains("home-opening-active");
-      const target = openingDone ? emerge * duck : 0;
-      rise = reduceMotion ? target : lerp(rise, target, 0.16);
-      setVar(lipWrap, "--obx-rise", rise.toFixed(3));
-      /* fully retracted = sunk into the frost: fade the under-glass body away */
-      setVar(lipWrap, "--obx-lip-o", clamp01(rise / 0.08).toFixed(3));
-      /* eyes: centred, gazing up over the lip, easing back as it ducks */
-      const outAmt = Math.min(1, rise / 0.67);
-      lipLX = lerp(lipLX, 0, 0.12);
-      lipLY = lerp(lipLY, lerp(1.6, -2.0, outAmt), 0.12);
-      setVar(lip, "--obx-lx", `${lipLX.toFixed(2)}px`);
-      setVar(lip, "--obx-ly", `${lipLY.toFixed(2)}px`);
+
+      if (!openingDone) {
+        rise = 0;
+        lastLipDocTop = -1; // force a re-glue once the panel is real again
+        setVar(lipWrap, "--obx-rise", "0");
+        setVar(lipWrap, "--obx-lip-o", "0");
+      } else {
+        const sr = studio.getBoundingClientRect();
+        const st = sr.top;
+        /* glue the peeker's anchor to the panel's top edge in document space
+           (the panel is in-flow, so this only changes on layout shifts) */
+        const docTop = sr.top + y - (studio.offsetParent ? studio.offsetParent.getBoundingClientRect().top + y : 0);
+        if (Math.abs(docTop - lastLipDocTop) > 0.5) {
+          lastLipDocTop = docTop;
+          setVar(lipWrap, "--obx-lip-top", `${docTop.toFixed(1)}px`);
+        }
+        const emerge = 0.1 + 0.57 * smooth(vh * 0.95, vh * 0.48, st); /* sliver 0.10 → 2/3 out */
+        const duck = 1 - smooth(vh * 0.44, vh * 0.12, st);            /* … → fully hidden */
+        const target = emerge * duck;
+        rise = reduceMotion ? target : lerp(rise, target, 0.16);
+        setVar(lipWrap, "--obx-rise", rise.toFixed(3));
+        /* fully retracted = sunk into the frost: fade the under-glass body away */
+        setVar(lipWrap, "--obx-lip-o", clamp01(rise / 0.08).toFixed(3));
+        /* eyes: centred, gazing up over the lip, easing back as it ducks */
+        const outAmt = Math.min(1, rise / 0.67);
+        lipLX = lerp(lipLX, 0, 0.12);
+        lipLY = lerp(lipLY, lerp(1.6, -2.0, outAmt), 0.12);
+        setVar(lip, "--obx-lx", `${lipLX.toFixed(2)}px`);
+        setVar(lip, "--obx-ly", `${lipLY.toFixed(2)}px`);
+      }
     }
 
     /* ---- pinned intro scene: scroll progress IS the timeline ----

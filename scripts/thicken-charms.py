@@ -22,9 +22,9 @@ ROOT = os.path.dirname(HERE)
 SRC = os.path.join(HERE, "charm-sources")
 OUT_DIR = os.path.join(ROOT, "assets", "system")
 
-INK = (26, 26, 26)          # near-black, matches the rope ink
+INK = (17, 17, 17)          # #111 — exact match to --pc-line / rope ink
 VW_PX = 1280 / 100.0        # 1 vw at the reference viewport
-TARGET_DISP_STROKE = 0.8   # <-- KNOB: stroke width in px on a 1280 viewport
+TARGET_DISP_STROKE = 1.1   # <-- KNOB: stroke width in px on a 1280 viewport
 
 # name -> source file, ink-bbox crop box, body width (px), display width (vw).
 # The crop box + disp_vw must match the .pc-l1{name} CSS so positioning is stable.

@@ -13,19 +13,22 @@
     <meta property="og:url" content="https://christusluo.com/" />
     <meta property="og:type" content="website" />
     <title>christus's portfolio</title>
-    <!-- theme boot: stamp <html data-theme> BEFORE first paint so dark mode
-         never flashes white (reads the saved theme, falls back to the system) -->
+    <!-- theme boot, BEFORE first paint. The choice survives navigation inside
+         the site (home -> about -> playground ...) but NOT a reload: a reload
+         restarts the site from the intro lines, so it opens light, matching the
+         rest of the reload-resets-everything behaviour. -->
     <script>
       (function () {
+        var t = "light";
         try {
-          /* Theme is NOT persisted: every page load (refresh or navigation)
-             starts in LIGHT mode. Dark mode still toggles live via the pull-
-             chain, but only for the current view — this avoids the dark-mode
-             flash on the opening scroll after a refresh. */
-          document.documentElement.dataset.theme = "light";
+          var nav = performance.getEntriesByType("navigation")[0];
+          /* a reload starts the whole site over -> forget the choice */
+          if (nav && nav.type === "reload") sessionStorage.removeItem("portfolio-theme");
+          if (sessionStorage.getItem("portfolio-theme") === "dark") t = "dark";
         } catch (e) {
           /* storage blocked (private mode) — keep the light default */
         }
+        document.documentElement.dataset.theme = t;
       })();
     </script>
     <!-- fonts load in parallel with the CSS (was an @import inside styles.css,
@@ -33,10 +36,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap" />
-    <link rel="stylesheet" href="styles.css?v=20260719j" />
-    <link rel="stylesheet" href="orange-buddy.css?v=20260715f" />
+    <link rel="stylesheet" href="styles.css?v=202607211b" />
+    <link rel="stylesheet" href="orange-buddy.css?v=20260721a" />
   </head>
   <body data-page="home">
+    <script>
+      /* Mirror the theme onto <body> before ANY body content is parsed:
+         almost every dark rule is written as body[data-theme="dark"], and
+         <body> does not exist yet when the <head> script runs. Without this
+         those rules only land once script.js executes — one light frame. */
+      document.body.dataset.theme = document.documentElement.dataset.theme;
+    </script>
     <header class="site-header">
       <a class="brand-mark" href="index.html" aria-label="Xin.L home">
         <img class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
@@ -105,29 +115,39 @@
 
           <div class="hh-annot" aria-hidden="true">
             <span class="hh-annot-text">play with me!</span>
-            <svg class="hh-annot-arrow" viewBox="0 0 56 40" fill="none">
-              <path d="M52 7 C 36 1, 16 8, 7 28" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-              <path d="M4 20 L 7 29 L 15 25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+            <!-- doodled spiral arrow: one flowing stroke in from the upper
+                 right, a single closed loop mid-way, then the tail leaves the
+                 loop shallow and sweeps down-left in ONE continuously-bending
+                 arc into the tip — no straight stretch (the control-leg angles
+                 rise monotonically ~15° → 33° → 47° → 69°). -->
+            <svg class="hh-annot-arrow" viewBox="0 0 80 54" fill="none">
+              <path d="M 73 10 C 62 6, 52 8, 46 14 C 42 18, 41 25, 46 27 C 52 29, 56 22, 51 17 C 46 12, 40 12.5, 34 16 C 25 21.5, 17 30, 12.5 41.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path d="M 19.6 37.2 L 12.5 41.5 L 11 33" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
             </svg>
           </div>
 
           <svg class="hh-flowers" viewBox="0 0 96 74" fill="none" aria-hidden="true">
-            <!-- two loose line-art flowers + grass ticks, same ink as the site -->
-            <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-              <path d="M34 70 C 33 56, 34 46, 33 34" />
-              <circle cx="33" cy="26" r="3" />
-              <circle cx="26.5" cy="22" r="4.6" />
-              <circle cx="33" cy="16.5" r="4.6" />
-              <circle cx="39.5" cy="22" r="4.6" />
-              <circle cx="29" cy="31" r="4.6" />
-              <circle cx="37" cy="31" r="4.6" />
-              <path d="M62 71 C 62 62, 61 56, 62 49" />
-              <circle cx="62" cy="44" r="2.2" />
-              <circle cx="57.5" cy="41" r="3.4" />
-              <circle cx="62" cy="37.5" r="3.4" />
-              <circle cx="66.5" cy="41" r="3.4" />
-              <circle cx="59.5" cy="47" r="3.4" />
-              <circle cx="64.5" cy="47" r="3.4" />
+            <!-- two DIFFERENT flowers leaning toward each other + grass ticks,
+                 same ink as the site: a tilted petal daisy (pointed leaf on the
+                 RIGHT of its stem) and a smaller tulip leaning the other way
+                 (leaf on its LEFT) — companions, not copies. -->
+            <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M33 70 C 32 57, 33.5 48, 31.5 33" />
+              <g transform="rotate(-14 31 22)">
+                <ellipse cx="31" cy="13" rx="3" ry="5" />
+                <ellipse cx="38.2" cy="17.4" rx="3" ry="5" transform="rotate(62 38.2 17.4)" />
+                <ellipse cx="35.8" cy="25.6" rx="3" ry="5" transform="rotate(118 35.8 25.6)" />
+                <ellipse cx="26.2" cy="25.6" rx="3" ry="5" transform="rotate(-118 26.2 25.6)" />
+                <ellipse cx="23.8" cy="17.4" rx="3" ry="5" transform="rotate(-62 23.8 17.4)" />
+                <circle cx="31" cy="19.8" r="2.6" />
+              </g>
+              <path d="M32.7 53 C 37.6 51.2, 39.8 47, 38.8 43.6 C 34.8 45.6, 32.8 49.4, 32.7 53" />
+              <path d="M62 71 C 62 63, 61.5 57, 62 50" />
+              <g transform="rotate(9 61.5 45)">
+                <path d="M57.5 41 C 56.4 44, 56.6 47.2, 58.2 49.4 C 60.8 50.4, 63.4 50.2, 65.6 49 C 67 46.4, 67 43.2, 65.9 40.6" />
+                <path d="M57.5 41 L 59.8 44.4 L 61.9 40.2 L 63.9 44.2 L 65.9 40.6" />
+              </g>
+              <path d="M62 59 C 58.6 57.8, 57 55, 57.6 52.4 C 60.4 53.6, 61.8 56, 62 59" />
               <path d="M14 71 C 18 66, 19 64, 20 60 M22 71 C 24 68, 25 66, 25 64 M76 72 C 79 68, 80 66, 81 62 M86 72 C 88 69, 89 68, 90 65" />
             </g>
           </svg>
@@ -167,8 +187,8 @@
              weight at any size. -->
         <svg class="pc-clip-defs" width="0" height="0" aria-hidden="true" focusable="false">
           <defs>
-            <path id="pc-clip-back" d="M 4.6 0.6 C 6.1 -0.2, 10.0 -0.1, 11.5 0.7 C 12.0 3.2, 11.95 6.2, 11.6 8.4 C 11.25 9.6, 11.3 10.6, 11.65 11.8 C 12.2 16.2, 11.4 21.8, 10.3 25.6 C 9.3 26.6, 7.3 26.6, 6.4 25.7 C 5.3 21.6, 4.5 15.9, 4.95 11.9 C 5.25 10.7, 5.3 9.7, 5.0 8.5 C 4.6 6.2, 4.2 3.0, 4.6 0.6 Z" style="fill: var(--paper); stroke: var(--pc-line); stroke-width: 1.15; stroke-linejoin: round; stroke-linecap: round" vector-effect="non-scaling-stroke"/>
-            <path id="pc-clip-front" d="M 6.5 3.0 C 8.0 2.2, 12.2 2.3, 13.7 3.1 C 14.2 5.8, 14.15 8.9, 13.75 11.3 C 13.35 12.6, 13.4 13.6, 13.8 14.9 C 14.4 19.6, 13.5 26.0, 12.3 30.4 C 11.2 31.5, 8.9 31.5, 7.9 30.5 C 6.6 26.2, 5.7 19.8, 6.2 15.1 C 6.55 13.7, 6.6 12.7, 6.25 11.4 C 5.85 8.9, 5.9 5.6, 6.5 3.0 Z" style="fill: var(--paper); stroke: var(--pc-line); stroke-width: 1.15; stroke-linejoin: round; stroke-linecap: round" vector-effect="non-scaling-stroke"/>
+            <path id="pc-clip-back" d="M 4.6 0.6 C 6.1 -0.2, 10.0 -0.1, 11.5 0.7 C 12.0 3.2, 11.95 6.2, 11.6 8.4 C 11.25 9.6, 11.3 10.6, 11.65 11.8 C 12.2 16.2, 11.4 21.8, 10.3 25.6 C 9.3 26.6, 7.3 26.6, 6.4 25.7 C 5.3 21.6, 4.5 15.9, 4.95 11.9 C 5.25 10.7, 5.3 9.7, 5.0 8.5 C 4.6 6.2, 4.2 3.0, 4.6 0.6 Z" style="fill: var(--paper); stroke: var(--pc-line); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round" vector-effect="non-scaling-stroke"/>
+            <path id="pc-clip-front" d="M 6.5 3.0 C 8.0 2.2, 12.2 2.3, 13.7 3.1 C 14.2 5.8, 14.15 8.9, 13.75 11.3 C 13.35 12.6, 13.4 13.6, 13.8 14.9 C 14.4 19.6, 13.5 26.0, 12.3 30.4 C 11.2 31.5, 8.9 31.5, 7.9 30.5 C 6.6 26.2, 5.7 19.8, 6.2 15.1 C 6.55 13.7, 6.6 12.7, 6.25 11.4 C 5.85 8.9, 5.9 5.6, 6.5 3.0 Z" style="fill: var(--paper); stroke: var(--pc-line); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round" vector-effect="non-scaling-stroke"/>
           </defs>
         </svg>
           <div class="pc-top" aria-hidden="true">
@@ -185,7 +205,7 @@
                  elements below (.pc-l1pic / .pc-l1star / .pc-l1heart /
                  .pc-l1drop). The art paints ABOVE the bun so the clip holds the
                  dome. -->
-            <img class="pc-top-line" src="assets/system/clothesline-top.svg?v=20260717c" alt="" draggable="false" />
+            <img class="pc-top-line" src="assets/system/clothesline-top.svg?v=20260721j" alt="" draggable="false" />
 
             <!-- bun caught in the artwork's drawn clothespin at the sag -->
             <div class="pc-bun">
@@ -204,14 +224,14 @@
             <!-- the user's framed cartoon drawing, pinned by the two clips above
                  (replaces the old drawn tee): top edge inside both jaws, tilted
                  with the rope's local slope so it hangs on the line, not near it -->
-            <img class="pc-l1pic" src="assets/system/hanging-drawing.png?v=20260712j" alt="" draggable="false" />
+            <img class="pc-l1pic" src="assets/system/hanging-drawing.png?v=20260721m" alt="" draggable="false" />
 
             <!-- the user's star / heart / raindrop charms, hung from the rope as
                  crisp DOM images (native line art, solid ink) at the SAME spots the
                  old raster charms held — string-top tucks under the z2 rope art -->
-            <img class="pc-l1charm pc-l1star" src="assets/system/charm-star.png?v=20260712j" alt="" draggable="false" />
-            <img class="pc-l1charm pc-l1heart" src="assets/system/charm-heart.png?v=20260712j" alt="" draggable="false" />
-            <img class="pc-l1charm pc-l1drop" src="assets/system/charm-drop.png?v=20260712j" alt="" draggable="false" />
+            <img class="pc-l1charm pc-l1star" src="assets/system/charm-star.png?v=20260721n" alt="" draggable="false" />
+            <img class="pc-l1charm pc-l1heart" src="assets/system/charm-heart.png?v=20260721n" alt="" draggable="false" />
+            <img class="pc-l1charm pc-l1drop" src="assets/system/charm-drop.png?v=20260721n" alt="" draggable="false" />
           </div>
 
           <!-- the lower PROJECT rope: a long foreground curve spanning the whole
@@ -618,8 +638,8 @@
          over it (position: sticky has nothing to hold onto without this). -->
     <div class="home-reveal-spacer" aria-hidden="true"></div>
 
-    <script src="script.js?v=20260719e"></script>
-    <script src="orange-buddy.js?v=20260715f"></script>
-    <script src="clothesline.js?v=20260715f"></script>
+    <script src="script.js?v=202607211b"></script>
+    <script src="orange-buddy.js?v=20260721a"></script>
+    <script src="clothesline.js?v=202607211b"></script>
   </body>
 </html>

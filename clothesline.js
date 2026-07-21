@@ -192,6 +192,16 @@
       // card except .pc-card-active, so their hot-zones truly leave with them.
       c.classList.toggle("pc-card-active", i === activeProjectIndex);
     });
+
+    // Desktop cursor hint, only at the two ENDS of the row: on the first card a
+    // right arrow says "keep going that way", on the last a left arrow says
+    // "back the other way". In between the pointer stays ordinary — the hint is
+    // for the ends, where the direction to travel is unambiguous. Driven from
+    // here so it stays in step with the index on every path that moves the row
+    // (drag, wheel, keys, dots); CSS swaps the cursor image off these classes,
+    // and scopes them to the ACTIVE card so blurred neighbours never show one.
+    viewport.classList.toggle("pc-at-first", activeProjectIndex === 0);
+    viewport.classList.toggle("pc-at-last", activeProjectIndex >= snaps.length - 1);
   };
 
   let lastT = 0;

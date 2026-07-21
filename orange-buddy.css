@@ -81,6 +81,19 @@ body[data-page="home"] main {
   opacity: var(--obx-lip-o, 0);
 }
 
+/* The peeker is a SIBLING of .studio-block (so its body can sit UNDER the
+   glass rather than be clipped by it), which means it does NOT inherit the
+   panel's `.home-opening-active { visibility: hidden }` rule. Without this it
+   is the one orange still painting while the opening choreography runs: the
+   work section goes position:fixed, the panel's document top collapses to ~0,
+   the JS-glued anchor teleports to the top of the page, and the peeker is
+   exposed in the hero's upper right. Hide it on exactly the same condition as
+   the panel it belongs to — a structural guarantee, not a timing race. */
+body[data-page="home"].home-opening-active .obx-lip-wrap {
+  opacity: 0;
+  visibility: hidden;
+}
+
 .obx-lip {
   position: absolute;
   left: 0;

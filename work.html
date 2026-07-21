@@ -10,19 +10,22 @@
     <meta property="og:url" content="https://christusluo.com/work.html" />
     <meta property="og:type" content="website" />
     <title>Voderrn | Christus Luo</title>
-    <!-- theme boot: stamp <html data-theme> BEFORE first paint so dark mode
-         never flashes white (reads the saved theme, falls back to the system) -->
+    <!-- theme boot, BEFORE first paint. The choice survives navigation inside
+         the site (home -> about -> playground ...) but NOT a reload: a reload
+         restarts the site from the intro lines, so it opens light, matching the
+         rest of the reload-resets-everything behaviour. -->
     <script>
       (function () {
+        var t = "light";
         try {
-          /* Theme is NOT persisted: every page load (refresh or navigation)
-             starts in LIGHT mode. Dark mode still toggles live via the pull-
-             chain, but only for the current view — this avoids the dark-mode
-             flash on the opening scroll after a refresh. */
-          document.documentElement.dataset.theme = "light";
+          var nav = performance.getEntriesByType("navigation")[0];
+          /* a reload starts the whole site over -> forget the choice */
+          if (nav && nav.type === "reload") sessionStorage.removeItem("portfolio-theme");
+          if (sessionStorage.getItem("portfolio-theme") === "dark") t = "dark";
         } catch (e) {
           /* storage blocked (private mode) — keep the light default */
         }
+        document.documentElement.dataset.theme = t;
       })();
     </script>
     <!-- fonts load in parallel with the CSS (was an @import inside styles.css,
@@ -30,9 +33,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap" />
-    <link rel="stylesheet" href="styles.css?v=20260719j" />
+    <link rel="stylesheet" href="styles.css?v=202607211b" />
   </head>
   <body data-page="case-study">
+    <script>
+      /* Mirror the theme onto <body> before ANY body content is parsed:
+         almost every dark rule is written as body[data-theme="dark"], and
+         <body> does not exist yet when the <head> script runs. Without this
+         those rules only land once script.js executes — one light frame. */
+      document.body.dataset.theme = document.documentElement.dataset.theme;
+    </script>
     <div class="case-hover-zone is-at-top" aria-label="Project navigation">
       <div class="case-floating-nav">
         <a class="case-back-link" href="index.html#work" aria-label="Back to selected projects">
@@ -544,6 +554,6 @@
       <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
 
-    <script src="script.js?v=20260719e"></script>
+    <script src="script.js?v=202607211b"></script>
   </body>
 </html>
