@@ -82,7 +82,9 @@ expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.header-actions\s+\.connect-butto
 
 expect(!html.includes('class="home-hero reveal-section"'), "Home should not keep the old hero section when the opening sequence is active");
 expect(!html.includes("End to end design · Vibe coding"), "Home should not keep the old positioning copy in the new opening sequence");
-expect(!/drop-shadow|--glow|orange-stage::before|orange-stage::after/m.test(css), "orange character should not glow");
+// narrowed 2026-07-21: dark-mode charm gems legitimately use drop-shadow; the
+// ban is about the ORANGE CHARACTER, so scope it to orange-* rules.
+expect(!/\.orange[^{}]*\{[^}]*drop-shadow/m.test(css) && !/--glow/.test(css) && !/orange-stage::(before|after)/.test(css), "orange character should not glow");
 expect(css.includes(".orange-eye"), "CSS should style orange eyes");
 // The eye rig is proportional: script.js measures the stage against the 360px
 // desktop reference and writes --eye-scale, which drives pupil size + gap here

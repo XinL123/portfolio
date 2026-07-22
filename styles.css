@@ -9193,8 +9193,127 @@ body[data-theme="dark"] .pc-l1pic {
   transition: filter 240ms ease; /* invert crossfades with the theme switch */
 }
 
-body[data-theme="dark"] .pc-l1charm {
-  filter: invert(1);
+/* stacked light/dark pair per charm (same classes -> identical geometry).
+   Light: the hand-drawn ink original. Dark: a BAKED variant — same strokes
+   pre-inverted to cream, interior filled with a translucent gem colour
+   (assets built by scripts/make-dark-charms.py; a raster interior cannot be
+   filled from CSS). Atomic swap, no crossfade — the pair is opaque-on-
+   transparent so strokes align exactly and nothing bleeds mid-toggle. */
+.pc-charm-dark {
+  opacity: 0;
+}
+
+body[data-theme="dark"] .pc-charm-dark {
+  opacity: 1;
+}
+
+body[data-theme="dark"] img.pc-l1charm:not(.pc-charm-dark) {
+  opacity: 0;
+}
+
+/* ---- night-time gem light (dark mode only) --------------------------------
+   A CONSTANT soft halo — a tight bright core plus a wide faint one, drawn
+   with drop-shadow so the light follows each drawing's own alpha (fill
+   included, so the whole gem is lit, not just its outline). Stroke pixels
+   are untouched: the shadow paints behind the artwork.
+   Deliberately NOT animated. A gem does not pulse; making the whole shape
+   breathe in and out read as a cheap neon sign. The gem simply sits there
+   glowing, and all the sparkle comes from the glints below. */
+body[data-theme="dark"] .pc-charm-dark.pc-l1star {
+  filter: drop-shadow(0 0 2px rgba(255, 214, 130, 0.85)) drop-shadow(0 0 7px rgba(255, 196, 96, 0.34));
+}
+
+body[data-theme="dark"] .pc-charm-dark.pc-l1heart {
+  filter: drop-shadow(0 0 2px rgba(255, 150, 175, 0.8)) drop-shadow(0 0 7px rgba(255, 122, 156, 0.3));
+}
+
+body[data-theme="dark"] .pc-charm-dark.pc-l1drop {
+  filter: drop-shadow(0 0 2px rgba(140, 195, 255, 0.8)) drop-shadow(0 0 7px rgba(110, 175, 250, 0.3));
+}
+
+/* ---- the bling: small glints skipping across each gem --------------------
+   One <span> per charm shares the charm's positioning classes, so it overlays
+   the artwork exactly (media-query size changes included); aspect-ratio gives
+   the span the PNG's proportions, since a span has no intrinsic height. Inside
+   it, four <i> are four-point star glints sitting at different facets of the
+   gem body (positions taken from the measured fill bounding boxes, so none can
+   land on the hanging string).
+
+   Each glint pops for a fraction of its cycle — scale 0 -> 1 -> 0 with a small
+   rotation, ~8% of the period — and each has its OWN negative delay, so the
+   four fire at four different moments and the gem twinkles irregularly instead
+   of blinking as a unit. Nothing else moves: the gem's own light is constant.
+
+   ▼ TUNING: --s = glint size (% of the charm's width), --x/--y = position on
+     the gem, --d = when in the cycle it fires. Duration lives on the charm. ▼ */
+.pc-gem-spark {
+  opacity: 0;
+  z-index: 2; /* glints sit over the charm art */
+}
+
+.pc-gem-spark.pc-l1star { aspect-ratio: 277 / 477; }
+.pc-gem-spark.pc-l1heart { aspect-ratio: 272 / 566; }
+.pc-gem-spark.pc-l1drop { aspect-ratio: 297 / 1199; }
+
+body[data-theme="dark"] .pc-gem-spark {
+  opacity: 1;
+}
+
+/* Soft light, not a pasted shape. These charms render at only ~11-16px wide,
+   so a hard-edged geometric star cannot resolve at that size — it just reads as
+   a crisp white blob stuck onto hand-drawn art, which is what made the earlier
+   glints feel abrupt. A radial gradient fading to nothing gives a catch of
+   light that is bright at its centre and has no edge to snag the eye. */
+.pc-gem-spark i {
+  position: absolute;
+  width: var(--s, 20%);
+  aspect-ratio: 1;
+  left: var(--x, 50%);
+  top: var(--y, 50%);
+  background: radial-gradient(
+    circle closest-side,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.6) 32%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  transform: scale(0);
+}
+
+/* star — four facets around its body (fill bbox x 15-85%, y 55-99%) */
+.pc-gem-spark.pc-l1star i:nth-child(1) { --s: 26%; --x: 29%; --y: 65%; --d: -0.2s; }
+.pc-gem-spark.pc-l1star i:nth-child(2) { --s: 18%; --x: 63%; --y: 71%; --d: -1.3s; }
+.pc-gem-spark.pc-l1star i:nth-child(3) { --s: 22%; --x: 45%; --y: 86%; --d: -2.4s; }
+.pc-gem-spark.pc-l1star i:nth-child(4) { --s: 15%; --x: 22%; --y: 82%; --d: -3.1s; }
+
+/* heart — fill bbox x 11-89%, y 61-93% */
+.pc-gem-spark.pc-l1heart i:nth-child(1) { --s: 26%; --x: 27%; --y: 68%; --d: -0.6s; }
+.pc-gem-spark.pc-l1heart i:nth-child(2) { --s: 18%; --x: 61%; --y: 70%; --d: -1.9s; }
+.pc-gem-spark.pc-l1heart i:nth-child(3) { --s: 22%; --x: 44%; --y: 83%; --d: -3.0s; }
+.pc-gem-spark.pc-l1heart i:nth-child(4) { --s: 15%; --x: 70%; --y: 78%; --d: -4.1s; }
+
+/* raindrop — its body is the lower part of a very tall canvas (y 58-99%) */
+.pc-gem-spark.pc-l1drop i:nth-child(1) { --s: 30%; --x: 33%; --y: 70%; --d: -0.4s; }
+.pc-gem-spark.pc-l1drop i:nth-child(2) { --s: 22%; --x: 62%; --y: 77%; --d: -1.8s; }
+.pc-gem-spark.pc-l1drop i:nth-child(3) { --s: 26%; --x: 44%; --y: 87%; --d: -3.3s; }
+.pc-gem-spark.pc-l1drop i:nth-child(4) { --s: 18%; --x: 29%; --y: 83%; --d: -4.6s; }
+
+/* one glint per cycle, each on its own clock */
+body[data-theme="dark"] .pc-gem-spark.pc-l1star i  { animation: pc-glint 3.8s ease-in-out var(--d) infinite; }
+body[data-theme="dark"] .pc-gem-spark.pc-l1heart i { animation: pc-glint 4.6s ease-in-out var(--d) infinite; }
+body[data-theme="dark"] .pc-gem-spark.pc-l1drop i  { animation: pc-glint 5.4s ease-in-out var(--d) infinite; }
+
+/* a quick catch of light: in and out inside ~8% of the cycle, so each glint
+   is a blink of light rather than a shape that fades up and down */
+@keyframes pc-glint {
+  0%, 8%, 100% { transform: scale(0) rotate(0deg); }
+  4% { transform: scale(1) rotate(18deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-gem-spark i {
+    animation: none;
+    transform: scale(0); /* no glints — the gems' constant light carries it */
+  }
 }
 
 .pc-l1star {
