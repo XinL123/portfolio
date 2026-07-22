@@ -30,3 +30,8 @@ Page Pics/
 linedemo/
 pencil/
 .claude/settings.local.json
+
+# Deployed video assets. The blanket *.mov/*.mp4 rules above keep raw local
+# footage out of the repo, but anything index.html actually references has to
+# ship or the deployed site 404s it. Negations must stay below those rules.
+!assets/home/home-video.mp4
