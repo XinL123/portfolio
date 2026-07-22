@@ -270,7 +270,13 @@
               <article class="pc-card pc-card-cover pc-card-wentong" style="--sv: 0.9">
                 <div class="pc-hang">
                   <span class="pc-clip pc-clip-b pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span><span class="pc-clip pc-clip-b pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span>
-                  <a class="pc-card-link" href="https://landofwisdom.framer.website/" target="_blank" rel="noreferrer">
+                  <!-- Route parked until the new project pages are ready. Same shape as the
+                       "Coming Soon" card below: a plain div carries no href, no keyboard focus
+                       and no link semantics, so the card cannot navigate. Hover/focus art is
+                       untouched (the CSS keys off .pc-card-link, not the element type).
+                       To re-enable: restore the anchor and its matching closing tag.
+                       WAS: <a class="pc-card-link" href="https://landofwisdom.framer.website/" target="_blank" rel="noreferrer"> -->
+                  <div class="pc-card-link">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-wentong">
                         <img class="pc-cover-light" src="assets/cover/wisdom-cover-scene.png?v=20260715f" alt="Land of Wisdom — orange reading with an AI thought" loading="lazy" />
@@ -288,7 +294,7 @@
                       </div>
                       <svg class="pc-mini pc-mini-star" style="--mx: auto; --mr: 6%; --my: auto; --mb: 7%" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4 14.4 9l5.8.5-4.4 3.9 1.3 5.7L12 16 6.9 19.1l1.3-5.7L3.8 9.5 9.6 9z" fill="none" vector-effect="non-scaling-stroke" /></svg>
                     </div>
-                  </a>
+                  </div>
                   <span class="pc-note" aria-hidden="true">coming soon</span>
                   <span class="pc-clip pc-clip-f pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span><span class="pc-clip pc-clip-f pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span>
                 </div>
@@ -297,7 +303,12 @@
               <article class="pc-card pc-card-cover pc-card-voderrn" style="--sv: 1.1">
                 <div class="pc-hang">
                   <span class="pc-clip pc-clip-b pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span><span class="pc-clip pc-clip-b pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span>
-                  <a class="pc-card-link" href="work.html" target="_self">
+                  <!-- Route parked until the new project pages are ready. work.html (the Voderrn
+                       case study) stays in the repo untouched as the backup; only this card's
+                       connection to it is removed, so the card cannot navigate.
+                       To re-enable: restore the anchor and its matching closing tag.
+                       WAS: <a class="pc-card-link" href="work.html" target="_self"> -->
+                  <div class="pc-card-link">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-voderrn">
                         <img class="pc-cover-light" src="assets/cover/voderrn-cover-scene.png?v=20260715f" alt="Voderrn — orange trying on looks at the mirror" loading="lazy" />
@@ -315,7 +326,7 @@
                       </div>
                       <svg class="pc-mini pc-mini-tag" style="--mx: auto; --mr: 6%; --my: 7%; --mb: auto" viewBox="0 0 26 30" aria-hidden="true"><path d="M13 2 v5" vector-effect="non-scaling-stroke" /><rect x="5.5" y="7" width="15" height="19" rx="3.4" transform="rotate(7 13 16.5)" vector-effect="non-scaling-stroke" /><circle cx="13" cy="11.6" r="1.1" /></svg>
                     </div>
-                  </a>
+                  </div>
                   <span class="pc-note" aria-hidden="true">coming soon</span>
                   <span class="pc-clip pc-clip-f pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span><span class="pc-clip pc-clip-f pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span>
                 </div>
@@ -350,7 +361,14 @@
               <article class="pc-card pc-card-cover pc-card-health" style="--sv: 1.05">
                 <div class="pc-hang">
                   <span class="pc-clip pc-clip-b pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span><span class="pc-clip pc-clip-b pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span>
-                  <a class="pc-card-link" href="Gowncard%20Pitch.pdf" target="_blank" rel="noreferrer">
+                  <!-- Route parked until the new project pages are ready. This one was also
+                       broken: "Gowncard Pitch.pdf" is caught by the blanket *.pdf rule in
+                       .gitignore, so it never deployed and the live link 404'd. The PDF stays
+                       local-only by choice; ship it with a .gitignore negation if this card is
+                       ever pointed back at it.
+                       To re-enable: restore the anchor and its matching closing tag.
+                       WAS: <a class="pc-card-link" href="Gowncard%20Pitch.pdf" target="_blank" rel="noreferrer"> -->
+                  <div class="pc-card-link">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-health">
                         <img class="pc-cover-light" src="assets/cover/healthcare-cover-scene.png?v=20260715f" alt="Healthcare — orange as a doctor examining a teddy bear" loading="lazy" />
@@ -368,7 +386,7 @@
                       </div>
                       <svg class="pc-mini pc-mini-heart" style="--mx: auto; --mr: 6%; --my: auto; --mb: 7%" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19.2 C7 15.4 4.4 12.6 4.4 9.8 a3.9 3.9 0 0 1 7.6-1.3 A3.9 3.9 0 0 1 19.6 9.8 c0 2.8-2.6 5.6-7.6 9.4 Z" fill="none" vector-effect="non-scaling-stroke" /></svg>
                     </div>
-                  </a>
+                  </div>
                   <span class="pc-note" aria-hidden="true">coming soon</span>
                   <span class="pc-clip pc-clip-f pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span><span class="pc-clip pc-clip-f pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span>
                 </div>
