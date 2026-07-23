@@ -1266,6 +1266,13 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   const introLines = Array.from(document.querySelectorAll('body[data-page="home"] .intro-line'));
   let activeIntroIndex = 0;
   let isIntroPaging = false;
+  // True once the opening has scheduled its first intro-line write. The late
+  // `load`/`pageshow` re-reset (below) keys off this so it can never wipe a
+  // first line that is mid-lead-in: writeIntroLine blanks the line for its
+  // ~300ms+font-wait run-up BEFORE any hw-* class exists, and a reset landing
+  // in that window (heavy hero video delays `load` to ~2.4s, right into it)
+  // restarts the line and can lose the animation to the plain-text fail-safe.
+  let openingArmed = false;
   let introTypingTimer = null;
   let introDoneTimer = null;
   let introRaf = null;
@@ -2055,6 +2062,9 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   };
 
   const activateIntroScreen = (nextIndex) => {
+    // The opening has begun the moment a screen is activated — mark it so the
+    // load/pageshow re-reset treats even the pre-draw lead-in as "started".
+    openingArmed = true;
     activeIntroIndex = clamp(nextIndex, 0, homeIntroScreens.length);
     const isGallery = activeIntroIndex >= homeIntroScreens.length;
     document.body.classList.toggle("home-gallery-active", isGallery);
@@ -2805,12 +2815,15 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // yank a visitor who already started scrolling back to the first intro
     // screen. Only a bfcache return (persisted) still resets unconditionally.
     const hasStartedOpening = () =>
+      openingArmed ||
       activeIntroIndex > 0 ||
       galleryProgress > 0.001 ||
       document.body.classList.contains("home-opening-complete") ||
       // Sentence 1 mid-write (or written) counts as started: on a HARD
       // refresh the heavy video delays `load` by seconds, and the re-reset
-      // used to wipe the half-written line to blank and start it over.
+      // used to wipe the half-written line to blank and start it over. The
+      // `openingArmed` guard above extends this to the blank lead-in too —
+      // the class check alone missed the run-up before the first stroke.
       !!homeIntroScreens[0]?.querySelector(".hw-writing, .is-writing, .is-done");
     window.addEventListener("pageshow", (event) => {
       if (event.persisted || !hasStartedOpening()) resetHomeOpening();
