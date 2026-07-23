@@ -1,6 +1,23 @@
 [build]
   publish = "."
 
+# Canonical urls are clean and extensionless: /, /projects, /about, ...
+# Any legacy .html address 301s to the clean form so the ugly url never sticks
+# in the address bar (mirrors Netlify's pretty-url behaviour for real files,
+# which /projects and / do not get on their own — one is a rewrite target, the
+# other is the index). These 301s must come BEFORE the 200 rewrite below:
+# Netlify uses first-match, and we want /projects.html -> /projects, not
+# /projects.html -> index.html (which would keep the .html visible).
+[[redirects]]
+  from = "/projects.html"
+  to = "/projects"
+  status = 301
+
+[[redirects]]
+  from = "/index.html"
+  to = "/"
+  status = 301
+
 # /projects is served BY THE SERVER from the home document — status 200 is a
 # rewrite, not a redirect, so the address bar keeps /projects and the browser
 # never sees index.html or #work. The Projects carousel is not duplicated; it
@@ -8,11 +25,6 @@
 # Mirrors PROJECTS_ROUTES in vite.config.js — keep the two in sync.
 [[redirects]]
   from = "/projects"
-  to = "/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/projects.html"
   to = "/index.html"
   status = 200
 

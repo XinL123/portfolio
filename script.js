@@ -7,10 +7,12 @@ const HOME_LOGO_SKIP_KEY = "portfolio-logo-skip-intro";
 
 // The Projects section lives in the home page (it is the target of the hero
 // handoff), but it is addressed by its own url so it matches About / Resume /
-// Playground instead of showing as index.html#work. projects.html is a real
-// file, so the url survives a refresh, a bookmark and a cross-page click; from
-// the home page the nav swaps it in with pushState and never reloads.
-const PROJECTS_PATH = "projects.html";
+// Playground instead of showing as index.html#work. /projects is a clean route
+// served from this document by a server rewrite (vite.config.js / netlify.toml),
+// so the url survives a refresh, a bookmark and a cross-page click; from the
+// home page the nav swaps it in with pushState and never reloads. Keep this a
+// clean, extensionless path — it is what the address bar shows verbatim.
+const PROJECTS_PATH = "/projects";
 const isProjectsUrl = () => /\/projects(\.html)?$/.test(window.location.pathname);
 
 const navigationEntry = performance.getEntriesByType("navigation")[0];
@@ -26,8 +28,9 @@ if (isPageReload) {
     // 其他页面刷新后返回主页开场。/projects 是主页文档的虚拟路由，但对刷新的
     // 预期和 About/Resume 一样：回到主页开场（否则会停在 Projects 段、跳过开场，
     // URL 还停在 /projects —— 看起来像"没刷新")。直接访问/收藏 /projects 不受影响，
-    // 那是 navigate 而非 reload。
-    window.location.replace("index.html");
+    // 那是 navigate 而非 reload。用干净的 "/"，不要 "index.html"，否则地址栏会
+    // 停在 /index.html。
+    window.location.replace("/");
   }
 }
 
@@ -2845,7 +2848,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 // On other pages there is no Work section to scroll to, so the link keeps its
 // default navigation to index.html#work.
 if (isHomePage) {
-  document.querySelectorAll('a[href="#work"], a[href="index.html#work"], a[href="projects.html"]').forEach((link) => {
+  document.querySelectorAll('a[href="#work"], a[href="index.html#work"], a[href="/projects"], a[href="projects.html"]').forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
       sessionStorage.removeItem(HOME_LOGO_SKIP_KEY);
@@ -2890,7 +2893,8 @@ document.querySelectorAll(".brand-mark").forEach((link) => {
     event.preventDefault();
 
     sessionStorage.setItem(HOME_LOGO_SKIP_KEY, "1");
-    window.location.href = "index.html";
+    // Clean "/" so the home url never becomes /index.html.
+    window.location.href = "/";
   });
 });
 
