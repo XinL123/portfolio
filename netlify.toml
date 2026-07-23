@@ -13,10 +13,16 @@
   to = "/projects"
   status = 301
 
+# force = true is required: /index.html is a REAL file, and Netlify skips a
+# redirect whose `from` matches an existing file unless forced. (/projects.html
+# needs no force — no file sits behind it.) No loop: "/" serves index.html
+# internally, which is not a redirect, and the /projects 200 rewrite proxies
+# index.html's bytes without re-triggering this rule.
 [[redirects]]
   from = "/index.html"
   to = "/"
   status = 301
+  force = true
 
 # /projects is served BY THE SERVER from the home document — status 200 is a
 # rewrite, not a redirect, so the address bar keeps /projects and the browser
