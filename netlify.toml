@@ -1,6 +1,21 @@
 [build]
   publish = "."
 
+# /projects is served BY THE SERVER from the home document — status 200 is a
+# rewrite, not a redirect, so the address bar keeps /projects and the browser
+# never sees index.html or #work. The Projects carousel is not duplicated; it
+# stays in the home page as the target of the hero scroll handoff.
+# Mirrors PROJECTS_ROUTES in vite.config.js — keep the two in sync.
+[[redirects]]
+  from = "/projects"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/projects.html"
+  to = "/index.html"
+  status = 200
+
 [[headers]]
   for = "/*"
 

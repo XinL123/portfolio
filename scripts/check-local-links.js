@@ -3,6 +3,7 @@ const path = require("path");
 
 const htmlFiles = ["index.html", "work.html", "about.html", "resume.html", "playground.html", "404.html"];
 const localReferencePattern = /(?:href|src)="([^"]+)"/g;
+const virtualRoutes = new Set(["projects.html", "/projects.html", "projects", "/projects"]);
 const missing = [];
 
 for (const file of htmlFiles) {
@@ -17,6 +18,13 @@ for (const file of htmlFiles) {
       reference.startsWith("mailto:") ||
       reference.startsWith("#")
     ) {
+      continue;
+    }
+
+    // Server-side routes with no file behind them: /projects is rewritten to
+    // index.html by vite.config.js and netlify.toml (status 200), so it
+    // resolves at request time even though projects.html does not exist.
+    if (virtualRoutes.has(reference)) {
       continue;
     }
 

@@ -272,7 +272,10 @@ body[data-page="home"].home-opening-active:not(.home-gallery-active) .site-heade
   width: max-content;
   min-height: 50px;
   padding: 0 28px;
-  border: 2px solid var(--line);
+  /* Matches the site's hand-drawn line art (the SVG doodles are stroke-width
+     1.5-1.6). Invisible at rest — the border colour equals the fill — so this
+     weight is what you actually see on hover, when the fill flips to paper. */
+  border: 1.5px solid var(--line);
   border-radius: 999px;
   background: var(--ink);
   color: var(--paper);
@@ -428,6 +431,8 @@ body[data-page="home"].home-opening-active:not(.home-gallery-active) .site-heade
   pointer-events: auto;
   transform: translateY(0) scale(1);
   visibility: visible;
+  /* the screen advances on click as well as on scroll */
+  cursor: pointer;
 }
 
 body.home-opening-complete .home-intro-screen {
@@ -444,7 +449,8 @@ body.home-opening-complete .home-intro-screen {
      used to sit at the 18px floor — tiny, and a jarring 27→18 drop across the
      820px breakpoint where the ≤820 rule caps at 27. 25px keeps that band at the
      desktop size; the max (27) still governs very wide screens unchanged. */
-  font-size: clamp(27px, 1.9vw, 30px);
+  /* user-tuned 2026-07-23: whole intro scale up a touch (was 27-30px) */
+  font-size: clamp(33px, 2.25vw, 36px);
   font-weight: 300;
   font-synthesis: none;
   line-height: 1.12;
@@ -458,31 +464,128 @@ body.home-opening-complete .home-intro-screen {
 #intro-3 .intro-line {
   /* same fix as .intro-line above: floor 17→22 so the longer lines 2/3 don't
      shrink to the floor across the iPad / small-laptop band */
-  font-size: clamp(24px, 1.7vw, 27px);
+  font-size: clamp(27px, 1.8vw, 30px);
 }
 
-.intro-line::after {
+/* The old typewriter caret's ::after spacer is GONE (2026-07-23): its 0.48em
+   of reserved inline width pushed every centred sentence ~0.24em left of the
+   true viewport centre. The intro lines now centre exactly. */
+
+/* Handwriting reveal. A word wrapper keeps line breaks at spaces only; each
+   glyph inside is wiped in left-to-right within its own box. The wipe lasts
+   longer than the gap between two glyph starts (see INK_GLYPH_MS / the stagger
+   maths in script.js), so several letters are always mid-stroke and the ink
+   reads as one continuous line instead of characters popping in. */
+.intro-line {
+  --ink-glyph: 160ms; /* keep in sync with INK_GLYPH_MS in script.js */
+}
+
+.intro-line .ink-w {
   display: inline-block;
-  width: 0.48em;
-  color: #000000;
-  content: "|";
-  opacity: 0;
-  transform: translateY(-0.03em);
+  white-space: pre;
 }
 
-.intro-line.is-typing::after {
-  animation: intro-caret-blink 780ms steps(1) infinite;
+.intro-line .ink-c {
+  display: inline-block;
+  white-space: pre;
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  transition:
+    clip-path var(--ink-glyph) linear,
+    opacity calc(var(--ink-glyph) * 0.6) linear;
+}
+
+.intro-line.is-writing .ink-c,
+.intro-line.is-done .ink-c {
   opacity: 1;
+  clip-path: inset(0 0 0 0);
 }
 
-.intro-line.is-done::after {
-  opacity: 0;
+/* ------------------------------------------------------------------
+   Sentence-level ink reveal (intro lines 2 and 3).
+
+   The per-glyph wipe above gives every letter its own rectangular mask,
+   and on a long sentence that row of vertical seams reads as venetian
+   blinds rather than writing. Here the whole visual line is masked
+   instead: one soft, rounded ink head travels along it, everything
+   behind the head is fully inked, and no letter owns a boundary.
+
+   Two mask layers, composited together:
+     · a trail  — opaque up to (--ink-x - --ink-head), feathering out by --ink-x
+     · a head   — an ellipse centred on --ink-x, taller than the text, whose
+                  falloff rounds the leading edge and softens its top/bottom
+   Only --ink-x (and a barely-there --ink-y wobble) is animated, from
+   requestAnimationFrame in script.js.
+   ------------------------------------------------------------------ */
+.intro-line .ink-line {
+  display: block;
+  --ink-x: -200px;
+  --ink-head: 26px; /* soft leading edge, ~24-36px */
+  --ink-tall: 0.92em; /* < 1em so the front curves like a nib, not a bar */
+  --ink-dry: 96px; /* wet ink behind the head settles to full over this run */
+  --ink-y: 50%;
+  /* trail: fresh ink sits at ~0.82 just behind the head and "dries" to full
+     over --ink-dry; head: a nib-shaped ellipse rounds the leading edge. */
+  -webkit-mask-image:
+    radial-gradient(
+      ellipse var(--ink-head) var(--ink-tall) at var(--ink-x) var(--ink-y),
+      rgba(0, 0, 0, 0.9) 26%,
+      rgba(0, 0, 0, 0.5) 62%,
+      transparent 100%
+    ),
+    linear-gradient(to right, #000 0, #000 calc(var(--ink-x) - var(--ink-dry)), rgba(0, 0, 0, 0.82) calc(var(--ink-x) - var(--ink-head)), transparent var(--ink-x));
+  mask-image:
+    radial-gradient(
+      ellipse var(--ink-head) var(--ink-tall) at var(--ink-x) var(--ink-y),
+      rgba(0, 0, 0, 0.9) 26%,
+      rgba(0, 0, 0, 0.5) 62%,
+      transparent 100%
+    ),
+    linear-gradient(to right, #000 0, #000 calc(var(--ink-x) - var(--ink-dry)), rgba(0, 0, 0, 0.82) calc(var(--ink-x) - var(--ink-head)), transparent var(--ink-x));
+  -webkit-mask-repeat: no-repeat, no-repeat;
+  mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-size: 100% 100%, 100% 100%;
+  mask-size: 100% 100%, 100% 100%;
+  -webkit-mask-composite: source-over;
+  mask-composite: add;
 }
 
-@keyframes intro-caret-blink {
-  50% {
+/* Written: drop the mask entirely so the text rests perfectly crisp. */
+.intro-line.is-done .ink-line {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Sentence 1 stroke-writing proof of concept: the HTML text keeps the layout
+   but paints transparent while an SVG copy of the same Gaegu text — masked by
+   the growing pen strokes — writes itself on top. When the pen finishes the
+   overlay is removed and the plain HTML text remains. */
+.intro-line.hw-writing {
+  position: relative;
+  color: transparent;
+}
+
+/* No-animation exit (cold font cache on a hard refresh, or the font failed):
+   the plain sentence eases in instead of popping onto an empty line. */
+.intro-line.hw-fallback {
+  animation: intro-fallback-fade 420ms ease both;
+}
+
+@keyframes intro-fallback-fade {
+  from {
     opacity: 0;
   }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.intro-line .hw-svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
 }
 
 .home-gallery-screen {
@@ -6451,6 +6554,8 @@ body[data-theme="dark"] .about-collage-card {
 
   .intro-line {
     width: min(92vw, 560px);
+    /* phone sizes stay at the ORIGINAL scale on purpose (2026-07-23): the
+       desktop intro was enlarged, the phone intro was not. */
     font-size: clamp(20px, 5.6vw, 27px);
   }
 

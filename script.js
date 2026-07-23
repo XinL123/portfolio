@@ -5,17 +5,28 @@ const orangeStage = document.querySelector(".orange-stage");
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const HOME_LOGO_SKIP_KEY = "portfolio-logo-skip-intro";
 
+// The Projects section lives in the home page (it is the target of the hero
+// handoff), but it is addressed by its own url so it matches About / Resume /
+// Playground instead of showing as index.html#work. projects.html is a real
+// file, so the url survives a refresh, a bookmark and a cross-page click; from
+// the home page the nav swaps it in with pushState and never reloads.
+const PROJECTS_PATH = "projects.html";
+const isProjectsUrl = () => /\/projects(\.html)?$/.test(window.location.pathname);
+
 const navigationEntry = performance.getEntriesByType("navigation")[0];
 const isPageReload = navigationEntry?.type === "reload";
 
 if (isPageReload) {
   sessionStorage.removeItem(HOME_LOGO_SKIP_KEY);
 
-  if (document.body.dataset.page === "home") {
+  if (document.body.dataset.page === "home" && !isProjectsUrl()) {
     // 包括 index.html#work，刷新后也回到开场
     history.replaceState(null, "", window.location.pathname);
   } else {
-    // 其他页面刷新后返回主页
+    // 其他页面刷新后返回主页开场。/projects 是主页文档的虚拟路由，但对刷新的
+    // 预期和 About/Resume 一样：回到主页开场（否则会停在 Projects 段、跳过开场，
+    // URL 还停在 /projects —— 看起来像"没刷新")。直接访问/收藏 /projects 不受影响，
+    // 那是 navigate 而非 reload。
     window.location.replace("index.html");
   }
 }
@@ -178,6 +189,13 @@ if (header && menuButton) {
   });
 
   const setNavOpen = (isOpen) => {
+    // Restoring the scroll position is how the phone menu's body-lock is undone,
+    // so it may ONLY run when a lock was actually taken. Every .main-nav click
+    // calls setNavOpen(false), including on desktop where the menu never opens —
+    // there lockedScrollY is still 0, and restoring it yanked the page to the top
+    // mid-click, fighting the smooth scroll to the section.
+    const wasOpen = header.classList.contains("nav-open");
+
     header.classList.toggle("nav-open", isOpen);
     document.body.classList.toggle("nav-lock", isOpen);
     menuButton.setAttribute("aria-expanded", String(isOpen));
@@ -188,6 +206,8 @@ if (header && menuButton) {
       document.body.style.top = `-${lockedScrollY}px`;
       return;
     }
+
+    if (!wasOpen) return; // nothing was locked; leave the scroll position alone
 
     document.body.style.top = "";
     window.scrollTo(0, lockedScrollY);
@@ -730,13 +750,27 @@ if (wasGalleryActive) {
   };
   vibeNote?.addEventListener("animationend", () => vibeNote.classList.remove("is-nudged"));
 
+  let lastHeartLeft = null;
+
   const spawnHeart = () => {
     if (prefersReducedMotion.matches) return;
     const heart = document.createElement("span");
     heart.className = "orange-heart";
     heart.textContent = "♥";
-    heart.style.left = `${18 + Math.random() * 64}%`;
+    // Hearts can now come in a run, so nudge one off its predecessor's column
+    // rather than letting two stack in the same spot.
+    let left = 18 + Math.random() * 64;
+    if (lastHeartLeft !== null && Math.abs(left - lastHeartLeft) < 16) {
+      left = 18 + ((left - 18 + 32) % 64);
+    }
+    lastHeartLeft = left;
+    heart.style.left = `${left.toFixed(1)}%`;
     heart.style.rotate = `${(Math.random() * 28 - 14).toFixed(1)}deg`;
+    // Overlapping hearts would drift in lockstep if they were identical, which
+    // reads as cloned rather than drawn. Give each its own float length and
+    // size so a cluster stays loose.
+    heart.style.animationDuration = `${Math.round(880 + Math.random() * 300)}ms`;
+    heart.style.fontSize = `calc(${(0.86 + Math.random() * 0.3).toFixed(2)} * 26px * var(--eye-scale, 1))`;
     orangeStage.appendChild(heart);
     heart.addEventListener("animationend", () => heart.remove());
   };
@@ -749,13 +783,33 @@ if (wasGalleryActive) {
   const PET_REVERSALS_NEEDED = 2;
   const PET_LINGER_MS = 300;
   const RUB_MIN_STEP = 3;      // px; below this is pointer jitter, not a stroke
-  const HEART_AFTER_MS = 1600; // it only dares show the heart if this goes on
+  const HEART_AFTER_MS = 1600; // it only dares show the FIRST heart if this goes on
+
+  /* Keeping it up earns more hearts, and rubbing briskly earns them sooner —
+     but the pace is bounded at both ends and the run stops at a ceiling, so
+     the stage never fills up.
+
+     A heart's float lasts ~980ms, and BOTH gaps sit under that on purpose: the
+     next heart is meant to be born while the previous one is still rising, so
+     they overlap into a little drift. (An earlier pass had the slow gap at
+     1300ms — longer than the float — which made gentle petting strictly one at
+     a time: spawn, vanish, spawn.) Even the slow end now just overlaps; brisk
+     rubbing stacks about three. Every value is per continuous pet; lifting the
+     hand resets the run. */
+  const HEART_GAP_SLOW = 820;   // barely moving — still a slight overlap
+  const HEART_GAP_FAST = 300;   // brisk rubbing — ~3 adrift at once
+  const HEART_MAX_PER_PET = 7;
+  const RUB_SPEED_SLOW = 0.15;  // px/ms — below this counts as the slow end
+  const RUB_SPEED_FAST = 0.9;   // px/ms — at or above this is full pace
 
   let petLingerTimer = null;
   let petHeartTimer = null;
   let lastRubX = null;
   let lastRubDir = 0;
   let rubReversals = 0;
+  let heartsThisPet = 0;
+  let rubSinceHeart = 0;  // px travelled since the last heart -> the next gap
+  let lastHeartAt = 0;
 
   const stopPetting = () => {
     window.clearTimeout(petLingerTimer);
@@ -767,6 +821,28 @@ if (wasGalleryActive) {
     lastRubX = null;
     lastRubDir = 0;
     rubReversals = 0;
+    heartsThisPet = 0;
+    rubSinceHeart = 0;
+  };
+
+  // Self-rescheduling so the run continues while the hand does; each gap is
+  // measured from how briskly it was rubbed since the previous heart.
+  const scheduleHeart = (delay) => {
+    petHeartTimer = window.setTimeout(() => {
+      if (!petting()) return;
+
+      spawnHeart();
+      heartsThisPet += 1;
+      if (heartsThisPet >= HEART_MAX_PER_PET) return; // that is all it will ask for
+
+      const now = performance.now();
+      const speed = rubSinceHeart / Math.max(now - lastHeartAt, 1);
+      rubSinceHeart = 0;
+      lastHeartAt = now;
+
+      const pace = clamp((speed - RUB_SPEED_SLOW) / (RUB_SPEED_FAST - RUB_SPEED_SLOW), 0, 1);
+      scheduleHeart(HEART_GAP_SLOW + (HEART_GAP_FAST - HEART_GAP_SLOW) * pace);
+    }, delay);
   };
 
   const startPetting = () => {
@@ -774,7 +850,10 @@ if (wasGalleryActive) {
     clearBody();
     orangeStage.classList.add("is-petted");
     dough.classList.add("is-petted");
-    petHeartTimer = window.setTimeout(spawnHeart, HEART_AFTER_MS);
+    heartsThisPet = 0;
+    rubSinceHeart = 0;
+    lastHeartAt = performance.now();
+    scheduleHeart(HEART_AFTER_MS);
   };
 
   orangeStage.addEventListener("pointermove", (event) => {
@@ -791,7 +870,12 @@ if (wasGalleryActive) {
       }
       lastRubDir = dir;
     }
-    if (lastRubX === null || Math.abs(x - lastRubX) > RUB_MIN_STEP) lastRubX = x;
+    if (lastRubX === null || Math.abs(x - lastRubX) > RUB_MIN_STEP) {
+      // Accumulate only on a real recorded step, so distance is counted once
+      // per stroke segment rather than re-added on every jittery frame.
+      if (petting() && lastRubX !== null) rubSinceHeart += Math.abs(x - lastRubX);
+      lastRubX = x;
+    }
 
     if (petting()) {
       // lean a touch toward the hand, dip under it — the dent of a soft press
@@ -1055,8 +1139,12 @@ const shouldStartAtHomeGallery =
   isHomePage && window.location.hash === "#home";
 
 // 必须先判断 Work
+// /projects is served from this very document by a server rewrite (see
+// vite.config.js / netlify.toml), so arriving there is just "the home page
+// loaded at the Projects url" — jump straight to the section. #work is still
+// honoured so older links and the case-study back-link keep working.
 const shouldStartAtWork =
-  isHomePage && window.location.hash === "#work";
+  isHomePage && (isProjectsUrl() || window.location.hash === "#work");
 
 // 进入 Work 时，清除可能残留的 Logo 状态
 if (shouldStartAtWork) {
@@ -1076,6 +1164,11 @@ if (shouldSkipIntroFromLogo) {
 const shouldResetHomeScroll =
   document.body.dataset.page === "home" &&
   !window.location.hash &&
+  // "no hash" used to be enough to mean "opened at the top". Now the home
+  // document is also served at /projects, which carries no hash either — and
+  // there the visitor asked for the section, not the opening. Without this the
+  // reset branch below wins the if/else chain and shouldStartAtWork never runs.
+  !shouldStartAtWork &&
   !shouldSkipIntroFromLogo;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -1171,6 +1264,10 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   let activeIntroIndex = 0;
   let isIntroPaging = false;
   let introTypingTimer = null;
+  let introDoneTimer = null;
+  let introRaf = null;
+  let hwGeneration = 0; // invalidates in-flight stroke builds when paging away
+  let hwIdCounter = 0;  // unique <mask> ids across rebuilds
   let galleryProgress = 0;
   let homeRevealProgress = 0;
   let galleryArmed = false;
@@ -1243,37 +1340,705 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     return handoffTop + (Number.isFinite(y) ? y : 0);
   };
 
-  const getTypingDelay = (text) => {
-    const targetDuration = 1450;
-    const delay = targetDuration / Math.max(text.length, 1);
-    return Math.max(32, Math.min(130, delay));
+  const stopIntroWriting = () => {
+    window.clearTimeout(introTypingTimer);
+    window.clearTimeout(introDoneTimer);
+    if (introRaf) window.cancelAnimationFrame(introRaf);
+    introRaf = null;
+    hwGeneration += 1; // orphan any pending stroke build / completion
   };
 
-  const typeIntroLine = (line) => {
+  /* Handwriting reveal (replaces the old per-character typewriter).
+     Each glyph sits in its own inline-block and is wiped in left-to-right
+     inside its own box; because a glyph's wipe (INK_GLYPH_MS) lasts far longer
+     than the gap between two glyph starts, three-ish letters are always mid-
+     stroke at once, so the ink reads as one continuous line rather than
+     characters popping in. Words keep their own wrapper so a wrap can still
+     only happen at a space.
+
+     Splitting the sentence this way was measured against the plain text node
+     first: it moves the line width by 0.12px on the longest sentence (Gaegu
+     carries essentially no kerning pairs), so size, centring and the
+     responsive layout are unchanged. */
+  const INK_GLYPH_MS = 160;   // how long one glyph takes to be wiped in
+  const INK_PER_CHAR = 46;    // nominal pen speed
+  const INK_MIN_SPAN = 900;
+  const INK_MAX_SPAN = 1700;
+  // Pen speed is defined directly and then integrated into per-glyph start
+  // times, rather than easing the times themselves — easing time with a
+  // smoothstep does the opposite of what it reads like (its derivative is zero
+  // at the ends, which makes the pen fastest exactly where it should be
+  // slowest). Speed is 1 at both ends and 1 + INK_SWELL across the middle.
+  const INK_SWELL = 0.85;
+
+  // Dwell AFTER a character, in ms — the small hesitations a hand makes at a
+  // turn. Punctuation rests longest, a word gap barely at all.
+  const inkPauseAfter = (ch) => {
+    if (ch === ",") return 90;
+    if (ch === "." || ch === "!" || ch === "?") return 130;
+    if (ch === "@") return 60;
+    if (ch === " ") return 30;
+    return 0;
+  };
+
+  const writeIntroLineGlyphs = (line) => {
     if (!line) return;
     const text = line.dataset.text || "";
-    window.clearTimeout(introTypingTimer);
-    line.textContent = "";
-    line.classList.remove("is-done");
-    line.classList.add("is-typing");
+    stopIntroWriting();
 
-    const delay = getTypingDelay(text);
-    let index = 0;
+    line.classList.remove("is-writing", "is-done");
+    line.innerHTML = "";
 
-    const tick = () => {
-      line.textContent = text.slice(0, index);
-      index += 1;
-
-      if (index <= text.length) {
-        introTypingTimer = window.setTimeout(tick, delay + Math.random() * 18);
-      } else {
-        line.classList.remove("is-typing");
-        line.classList.add("is-done");
+    // Build word wrappers -> glyph spans, and collect the glyphs in reading
+    // order so the timing below follows the eye across a wrapped line too.
+    const glyphs = [];
+    let word = null;
+    for (const ch of text) {
+      if (!word) {
+        word = document.createElement("span");
+        word.className = "ink-w";
+        line.appendChild(word);
       }
+      const span = document.createElement("span");
+      span.className = "ink-c";
+      span.textContent = ch;
+      word.appendChild(span);
+      glyphs.push({ span, ch });
+      if (ch === " ") word = null; // next word starts its own wrapper
+    }
+    if (!glyphs.length) return;
+
+    const n = glyphs.length;
+    const span = Math.max(INK_MIN_SPAN, Math.min(INK_MAX_SPAN, n * INK_PER_CHAR));
+
+    // Integrate 1/speed across the sentence to get each glyph's start offset:
+    // wide gaps where the pen is slow, tight gaps where it runs.
+    const offsets = [];
+    let acc = 0;
+    for (let i = 0; i < n; i += 1) {
+      offsets.push(acc);
+      acc += 1 / (1 + INK_SWELL * Math.sin((Math.PI * (i + 0.5)) / n));
+    }
+    const norm = acc || 1;
+
+    let pause = 0;
+    glyphs.forEach((g, i) => {
+      const at = (span * offsets[i]) / norm + pause;
+      g.span.style.transitionDelay = `${Math.round(at)}ms`;
+      pause += inkPauseAfter(g.ch);
+    });
+    const total = span + pause + INK_GLYPH_MS;
+
+    // Commit the hidden start state, then let the transitions run next frame.
+    void line.offsetWidth;
+
+    introTypingTimer = window.setTimeout(() => {
+      line.classList.add("is-writing");
+      introDoneTimer = window.setTimeout(() => {
+        // Drop the per-glyph delays once the sentence is written, so the line
+        // can never re-stagger if it is repainted while resting.
+        glyphs.forEach((g) => g.span.style.removeProperty("transition-delay"));
+        line.classList.add("is-done");
+      }, total + 40);
+    }, 300);
+  };
+
+  /* Sentence-level ink reveal — no per-glyph boxes at all.
+     The line is split ONLY at the browser's own wrap points, and each visual
+     line gets one mask (see .ink-line in styles.css) whose soft elliptical
+     head is walked across it by rAF. Nothing per-letter is scheduled, so
+     there are no vertical seams to line up.
+     Duration comes from the line's real rendered width, so a short line is
+     not dragged out to the same length as a long one. */
+  const INK_HEAD_PX = 26;        // soft leading edge, matches --ink-head
+  const INK_SPEED_PX_MS = 0.24;  // nominal pen speed across the text, px/ms
+  const INK_LINE_MIN_MS = 620;
+  const INK_LINE_MAX_MS = 2100;
+  const INK_LINE_GAP_MS = 110;   // pen travelling back for the next visual line
+  const INK_EASE_W = 0.72;       // 0 = constant speed, 1 = full smoothstep
+  // Handwriting cadence. A featureless constant sweep reads as a gradient
+  // wipe; what the eye recognises as writing is the RHYTHM of the pen —
+  // surging through a word, easing off as it finishes, hopping the space.
+  const INK_SURGE_AMP = 0.35;    // stroke-scale speed swell inside words
+  const INK_SURGE_LEN = 1.7;     // ...with a wavelength of ~1.7 glyph widths
+  const INK_WORD_DWELL = 0.45;   // finishing a word: the pen slows to 45%...
+  const INK_DWELL_PX = 6;        // ...over its last few px
+  const INK_GAP_HOP = 1.9;       // then hops the space at 190%
+  const INK_SETTLE_MS = 240;     // line end: last stroke + drying glide out
+  const INK_DRY_PX = 96;         // matches --ink-dry in styles.css
+
+  const writeIntroLineInk = (line) => {
+    if (!line) return;
+    const text = line.dataset.text || "";
+    stopIntroWriting();
+
+    line.classList.remove("is-writing", "is-done");
+    line.innerHTML = "";
+
+    // 1. Lay the words out inline and let the browser choose the wrap points.
+    const words = text.split(" ").filter(Boolean);
+    const probes = words.map((w, i) => {
+      const s = document.createElement("span");
+      s.textContent = w;
+      line.appendChild(s);
+      if (i < words.length - 1) line.appendChild(document.createTextNode(" "));
+      return s;
+    });
+
+    // 2. Group the words by the visual line they landed on.
+    const groups = [];
+    probes.forEach((s, i) => {
+      const top = Math.round(s.getBoundingClientRect().top);
+      const last = groups[groups.length - 1];
+      if (last && last.top === top) last.words.push(words[i]);
+      else groups.push({ top, words: [words[i]] });
+    });
+
+    // 3. Rebuild as one block per visual line. Words are never split, and each
+    //    block re-centres exactly where the wrapped line already sat.
+    line.innerHTML = "";
+    const plan = groups.map((g) => {
+      const el = document.createElement("span");
+      el.className = "ink-line";
+      el.textContent = g.words.join(" ");
+      line.appendChild(el);
+      return el;
+    }).map((el) => {
+      // Sweep between the TEXT edges, not the block edges: the block is full
+      // width because the line is centred.
+      const box = el.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const t = range.getBoundingClientRect();
+      const from = t.left - box.left - INK_HEAD_PX * 1.6;
+      const to = t.right - box.left + INK_HEAD_PX * 0.6;
+      const dur = Math.max(
+        INK_LINE_MIN_MS,
+        Math.min(INK_LINE_MAX_MS, (t.width || 1) / INK_SPEED_PX_MS)
+      );
+
+      // Where each word sits, in px — the cadence table is built from these.
+      const node = el.firstChild;
+      const words = [];
+      const re = /\S+/g;
+      let m;
+      while ((m = re.exec(el.textContent))) {
+        const wr = document.createRange();
+        wr.setStart(node, m.index);
+        wr.setEnd(node, m.index + m[0].length);
+        const b = wr.getBoundingClientRect();
+        words.push({ l: b.left - box.left, r: b.right - box.left });
+      }
+
+      // Precompute time-per-pixel: dwell at word endings, hop across spaces,
+      // and a stroke-scale surge inside words. Integrating 1/speed gives a
+      // cumulative table the rAF loop can walk — the overall duration stays
+      // exactly `dur` because the table is normalised against its own total.
+      const glyphW = Math.max(7, t.width / Math.max(el.textContent.length, 1));
+      const phase = Math.random() * Math.PI * 2;
+      const cols = Math.max(2, Math.ceil(to - from));
+      const cum = new Float32Array(cols);
+      let acc = 0;
+      for (let i = 0; i < cols; i += 1) {
+        const x = from + i;
+        let zone = INK_GAP_HOP; // outside every word: the pen hops
+        for (const w of words) {
+          if (x < w.l) break;
+          if (x <= w.r) {
+            zone = w.r - x <= INK_DWELL_PX ? INK_WORD_DWELL : 1;
+            break;
+          }
+        }
+        const surge = 1 + INK_SURGE_AMP * Math.sin(((Math.PI * 2) * i) / (glyphW * INK_SURGE_LEN) + phase);
+        acc += 1 / (zone * surge);
+        cum[i] = acc;
+      }
+
+      el.style.setProperty("--ink-x", `${from}px`);
+      return { el, from, to, dur, cum, total: acc, ptr: 0 };
+    });
+    if (!plan.length) return;
+
+    // Position over time: eased so the pen starts gently, runs through the
+    // middle and settles at the end. (Easing POSITION is the right way round —
+    // easing the per-glyph TIMES inverted it.)
+    const ease = (x) => {
+      const s = x * x * (3 - 2 * x);
+      return x + (s - x) * INK_EASE_W;
     };
 
-    introTypingTimer = window.setTimeout(tick, 300);
+    let li = 0;
+    let startedAt = 0;
+    let settleStart = 0;
+    const step = (now) => {
+      const cur = plan[li];
+
+      if (settleStart) {
+        // Line finished: glide the head off past the drying run so the last
+        // glyph and the wet trail reach full ink smoothly — never a pop when
+        // the mask is finally dropped.
+        const s = Math.min(1, (now - settleStart) / INK_SETTLE_MS);
+        const out = 1 - (1 - s) * (1 - s);
+        cur.el.style.setProperty("--ink-x", `${(cur.to + (INK_DRY_PX + 20) * out).toFixed(1)}px`);
+        if (s < 1) {
+          introRaf = window.requestAnimationFrame(step);
+          return;
+        }
+        settleStart = 0;
+        li += 1;
+        if (li >= plan.length) {
+          introRaf = null;
+          line.classList.add("is-done"); // drops the masks entirely
+          return;
+        }
+        startedAt = 0;
+        introDoneTimer = window.setTimeout(() => {
+          introRaf = window.requestAnimationFrame(step);
+        }, INK_LINE_GAP_MS);
+        return;
+      }
+
+      if (!startedAt) startedAt = now;
+      const t = Math.min(1, (now - startedAt) / cur.dur);
+      // Macro pacing (slow start / quicker middle / soft finish) picks the
+      // point in the cadence table; the table supplies the local rhythm.
+      const target = ease(t) * cur.total;
+      while (cur.ptr < cur.cum.length - 1 && cur.cum[cur.ptr] < target) cur.ptr += 1;
+      const x = cur.from + cur.ptr;
+      cur.el.style.setProperty("--ink-x", `${x.toFixed(1)}px`);
+      // barely-there drift so the head is not mechanically level
+      cur.el.style.setProperty("--ink-y", `calc(50% + ${(Math.sin((x - cur.from) / 34) * 2).toFixed(2)}px)`);
+
+      if (t < 1) {
+        introRaf = window.requestAnimationFrame(step);
+        return;
+      }
+      settleStart = now;
+      introRaf = window.requestAnimationFrame(step);
+    };
+
+    void line.offsetWidth;
+    introTypingTimer = window.setTimeout(() => {
+      line.classList.add("is-writing");
+      introRaf = window.requestAnimationFrame(step);
+    }, 300);
   };
+
+  /* ---- Sentence 1 proof of concept: stroke-order handwriting -------------
+     Not a travelling mask. Each glyph carries hand-authored CENTERLINE
+     writing strokes — the path a pen takes through the middle of the letter,
+     NOT the font outline — stored in a normalized per-character cell and
+     mapped onto that character's measured box at runtime. The strokes sit in
+     a per-character SVG <mask> over an SVG copy of the same Gaegu text and
+     grow via stroke-dashoffset in real writing order (left stem, right stem,
+     crossbar; stem then dot). The Gaegu glyph appears only where its pen
+     stroke has passed. One mask per character, so a wide pen pass can never
+     leak onto a neighbouring letter. When the last stroke lands the overlay
+     is removed and the plain HTML text remains. ---- */
+  const HW_SPEED_PX_MS = 0.34;  // pen speed along a stroke
+  const HW_STROKE_GAP_MS = 29;  // pen-lift between strokes of one letter
+  const HW_LETTER_GAP_MS = 36;  // travel to the next letter
+  // Sentence-level pacing: the hand eases in, runs through the middle and
+  // settles at the end. 0 = constant pace, 1 = full smoothstep. Warping is a
+  // pure time remap, so the total duration is unchanged by it.
+  const HW_MACRO_EASE = 0.55;
+  // Bounded font wait before writing with the currently-rendered face instead
+  // (hard refresh: Gaegu re-downloads and may be slow or blocked entirely).
+  const HW_FONT_WAIT_MS = 1800;
+  const HW_BASE = 0.78;         // baseline depth the recipes are drawn against
+
+  /* Coordinates: x is 0..1 across the character's advance box; y is 0..1 down
+     its inline box, with 0.24 ≈ cap height, 0.40 ≈ x-height and HW_BASE the
+     baseline (rescaled to the font's real baseline at build time). Strokes
+     are dense polylines — the glyph itself supplies the true curves, the
+     stroke only has to pass over them in writing order. */
+  const HW_RECIPES = {
+    /* H is written 竖-横-竖 (left stem, crossbar, right stem — per Xin).
+       The crossbar path stops SHORT of the right stem: the pen is a few px
+       wide, so a bar swept all the way across would reveal a chunk of the
+       not-yet-written right stem at mid-height. The bar's last bit of ink at
+       the right junction is laid by the right stem's own pass instead, which
+       reads as the strokes joining rather than as residue. */
+    H: [
+      [[0.20, 0.24], [0.17, 0.78]],
+      [[0.15, 0.52], [0.58, 0.505]],
+      [[0.80, 0.24], [0.83, 0.78]],
+    ],
+    i: [
+      [[0.50, 0.40], [0.50, 0.78]],
+      [[0.50, 0.24], [0.53, 0.27]],
+    ],
+    ",": [[[0.56, 0.72], [0.52, 0.82], [0.42, 0.90]]],
+    I: [[[0.50, 0.215], [0.50, 0.795]]],
+    "'": [[[0.51, 0.155], [0.45, 0.315]]],
+    m: [
+      [[0.13, 0.40], [0.13, 0.78]],
+      [[0.13, 0.52], [0.18, 0.41], [0.28, 0.37], [0.38, 0.42], [0.44, 0.53], [0.45, 0.78]],
+      [[0.45, 0.52], [0.52, 0.41], [0.62, 0.37], [0.74, 0.42], [0.81, 0.53], [0.83, 0.78]],
+    ],
+    /* X: two plain crossing strokes, ON PURPOSE. A zoned version that held
+       the crossing back for the second pass left a visible bite in the first
+       diagonal (user 2026-07-23: 不要特意让出来给第二笔). The crossing ink
+       belongs to the first stroke anyway; the sliver of the second diagonal
+       the pen brushes at the joint reads as a natural crossing. */
+    X: [
+      [[0.16, 0.24], [0.84, 0.78]],
+      [[0.84, 0.24], [0.16, 0.78]],
+    ],
+    n: [
+      [[0.17, 0.40], [0.17, 0.78]],
+      [[0.17, 0.52], [0.25, 0.40], [0.42, 0.36], [0.60, 0.42], [0.70, 0.54], [0.72, 0.78]],
+    ],
+    ".": [[[0.50, 0.72], [0.53, 0.76]]],
+    L: [[[0.30, 0.24], [0.28, 0.76], [0.84, 0.77]]],
+
+    /* ---- sentences 2 & 3 (authored 2026-07-23). Same conventions: cap 0.24,
+       x-height 0.40, baseline 0.78, descender ~0.95. Bleed rules learned on
+       the H: a stroke may touch ALREADY-written ink freely (reads as a
+       joint), but must not sweep over ink whose stroke is still to come — so
+       'd' writes its tall stem BEFORE the bowl, and 't'/'f' write stem before
+       crossbar. */
+    a: [
+      [[0.70, 0.46], [0.54, 0.38], [0.34, 0.43], [0.27, 0.57], [0.33, 0.71], [0.52, 0.77], [0.70, 0.68]],
+      [[0.72, 0.42], [0.74, 0.78]],
+    ],
+    b: [
+      [[0.20, 0.22], [0.20, 0.78]],
+      [[0.21, 0.48], [0.42, 0.40], [0.62, 0.46], [0.68, 0.59], [0.60, 0.72], [0.40, 0.77], [0.22, 0.70]],
+    ],
+    c: [[[0.72, 0.44], [0.52, 0.37], [0.32, 0.43], [0.25, 0.57], [0.32, 0.71], [0.52, 0.78], [0.72, 0.70]]],
+    d: [
+      [[0.74, 0.22], [0.74, 0.78]],
+      [[0.72, 0.46], [0.52, 0.38], [0.32, 0.44], [0.25, 0.58], [0.32, 0.72], [0.55, 0.77], [0.72, 0.70]],
+    ],
+    e: [
+      [[0.27, 0.58], [0.70, 0.55], [0.66, 0.42], [0.48, 0.37], [0.30, 0.44], [0.26, 0.58], [0.33, 0.72], [0.55, 0.78], [0.73, 0.71]],
+    ],
+    f: [
+      [[0.66, 0.245], [0.48, 0.22], [0.38, 0.32], [0.37, 0.78]],
+      [[0.20, 0.46], [0.62, 0.44]],
+    ],
+    g: [
+      [[0.70, 0.43], [0.50, 0.37], [0.30, 0.44], [0.24, 0.57], [0.32, 0.70], [0.53, 0.75], [0.70, 0.67]],
+      [[0.72, 0.40], [0.73, 0.82], [0.64, 0.955], [0.42, 0.97], [0.22, 0.925], [0.04, 0.90]],
+    ],
+    h: [
+      [[0.20, 0.22], [0.20, 0.78]],
+      [[0.20, 0.52], [0.30, 0.41], [0.48, 0.375], [0.64, 0.44], [0.70, 0.55], [0.71, 0.78]],
+    ],
+    l: [[[0.50, 0.22], [0.52, 0.78]]],
+    o: [
+      [[0.50, 0.375], [0.32, 0.42], [0.25, 0.57], [0.32, 0.71], [0.50, 0.78], [0.68, 0.71], [0.75, 0.57], [0.68, 0.42], [0.52, 0.375]],
+    ],
+    r: [
+      [[0.28, 0.40], [0.28, 0.78]],
+      [[0.28, 0.52], [0.38, 0.42], [0.54, 0.375], [0.68, 0.42]],
+    ],
+    s: [
+      [[0.72, 0.46], [0.66, 0.39], [0.50, 0.365], [0.33, 0.42], [0.33, 0.52], [0.50, 0.565], [0.66, 0.62], [0.66, 0.72], [0.48, 0.785], [0.26, 0.77], [0.04, 0.745]],
+    ],
+    t: [
+      [[0.46, 0.26], [0.46, 0.68], [0.52, 0.775], [0.68, 0.755]],
+      [[0.24, 0.42], [0.70, 0.40]],
+    ],
+    u: [
+      [[0.26, 0.40], [0.26, 0.60], [0.32, 0.73], [0.50, 0.775], [0.66, 0.70], [0.70, 0.55], [0.70, 0.40], [0.73, 0.78]],
+    ],
+    v: [[[0.26, 0.40], [0.48, 0.775], [0.72, 0.40]]],
+    y: [
+      [[0.24, 0.40], [0.49, 0.73]],
+      [[0.75, 0.38], [0.55, 0.68], [0.42, 0.88], [0.27, 0.96]],
+    ],
+    C: [
+      [[0.76, 0.32], [0.55, 0.235], [0.32, 0.32], [0.23, 0.50], [0.32, 0.68], [0.55, 0.775], [0.76, 0.68]],
+    ],
+    U: [
+      [[0.22, 0.24], [0.22, 0.58], [0.32, 0.73], [0.50, 0.78], [0.68, 0.73], [0.78, 0.58], [0.78, 0.24]],
+    ],
+    V: [[[0.20, 0.24], [0.50, 0.78], [0.80, 0.24]]],
+    "@": [
+      [[0.62, 0.42], [0.48, 0.37], [0.36, 0.44], [0.34, 0.56], [0.43, 0.64], [0.57, 0.61], [0.62, 0.47], [0.65, 0.64]],
+      [[0.86, 0.38], [0.70, 0.30], [0.50, 0.26], [0.28, 0.34], [0.18, 0.53], [0.27, 0.72], [0.50, 0.80], [0.70, 0.73], [0.80, 0.55]],
+    ],
+  };
+
+  // Unknown glyph: three covering passes, so nothing can stay hidden forever.
+  const HW_FALLBACK = [
+    [[0.10, 0.30], [0.90, 0.34]],
+    [[0.90, 0.52], [0.10, 0.56]],
+    [[0.10, 0.72], [0.90, 0.76]],
+  ];
+
+  /* Per-sentence pace. Stroke-writing time scales with STROKE COUNT, not
+     pixel width: sentence 1 is 19 strokes, sentences 2/3 are ~60/~48 — at
+     sentence 1's pace they would take 4s+. The faster hand keeps them near
+     the old travelling-ink durations (user-chosen compromise 2026-07-23:
+     s2 ≈2.6s / s3 ≈2.1s) while every stroke still gets 2-3 frames. Smaller
+     letters written faster also matches how hands actually write. */
+  const HW_FAST_PACE = { speed: 0.88, strokeGap: 11, letterGap: 13, minMs: 27 };
+
+  const writeIntroLineStrokes = (line, pace) => {
+    if (!line) return;
+    const paceSpeed = pace?.speed ?? HW_SPEED_PX_MS;
+    const paceStrokeGap = pace?.strokeGap ?? HW_STROKE_GAP_MS;
+    const paceLetterGap = pace?.letterGap ?? HW_LETTER_GAP_MS;
+    const paceMinMs = pace?.minMs ?? 45;
+    const text = line.dataset.text || "";
+    stopIntroWriting();
+    const gen = hwGeneration;
+
+    if (prefersReducedMotion.matches) {
+      line.textContent = text;
+      line.classList.add("is-done");
+      return;
+    }
+
+    line.classList.remove("is-writing", "is-done", "hw-fallback");
+    // Empty through the lead-in. Showing the real text here and hiding it in
+    // build() flashed the finished sentence for 300ms before writing began.
+    line.textContent = "";
+
+    const build = () => {
+      if (gen !== hwGeneration || !line.isConnected) return;
+      window.clearTimeout(introDoneTimer); // drop the show-plain-text fallback
+      line.textContent = text;             // lay the real text out to measure
+      const node = line.firstChild;
+      if (!node) return;
+      // Read the ink BEFORE hw-writing makes the HTML text transparent.
+      const inkColor = getComputedStyle(line).color;
+
+      const lineBox = line.getBoundingClientRect();
+      const cs = getComputedStyle(line);
+
+      // Baseline from the same metrics the HTML renderer uses, so the SVG
+      // copy sits pixel-on-pixel and the final swap back is invisible.
+      let ascent = null;
+      try {
+        const ctx = document.createElement("canvas").getContext("2d");
+        ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const met = ctx.measureText("Hg");
+        if (met.fontBoundingBoxAscent) ascent = met.fontBoundingBoxAscent;
+      } catch (e) {
+        /* canvas blocked — the HW_BASE fallback below still lands */
+      }
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("class", "hw-svg");
+      svg.setAttribute("viewBox", `0 0 ${lineBox.width.toFixed(2)} ${lineBox.height.toFixed(2)}`);
+      svg.setAttribute("aria-hidden", "true");
+      const defs = document.createElementNS(svgNS, "defs");
+      svg.appendChild(defs);
+
+      const range = document.createRange();
+      const strokes = [];
+      for (let i = 0; i < text.length; i += 1) {
+        const ch = text[i];
+        if (ch === " ") continue;
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const r = range.getBoundingClientRect();
+        const cell = { x: r.left - lineBox.left, y: r.top - lineBox.top, w: r.width, h: r.height };
+        const baseline = cell.y + (ascent !== null ? ascent : cell.h * HW_BASE);
+
+        /* Clip, not mask. The pen strokes are drawn as REAL ink and clipped to
+           this glyph's shape, instead of being hidden inside a <mask> that
+           reveals a filled glyph. Both produce the same picture, but only this
+           one animates: paths inside <mask>/<defs> are non-rendered, and Chrome
+           does not reliably repaint a mask when its contents mutate — the first
+           version updated sporadically, so later letters showed as specks and
+           the finished sentence only appeared when the overlay was swapped for
+           the HTML text. Here the animated element is ordinary rendered
+           content, and the clip is static. */
+        const clip = document.createElementNS(svgNS, "clipPath");
+        clip.setAttribute("id", `hw-c-${(hwIdCounter += 1)}`);
+        clip.setAttribute("clipPathUnits", "userSpaceOnUse");
+        const shape = document.createElementNS(svgNS, "text");
+        shape.setAttribute("x", cell.x.toFixed(2));
+        shape.setAttribute("y", baseline.toFixed(2));
+        shape.style.fontFamily = cs.fontFamily;
+        shape.style.fontSize = cs.fontSize;
+        shape.style.fontWeight = cs.fontWeight;
+        shape.textContent = ch;
+        clip.appendChild(shape);
+        defs.appendChild(clip);
+
+        const g = document.createElementNS(svgNS, "g");
+        g.setAttribute("clip-path", `url(#${clip.id})`);
+
+        /* Pen width is a trade-off measured, not guessed: Gaegu's own ink
+           stroke is ~2.5-3px at this size, and the pen must cover it plus
+           recipe slop — but every extra px of pen bleeds further into
+           NEIGHBOURING strokes at junctions (the too-wide 0.24 pen is what
+           hung crossbar stubs off the H stems before the bar was written). */
+        const penW = Math.max(4, cell.h * 0.17);
+        const mapX = (nx) => (cell.x + nx * cell.w).toFixed(2);
+        const mapY = (ny) => (cell.y + (ny / HW_BASE) * (baseline - cell.y)).toFixed(2);
+        const recipe = HW_RECIPES[ch] || HW_FALLBACK;
+        recipe.forEach((strokeDef, sIdx) => {
+          // A stroke is a point list, or {pts, zones} where zones are polygons
+          // the stroke's REVEAL is restricted to. Needed for mid-path crossings
+          // (the X): the first diagonal's pen sweeps the crossing and would
+          // otherwise expose a piece of the unwritten second diagonal. The
+          // zones exclude the second stroke's corridor; the crossing ink is
+          // laid when the second stroke itself passes. Zones are static clip
+          // content — only the dashoffset animates, so the defs rule holds.
+          const pts = Array.isArray(strokeDef) ? strokeDef : strokeDef.pts;
+          const zones = Array.isArray(strokeDef) ? null : strokeDef.zones;
+          const d = pts
+            .map(([nx, ny], j) => `${j === 0 ? "M" : "L"}${mapX(nx)} ${mapY(ny)}`)
+            .join(" ");
+          const p = document.createElementNS(svgNS, "path");
+          p.setAttribute("d", d);
+          p.setAttribute("stroke", inkColor);
+          p.setAttribute("stroke-width", penW.toFixed(1));
+          p.setAttribute("stroke-linecap", "round");
+          p.setAttribute("stroke-linejoin", "round");
+          p.setAttribute("fill", "none");
+          let holder = g;
+          if (zones) {
+            const zc = document.createElementNS(svgNS, "clipPath");
+            zc.setAttribute("id", `hw-z-${(hwIdCounter += 1)}`);
+            zc.setAttribute("clipPathUnits", "userSpaceOnUse");
+            zones.forEach((poly) => {
+              const el = document.createElementNS(svgNS, "polygon");
+              el.setAttribute("points", poly.map(([nx, ny]) => `${mapX(nx)},${mapY(ny)}`).join(" "));
+              zc.appendChild(el);
+            });
+            defs.appendChild(zc);
+            holder = document.createElementNS(svgNS, "g");
+            holder.setAttribute("clip-path", `url(#${zc.id})`);
+            g.appendChild(holder);
+          }
+          holder.appendChild(p);
+          strokes.push({ p, newLetter: sIdx === 0 });
+        });
+        svg.appendChild(g);
+      }
+      line.appendChild(svg);
+      if (!strokes.length) return; // nothing to write — leave the plain text up
+      // ONLY now hide the HTML text: the overlay that replaces it exists in
+      // this same frame, so there is never a moment where the line is blank
+      // with nothing drawing over it.
+      line.classList.add("hw-writing");
+
+      // Schedule: strictly sequential, one pen. Lengths need the SVG live.
+      // Driven by rAF, NOT CSS transitions: the paths sit inside <mask> in
+      // <defs>, which is non-rendered content — transitions never run there
+      // (first attempt snapped every stroke straight to its end state).
+      let at = 0;
+      strokes.forEach((s, idx) => {
+        s.len = s.p.getTotalLength();
+        s.dur = Math.max(paceMinMs, s.len / paceSpeed);
+        if (idx > 0) at += s.newLetter ? paceLetterGap : paceStrokeGap;
+        s.start = at;
+        at += s.dur;
+        // The dash is PADDED past the true length. With dasharray equal to a
+        // ROUNDED length, any stroke whose length rounded down left a sliver
+        // of its tail outside the gap — and a sub-pixel sliver under a 6px
+        // round cap renders as a dot. Stems end on the baseline, so every
+        // undrawn letter showed a row of baseline dots from the first frame.
+        s.dash = s.len + 4;
+        s.p.setAttribute("stroke-dasharray", `${s.dash.toFixed(2)}`);
+        s.p.setAttribute("stroke-dashoffset", `${s.dash.toFixed(2)}`);
+      });
+      const total = at;
+      // pen decelerates into the end of each stroke
+      const strokeEase = (u) => 1 - (1 - u) * (1 - u) * (1 - u * 0.4);
+
+      line.classList.add("is-writing");
+      let penT0 = 0;
+      const macroWarp = (x) => {
+        const sm = x * x * (3 - 2 * x);
+        return x + (sm - x) * HW_MACRO_EASE;
+      };
+      const penStep = (now) => {
+        introRaf = null;
+        if (gen !== hwGeneration) return;
+        if (!penT0) penT0 = now;
+        const real = now - penT0;
+        // warped clock: slow at both ends of the SENTENCE, quicker mid-way
+        const t = macroWarp(clamp(real / total, 0, 1)) * total;
+        strokes.forEach((s) => {
+          const u = clamp((t - s.start) / s.dur, 0, 1);
+          // offset runs dash -> 0 (not len -> 0): while hidden the whole path
+          // must sit inside the gap, or the round cap paints an endpoint dot.
+          s.p.setAttribute("stroke-dashoffset", `${(s.dash * (1 - strokeEase(u))).toFixed(2)}`);
+        });
+        if (t < total) {
+          introRaf = window.requestAnimationFrame(penStep);
+          return;
+        }
+        // last stroke landed: swap the overlay away, plain Gaegu HTML remains
+        svg.remove();
+        line.classList.remove("hw-writing", "is-writing");
+        line.classList.add("is-done");
+      };
+      introRaf = window.requestAnimationFrame(penStep);
+
+      // backstop only (e.g. rAF starved in a hidden tab): force-finish
+      introDoneTimer = window.setTimeout(() => {
+        if (gen !== hwGeneration || line.classList.contains("is-done")) return;
+        if (introRaf) window.cancelAnimationFrame(introRaf);
+        introRaf = null;
+        svg.remove();
+        line.classList.remove("hw-writing", "is-writing");
+        line.classList.add("is-done");
+      }, total + 2400);
+    };
+
+    /* Font gate, third iteration. Strokes are mapped onto MEASURED glyph
+       boxes, so ideally Gaegu is real before building — but the wait is
+       BOUNDED and never cancels the animation. On a HARD refresh the font
+       bypasses cache and comes from Google Fonts, which can be slow or fail
+       outright (e.g. blocked networks); the previous gate answered that by
+       showing the finished sentence statically — the exact "no animation on
+       force-refresh" bug. Now: wait up to HW_FONT_WAIT_MS, then WRITE ANYWAY
+       with whatever face is currently rendered. The clip glyphs and the final
+       HTML text share that same face, so the result is self-consistent; if
+       Gaegu lands later it reflows once, like any late webfont. The static
+       fade-in remains only for build() itself throwing. */
+    const showPlainSentence = () => {
+      if (gen !== hwGeneration || line.querySelector(".hw-svg")) return;
+      line.textContent = text;
+      line.classList.remove("hw-writing", "is-writing");
+      line.classList.add("is-done", "hw-fallback");
+    };
+
+    // Absolute fail-safe: the line must never sit empty. Cleared by build().
+    introDoneTimer = window.setTimeout(showPlainSentence, 3000);
+
+    introTypingTimer = window.setTimeout(() => {
+      if (gen !== hwGeneration) return;
+      const cs0 = getComputedStyle(line);
+      const spec = `${cs0.fontWeight} ${cs0.fontSize} ${cs0.fontFamily}`;
+      const fontsReady =
+        document.fonts && !document.fonts.check(spec)
+          ? Promise.race([
+              // reject = face unavailable; resolve the race and write anyway
+              document.fonts.load(spec).catch(() => {}),
+              // slow network: stop waiting before the fail-safe can win
+              new Promise((resolve) => window.setTimeout(resolve, HW_FONT_WAIT_MS)),
+            ])
+          : Promise.resolve();
+      fontsReady.then(() => {
+        if (gen !== hwGeneration) return; // a newer run owns the line
+        try {
+          build();
+        } catch (e) {
+          line.querySelector(".hw-svg")?.remove();
+          showPlainSentence();
+        }
+      });
+    }, 300);
+  };
+
+  // ALL THREE sentences now write stroke-by-stroke (2026-07-23). Sentence 1
+  // keeps its tuned 1.65s pace; the longer sentences 2/3 use HW_FAST_PACE.
+  // (writeIntroLineGlyphs and writeIntroLineInk above are unreferenced — kept
+  // so the earlier reveal styles can be swapped back in one line.)
+  const writeIntroLine = (line, screenIndex) =>
+    writeIntroLineStrokes(line, screenIndex === 0 ? null : HW_FAST_PACE);
 
   const showHeaderTemporarily = () => {
     if (!header || !document.body.classList.contains("home-gallery-active")) return;
@@ -1296,7 +2061,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     });
 
     if (isGallery) {
-      window.clearTimeout(introTypingTimer);
+      stopIntroWriting();
       galleryProgress = 0;
       galleryTargetProgress = 0;
       gallerydriftStop();
@@ -1310,11 +2075,13 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     const incomingLine = homeIntroScreens[activeIntroIndex]?.querySelector(".intro-line");
 
     if (incomingLine) {
-      incomingLine.textContent = "";
-      incomingLine.classList.remove("is-typing", "is-done");
+      incomingLine.innerHTML = "";
+      incomingLine.classList.remove("is-writing", "is-done");
     }
 
-    window.setTimeout(() => typeIntroLine(incomingLine), 620);
+    // capture the index now: activeIntroIndex may move again before this fires
+    const incomingIndex = activeIntroIndex;
+    window.setTimeout(() => writeIntroLine(incomingLine, incomingIndex), 620);
   };
 
 
@@ -1814,7 +2581,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
         window.scrollTo({ top, behavior: "instant" });
       }
 
-      history.replaceState(null, "", "index.html#work");
+      // Clean address bar: the section is reachable at its own /projects url.
+      // REPLACE, never push — moveToWork re-runs (immediately, across two rAFs
+      // and again on load), so pushing here would stack duplicate entries. The
+      // single history entry for a click is pushed at the click site instead.
+      history.replaceState(null, "", PROJECTS_PATH);
       syncVisibleWorkCards();
       // sets the scene's resting opacity; with the transition above active, that
       // change eases in gently when arriving from a faded state.
@@ -1919,6 +2690,22 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     { passive: false }
   );
 
+  // Click/tap advances the opening as well as scrolling. Routed through the
+  // same pageHomeOpening() the wheel and swipe use, so the paging lock, the
+  // 620ms hand-off and the gallery arming behave identically either way.
+  // Intro screens only: once the gallery is up, a click belongs to the
+  // draggable polaroids and the orange, not to paging.
+  homeIntroScreens.forEach((screen) => {
+    screen.addEventListener("click", (event) => {
+      if (!document.body.classList.contains("home-opening-active")) return;
+      if (activeIntroIndex >= homeIntroScreens.length) return;
+      if (event.target.closest("a, button")) return;
+      // don't page away mid text-selection
+      if (String(window.getSelection?.() ?? "").length) return;
+      pageHomeOpening(1);
+    });
+  });
+
   let homeTouchStartY = null;
   window.addEventListener(
     "touchstart",
@@ -2017,7 +2804,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     const hasStartedOpening = () =>
       activeIntroIndex > 0 ||
       galleryProgress > 0.001 ||
-      document.body.classList.contains("home-opening-complete");
+      document.body.classList.contains("home-opening-complete") ||
+      // Sentence 1 mid-write (or written) counts as started: on a HARD
+      // refresh the heavy video delays `load` by seconds, and the re-reset
+      // used to wipe the half-written line to blank and start it over.
+      !!homeIntroScreens[0]?.querySelector(".hw-writing, .is-writing, .is-done");
     window.addEventListener("pageshow", (event) => {
       if (event.persisted || !hasStartedOpening()) resetHomeOpening();
     });
@@ -2054,10 +2845,13 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 // On other pages there is no Work section to scroll to, so the link keeps its
 // default navigation to index.html#work.
 if (isHomePage) {
-  document.querySelectorAll('a[href="#work"], a[href="index.html#work"]').forEach((link) => {
+  document.querySelectorAll('a[href="#work"], a[href="index.html#work"], a[href="projects.html"]').forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
       sessionStorage.removeItem(HOME_LOGO_SKIP_KEY);
+      // One history entry per click, so Back returns to where they were. Guarded:
+      // clicking Projects while already at /projects must not stack duplicates.
+      if (!isProjectsUrl()) history.pushState(null, "", PROJECTS_PATH);
       const workSection = document.querySelector(".work-section");
       if (document.body.classList.contains("home-opening-complete")) {
         workSection?.scrollIntoView({
@@ -2074,6 +2868,20 @@ if (isHomePage) {
         workSection?.scrollIntoView({ block: "start" });
       }
     });
+  });
+
+  // pushState above means Back is now a real affordance: going back off
+  // /projects must actually leave the section, or the url would change while
+  // the page sat still. Only once the opening has finished — mid-choreography
+  // the scroll position belongs to the handoff, not to us.
+  window.addEventListener("popstate", () => {
+    if (!document.body.classList.contains("home-opening-complete")) return;
+    const behavior = prefersReducedMotion.matches ? "auto" : "smooth";
+    if (isProjectsUrl()) {
+      document.querySelector(".work-section")?.scrollIntoView({ behavior, block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior });
+    }
   });
 }
 

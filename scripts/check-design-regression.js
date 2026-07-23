@@ -161,7 +161,7 @@ expect(!html.includes("data-home-photo") && !html.includes("home-photo-main"), "
 expect(!/class="hh-photo[^>]*>[\s\S]{0,400}?<figcaption/.test(html), "Hero polaroids must stay caption-free");
 expect(/\.hh-photo\s*{[\s\S]*?touch-action:\s*none/.test(css) && /\.hh-title\s*{[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Hero CSS must be present in the stylesheet (a parallel-editor save once wiped it silently)");
 expect(/\.home-intro-screen\s*{[\s\S]*?position:\s*fixed[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Home intro screens should use the white Gaegu prototype style");
-expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(27px,\s*1\.9vw,\s*30px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (user-tuned 2026-07: 27-30px)");
+expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(33px,\s*2\.25vw,\s*36px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (user-tuned 2026-07-23: 33-36px)");
 expect(/\.home-gallery-screen\s*{[\s\S]*?min-height:\s*100svh[\s\S]*?background:\s*#ffffff/.test(css), "Home gallery should be a full white screen before Projects");
 expect(/body\.home-opening-complete\s+\.home-gallery-screen\s*{[\s\S]*?display:\s*none/.test(css), "Home gallery should leave normal page flow after the opening completes");
 expect(!/body\[data-theme="dark"\]\s+\.home-intro-screen/.test(css), "Intro screens should stay white and should not have a dark mode override");
@@ -169,7 +169,10 @@ expect(/body\[data-theme="dark"\]\s+\.home-gallery-screen\s*{[\s\S]*?background:
 expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-gallery-screen\s*{[\s\S]*?background:\s*#000000/.test(css), "Home gallery dark override should win over later home-specific light rules");
 expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-vibe-note\s*{[\s\S]*?color:\s*#ffffff/.test(css), "Home gallery vibe note should remain visible in dark mode");
 expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-photo\s*{[\s\S]*?background:\s*[\s\S]*?#121212/.test(css), "Home gallery placeholder cards should use a dark surface in dark mode");
-expect(js.includes("typeIntroLine") && js.includes("pageHomeOpening") && js.includes("galleryArmed") && js.includes("applyHomeGalleryDelta") && js.includes("homeRevealProgress"), "Home opening should use prototype paging with scroll-driven gallery progress");
+// writeIntroLine replaced the old typeIntroLine typewriter (2026-07: the intro
+// lines are now revealed as continuous handwriting). The guard's intent is
+// unchanged — the opening must still own its paging + gallery-progress pieces.
+expect(js.includes("writeIntroLine") && js.includes("pageHomeOpening") && js.includes("galleryArmed") && js.includes("applyHomeGalleryDelta") && js.includes("homeRevealProgress"), "Home opening should use prototype paging with scroll-driven gallery progress");
 expect(js.includes("reenterHomeGalleryFromProjects") && !js.includes("runHomeGalleryTransition"), "Home gallery should be reversible from Projects and should not autoplay through a timed transition");
 expect(!js.includes("homeReentryHoldUntil") && !js.includes("isReturningFromProjects") && !js.includes("isFinishingHomeOpening"), "Home reverse should not keep stale reentry patch state or undeclared finishing flags");
 expect(!js.includes("home-reentry-prep") && !css.includes("home-reentry-prep"), "Home reverse should not rely on the failed reentry-prep patch class");
