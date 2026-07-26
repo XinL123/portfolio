@@ -1275,6 +1275,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   let openingArmed = false;
   let introTypingTimer = null;
   let introDoneTimer = null;
+  let introInkFailSafe = null;
   let introRaf = null;
   let hwGeneration = 0; // invalidates in-flight stroke builds when paging away
   let hwIdCounter = 0;  // unique <mask> ids across rebuilds
@@ -1353,6 +1354,7 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   const stopIntroWriting = () => {
     window.clearTimeout(introTypingTimer);
     window.clearTimeout(introDoneTimer);
+    window.clearTimeout(introInkFailSafe);
     if (introRaf) window.cancelAnimationFrame(introRaf);
     introRaf = null;
     hwGeneration += 1; // orphan any pending stroke build / completion
@@ -1632,6 +1634,25 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       line.classList.add("is-writing");
       introRaf = window.requestAnimationFrame(step);
     }, 300);
+
+    // Fail-safe: the sweep is rAF-driven and, unlike the stroke reveal, has no
+    // backstop of its own. If rAF is ever starved (backgrounded tab, extreme
+    // jank) the mask would freeze mid-line and the text would sit hidden. Force
+    // the finished (mask-off) state after the sweep's own worst-case duration so
+    // the line can never get stuck blank.
+    const inkGen = hwGeneration;
+    const inkMaxMs =
+      300 +
+      plan.reduce((a, p) => a + p.dur, 0) +
+      plan.length * (INK_SETTLE_MS + INK_LINE_GAP_MS) +
+      1500;
+    introInkFailSafe = window.setTimeout(() => {
+      if (inkGen !== hwGeneration || line.classList.contains("is-done")) return;
+      if (introRaf) window.cancelAnimationFrame(introRaf);
+      introRaf = null;
+      line.classList.remove("is-writing");
+      line.classList.add("is-done");
+    }, inkMaxMs);
   };
 
   /* ---- Sentence 1 proof of concept: stroke-order handwriting -------------
@@ -2043,12 +2064,26 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     }, 300);
   };
 
-  // ALL THREE sentences now write stroke-by-stroke (2026-07-23). Sentence 1
-  // keeps its tuned 1.65s pace; the longer sentences 2/3 use HW_FAST_PACE.
-  // (writeIntroLineGlyphs and writeIntroLineInk above are unreferenced — kept
-  // so the earlier reveal styles can be swapped back in one line.)
+  // Desktop writes stroke-by-stroke (2026-07-23): sentence 1 at its tuned 1.65s
+  // pace, the longer sentences 2/3 at HW_FAST_PACE.
+  //
+  // Touch devices (iPhone/iPad) fall back to the ink-sweep reveal instead. The
+  // SVG handwriting is tuned to Gaegu's glyphs at a desktop size; on the smaller
+  // mobile line every stroke path is tiny (avg ~10 units), so each reveals in
+  // ~1 frame instead of a smooth pen (measured: partial-reveal count stays 0),
+  // and the recipes are clipped to the not-yet-loaded fallback font through a
+  // text-in-clipPath that WebKit repaints unreliably — together they render the
+  // fragmented mid-animation reported on iPad/phone. The ink sweep masks the
+  // REAL text with a soft left-to-right wipe: font-independent, one continuous
+  // motion (never fragments), and still reads as handwriting appearing.
+  // Touch OR the intro's own mobile breakpoint (styles.css switches the intro to
+  // its small layout at max-width:820px). Both are where glyphs shrink enough to
+  // trigger the fragmentation, so both take the robust ink reveal.
+  const useInkReveal = window.matchMedia("(pointer: coarse), (max-width: 820px)").matches;
   const writeIntroLine = (line, screenIndex) =>
-    writeIntroLineStrokes(line, screenIndex === 0 ? null : HW_FAST_PACE);
+    useInkReveal
+      ? writeIntroLineInk(line)
+      : writeIntroLineStrokes(line, screenIndex === 0 ? null : HW_FAST_PACE);
 
   const showHeaderTemporarily = () => {
     if (!header || !document.body.classList.contains("home-gallery-active")) return;
@@ -2742,6 +2777,31 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
         homeTouchStartY = currentY;
         return;
       }
+      // After the opening COMPLETES, a swipe down at the top of Projects hands
+      // back to the home gallery — the touch twin of the wheel branch above.
+      // Without it, touch devices (iPad/iPhone) reach Projects and get stuck
+      // with no way back up. reenterHomeGalleryFromProjects() itself no-ops
+      // (returns false) unless we're near the section top, so a partial-page
+      // swipe-up still scrolls natively; only at the very top does it hand back.
+      if (
+        document.body.dataset.page === "home" &&
+        document.body.classList.contains("home-opening-complete") &&
+        homeTouchStartY !== null
+      ) {
+        const completeY = event.touches[0]?.clientY ?? homeTouchStartY;
+        const completeDelta = homeTouchStartY - completeY; // < 0 = swiping down (scroll up)
+        if (
+          completeDelta < -56 &&
+          Date.now() - workArrivedAt > 600 &&
+          reenterHomeGalleryFromProjects()
+        ) {
+          event.preventDefault();
+          showHeaderTemporarily();
+          homeTouchStartY = completeY;
+        }
+        return;
+      }
+
       if (!document.body.classList.contains("home-opening-active") || homeTouchStartY === null) return;
       const currentY = event.touches[0]?.clientY ?? homeTouchStartY;
       const delta = homeTouchStartY - currentY;

@@ -993,7 +993,10 @@ body.home-work-handoff .home-gallery-stage {
 
 @media (max-width: 660px) {
   .hh-title {
-    top: clamp(64px, 12vh, 110px);
+    /* stage-relative % (the stage is an aspect-locked canvas here). Sits lower —
+       in the band just above the orange, level with the "play with me" arrow but
+       horizontally clear of it (the label sits right, the title stays centred). */
+    top: 35%;
     font-size: clamp(26px, 7.6vw, 34px);
   }
 
@@ -1006,13 +1009,15 @@ body.home-work-handoff .home-gallery-stage {
     top: -4px; /* thinner lip here — keep the pin's press on the photo ~2px */
   }
 
-  .hh-photo-1 { left: 3%; top: 20%; }
-  .hh-photo-2 { right: 3%; top: 14%; }
+  /* top pair pulled to the corners and up, so the centred title has a clean
+     horizontal AND vertical corridor between them */
+  .hh-photo-1 { left: 2%; top: 13%; }
+  .hh-photo-2 { right: 2%; top: 8%; }
   .hh-photo-3 { right: 4%; top: 66%; }
 
   .hh-annot {
     left: auto;
-    right: 7%;
+    right: 3%; /* nudged right: opens the gap from the orange (was 7%) */
     top: 41%;
     font-size: 14px;
   }
@@ -5101,13 +5106,23 @@ body[data-theme="dark"] .game-feature h1 {
 }
 
 @media (max-width: 660px) {
+  /* keep the arrows on phones (were hidden): restore the [arrow][game][arrow]
+     row and shrink the game to leave room, so the carousel can be paged. */
   .game-showcase {
-    grid-template-columns: 1fr;
-    --game-nav-gap: 14px;
+    --game-nav-size: 34px;
+    --game-nav-gap: 7px;
+    grid-template-columns: var(--game-nav-size) minmax(0, 1fr) var(--game-nav-size);
   }
 
   .game-nav {
-    display: none;
+    display: grid;
+  }
+
+  .game-nav span {
+    width: 9px;
+    height: 9px;
+    border-left-width: 2.5px;
+    border-bottom-width: 2.5px;
   }
 }
 
@@ -6610,10 +6625,31 @@ body[data-theme="dark"] .about-collage-card {
 
   .footer-socials {
     gap: 14px;
+    /* shrunk again so the two groups keep a wider middle gap on phones */
+    font-size: clamp(12px, 3.3vw, 13px);
   }
 
   .footer-socials a {
-    gap: 8px;
+    gap: 7px;
+  }
+
+  /* the ↗ arrow's 2px strokes read too heavy next to the now-smaller text —
+     thin them (and shrink a hair) so the weight matches the label */
+  .footer-socials a::after {
+    width: 7px;
+    height: 7px;
+    border-top-width: 1.3px;
+    border-right-width: 1.3px;
+    background: linear-gradient(
+      135deg,
+      transparent calc(50% - 0.65px),
+      currentColor calc(50% - 0.65px) calc(50% + 0.65px),
+      transparent calc(50% + 0.65px)
+    );
+  }
+
+  .footer-copy {
+    font-size: clamp(11px, 3vw, 12px);
   }
 
   .site-footer::before {
@@ -7351,12 +7387,28 @@ body[data-theme="dark"] .about-collage-card {
     --about-runway-trim: 263px;
   }
 
-  /* Books and Podcasts are compact four-cover rows on iPhone. This must come
-     after the generic phone .grid-four two-column fallback. */
+  /* Books and Podcasts: 2 + 2, centred — same card size as Screen Picks above
+     (each spans 2 of 6 tracks = 1/3 width), so the three walls read as one
+     family instead of Screen Picks big / these two tiny. Must come after the
+     generic phone .grid-four two-column fallback. */
   .photo-wall[aria-labelledby="books-title"] .grid-four,
   .photo-wall[aria-labelledby="podcasts-title"] .grid-four {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
+
+  .photo-wall[aria-labelledby="books-title"] .photo-card,
+  .photo-wall[aria-labelledby="podcasts-title"] .photo-card {
+    grid-column: span 2;
+  }
+
+  .photo-wall[aria-labelledby="books-title"] .photo-card:nth-child(1),
+  .photo-wall[aria-labelledby="podcasts-title"] .photo-card:nth-child(1) { grid-row: 1; grid-column: 2 / span 2; }
+  .photo-wall[aria-labelledby="books-title"] .photo-card:nth-child(2),
+  .photo-wall[aria-labelledby="podcasts-title"] .photo-card:nth-child(2) { grid-row: 1; grid-column: 4 / span 2; }
+  .photo-wall[aria-labelledby="books-title"] .photo-card:nth-child(3),
+  .photo-wall[aria-labelledby="podcasts-title"] .photo-card:nth-child(3) { grid-row: 2; grid-column: 2 / span 2; }
+  .photo-wall[aria-labelledby="books-title"] .photo-card:nth-child(4),
+  .photo-wall[aria-labelledby="podcasts-title"] .photo-card:nth-child(4) { grid-row: 2; grid-column: 4 / span 2; }
 }
 
 /* iPhone-only editorial grids. Six internal tracks make a standard card span
@@ -8119,6 +8171,41 @@ body[data-page="home"].home-opening-complete .home-reveal-spacer {
      this block serves is ≤1080 or a portrait tablet, so those tiers cover it) */
 }
 
+/* Projects REST POSITION on touch / narrow screens. The clothesline is a wide
+   desktop composition; scaled down it only fills the top of a tall phone/tablet
+   screen, so top-aligned (min-height:auto above) it rested too high — dead space
+   below and the next section peeking in. Fill the viewport and CENTRE the scene
+   so it lands balanced (matches the desktop feel). `(pointer: coarse)` catches
+   large landscape iPads (>1024) too; the width query covers phones/portrait
+   tablets and lets the same centring be verified at those widths. Overrides the
+   min-height:auto set just above. */
+/* PORTRAIT phones/tablets (tall viewport): fill + centre, biased DOWN a touch to
+   the desired resting spot. */
+@media (max-width: 1024px) and (orientation: portrait),
+       (pointer: coarse) and (orientation: portrait) {
+  body[data-page="home"] .work-section {
+    min-height: 100svh;
+    padding: clamp(96px, 15vh, 180px) 0 clamp(36px, 5vh, 72px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+/* LANDSCAPE tablets (short viewport): the clothesline is nearly as tall as the
+   screen, so centre it with only minimal symmetric breathing room — a downward
+   bias here pushes the pinwheel (absolute, near the scene bottom) off-screen. */
+@media (max-width: 1366px) and (orientation: landscape) and (pointer: coarse),
+       (max-width: 1024px) and (orientation: landscape) {
+  body[data-page="home"] .work-section {
+    min-height: 100svh;
+    padding: clamp(0px, 1.5vh, 20px) 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
 /* ===========================================================
    Bottom marquee — seamless infinite horizontal scroll of square
    cards above the footer. Pure CSS. Center cards stay sharp/opaque;
@@ -8840,6 +8927,20 @@ body[data-theme="dark"] .mascot-img {
     width: 62cqw;
     aspect-ratio: 16 / 9;
     translate: -50% 0;
+  }
+}
+
+/* Tablet portrait (iPad): the hero's .hh-* furniture has no tablet rules of its
+   own, so on the aspect-locked canvas the base desktop title comes out small
+   (~2.6vw) and a touch high. Enlarge it and drop it slightly; the photos, orange
+   and annotation otherwise sit fine. `top` is stage-relative % (the stage is the
+   container here) so it tracks the canvas. min-width:661px keeps this OFF phones
+   — their ≤660 block owns that layout — and orientation:portrait keeps it off
+   landscape tablets and desktop. */
+@media (min-width: 661px) and (max-width: 1180px) and (orientation: portrait) {
+  .hh-title {
+    top: 34%;
+    font-size: clamp(28px, 3.9vw, 36px);
   }
 }
 
@@ -10027,7 +10128,9 @@ body[data-theme="dark"] .pc-note {
        out of flow so the list is the only centred child. --svc-row is a FIXED
        row pitch so `50% + (row-i − 4)·svc-row` lands exactly on each row's
        centre (index 4 = the middle of 9 items = the list's centre). */
-    --svc-row: clamp(46px, 5.6vh, 58px);
+    --svc-row: clamp(56px, 6.2vh, 62px); /* row pitch — raised min so the list
+                                            breathes on short landscape iPads
+                                            (was 46: too tight there) */
     position: relative;
     display: flex;
     flex-direction: column;
@@ -10039,7 +10142,10 @@ body[data-theme="dark"] .pc-note {
 
   .studio-services-eyebrow {
     position: absolute;
-    top: 0;
+    /* lifted UP (negative) so it reads as a section header with clear air above
+       the list, not crowding it (landscape was tight). Its centred text's left
+       edge lands ~40%, i.e. aligned with the list column below. */
+    top: clamp(-34px, -3.4vh, -22px);
     left: 0;
     right: 0;
     margin: 0;
@@ -10047,9 +10153,10 @@ body[data-theme="dark"] .pc-note {
     font-size: clamp(15px, 1.8vw, 18px);
   }
 
-  /* list is the centre column */
+  /* list is the centre column — shifted right (was 34%, too left-heavy) so it
+     sits under the centred eyebrow and balances the image on the left */
   .studio-service-list {
-    margin-left: 34%;
+    margin-left: 40%;
   }
 
   .studio-service {
@@ -10099,8 +10206,8 @@ body[data-theme="dark"] .pc-note {
   }
 
   .studio-service-media {
-    width: clamp(128px, 18vw, 168px);  /* sketch: 140–180 square */
-    height: clamp(128px, 18vw, 168px);
+    width: clamp(96px, 12vw, 128px);  /* shrunk from 140–180: was dominating the frame */
+    height: clamp(96px, 12vw, 128px);
     border-radius: 12px;
   }
 
@@ -10122,13 +10229,30 @@ body[data-theme="dark"] .pc-note {
   .studio-service-big {
     display: block;
     top: calc(50% + (var(--row-i, 4) - 4) * var(--svc-row));
-    left: 56%;
-    right: auto;
-    font-size: clamp(30px, 3.7vw, 46px); /* sketch: 36–48, trimmed so the
-                                            longest word clears the edge at 768 */
+    /* RIGHT-anchored to the content column's right edge (~92% of the viewport):
+       every word — short ("Cats") or long ("Photography") — now ends flush on
+       the right instead of stranding empty space there, and the longest still
+       clears the list on its left. This is the desktop "big label pinned right"
+       feel, without the edge-clipping a left anchor caused. */
+    left: auto;
+    /* negative right lets it sit a touch past the content column toward the
+       viewport edge (further right, per request) — longest word still clears */
+    right: clamp(-24px, -1.6vw, -6px);
+    text-align: right;
+    font-size: clamp(28px, 3.4vw, 44px);
     line-height: 1.1;
     white-space: nowrap;
     transform: translateY(-50%);
+  }
+}
+
+/* Landscape iPads (short viewport): the taller rows push the vertically-centred
+   list UP toward the eyebrow, so lift the eyebrow further. Goal: the eyebrow→list
+   gap is clearly larger than the gap BETWEEN list items, so it reads as a header
+   with air, not another list row. Landscape-only — portrait's gap is already big. */
+@media (max-width: 1080px) and (orientation: landscape) {
+  .studio-services-eyebrow {
+    top: clamp(-64px, -8vh, -44px);
   }
 }
 
@@ -10138,9 +10262,19 @@ body[data-theme="dark"] .pc-note {
     padding: clamp(56px, 8vh, 88px) 0;
   }
 
+  /* Bring the eyebrow INTO the flow, centred right above the illustration, so
+     "WHAT I LIKE" always travels with the image instead of stranding at the
+     section's absolute top (where the flex-centred content scrolls it off and
+     the section reads as an unlabeled image + list). */
   .studio-services-eyebrow {
+    position: static;
+    margin: 0 auto clamp(18px, 4.5vw, 28px);
+    text-align: center;
     font-size: 15px;
   }
+
+  /* the eyebrow now occupies the top of the flow; the list's padding-top still
+     reserves room for the illustration, so order reads eyebrow → image → list */
 
   /* phones are too narrow for the giant word — the user confirmed dropping it
      here is fine; it stays only on tablet/desktop */
