@@ -288,15 +288,22 @@
   let startX = 0;
   let startTrack = 0;
   let moved = 0;
+  let gestureStepped = false; // did this gesture actually change project?
+  let pressLink = null;       // the card link the press started on (for click-nav)
   let lastEvX = 0;
   let lastEvT = 0;
   let flick = 0; // px per frame equivalent at release
 
   viewport.addEventListener("pointerdown", (event) => {
     if (event.button) return;
+    // Remember the card link under the press NOW: setPointerCapture below
+    // retargets the later `click` to the viewport, so the <a> never receives it
+    // — we navigate ourselves in the click handler using this.
+    pressLink = event.target.closest ? event.target.closest(".pc-card-link[href]") : null;
     if (isProjectAnimating) return; // one motion at a time — no mid-tween grabs
     dragging = true;
     moved = 0;
+    gestureStepped = false;
     flick = 0;
     startX = lastEvX = event.clientX;
     startTrack = x;
@@ -334,19 +341,38 @@
     let dir = 0;
     if (Math.abs(flick) > 5) dir = Math.sign(flick);
     else if (Math.abs(travelled) > S * 0.18) dir = Math.sign(travelled);
+    gestureStepped = dir !== 0;
     stepTo(dragStartIndex + dir);
   };
 
   viewport.addEventListener("pointerup", endDrag);
   viewport.addEventListener("pointercancel", endDrag);
 
-  // a real drag must not fire the card link underneath
+  // A real drag/flick must not fire the card link underneath — but an ordinary
+  // click always jitters a few px (trackpad drift, touch taps), so only swallow
+  // the click when the gesture actually MOVED the carousel or dragged a long way.
+  // (The old 8px cut was so tight it ate normal clicks — "can't click in".)
   viewport.addEventListener(
     "click",
     (event) => {
-      if (moved > 8) {
+      // A real drag/flick must never navigate.
+      if (gestureStepped || moved > 24) {
         event.preventDefault();
         event.stopPropagation();
+        return;
+      }
+      // Clean click: because setPointerCapture retargeted this click onto the
+      // viewport, the card's <a> never fired — so open its link ourselves.
+      if (pressLink) {
+        const href = pressLink.getAttribute("href");
+        if (href) {
+          event.preventDefault();
+          if (pressLink.getAttribute("target") === "_blank") {
+            window.open(href, "_blank", "noopener,noreferrer");
+          } else {
+            window.location.href = href;
+          }
+        }
       }
     },
     true

@@ -63,9 +63,18 @@ expect(
   js.includes('document.querySelector(".work-section.reveal-section")') &&
     js.includes("history.scrollRestoration = \"manual\"") &&
     js.includes("resetHomeOpening") &&
-    js.includes("workCards.forEach((card) => card.classList.remove(\"is-visible\"))") &&
-    js.includes("finishHomeOpening"),
-  "Home opening should hold Projects until the gallery transition completes"
+    js.includes("enterHomeNative"),
+  "Home should have the intro reset flow and the canonical native-scroll enter function"
+);
+// Every home entry (intro finish, logo return, /projects direct, from another
+// page, reduced motion) must land in the SAME native-scroll state so the site
+// can't drift (e.g. logo-refresh losing the pin): complete + gallery-active,
+// with the hero kept as the first in-flow section.
+expect(
+  /const enterHomeNative = \(atProjects\) => {[\s\S]*?classList\.add\("home-opening-complete", "home-gallery-active"\)/.test(js) &&
+    js.includes("const skipHomeOpening = () => enterHomeNative(false)") &&
+    js.includes("const showHomeGalleryFromLogo = () => enterHomeNative(false)"),
+  "All home entry paths should route through enterHomeNative into complete + gallery-active"
 );
 expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.menu-toggle\s*{[\s\S]*?display:\s*none/.test(css), "tablet header should keep the desktop-style nav instead of switching to a menu button");
 expect(/@media \(max-width:\s*1080px\)[\s\S]*?\.main-nav\s*{[\s\S]*?position:\s*static[\s\S]*?opacity:\s*1[\s\S]*?border-radius:\s*999px/.test(css), "tablet nav should remain a visible pill-shaped nav bar");
@@ -145,7 +154,10 @@ expect(/\.work-media-full\s*{[\s\S]*?aspect-ratio:\s*16\s*\/\s*10[\s\S]*?height:
 expect(/\.work-card-feature\s+\.work-media-full\s*{[\s\S]*?height:\s*auto/.test(css), "Featured Work media should stay restrained in the new grid");
 expect(/\.work-row\s*{[\s\S]*?display:\s*contents/.test(css), "Desktop Work row wrapper should no longer control the new four-card grid");
 expect(/class="pc-media pc-media-wentong">[\s\S]*?<\/div>\s*<div class="pc-caption">\s*<div class="pc-cap-main">\s*<h3>Publishing × AI<\/h3>\s*<span class="pc-year">2026<\/span>/.test(html), "Work card copy should sit inside the card below the image panel, title + year sharing the first caption row");
-expect(html.includes('class="pc-go">visit site') && html.includes('class="pc-go">case study') && html.includes('class="pc-go">pitch deck') && /\.pc-go\s*{[\s\S]*?transition:\s*color/.test(css), "Each linked clothesline card should carry a quiet destination hint that warms on hover");
+// The first card's hint reads "visit site" while its route is parked and
+// "view project" once the in-repo project page is linked — accept either, so
+// this passes whether or not that wiring is live.
+expect((html.includes('class="pc-go">view project') || html.includes('class="pc-go">visit site')) && html.includes('class="pc-go">case study') && html.includes('class="pc-go">pitch deck') && /\.pc-go\s*{[\s\S]*?transition:\s*color/.test(css), "Each linked clothesline card should carry a quiet destination hint that warms on hover");
 expect(!/\.pc-card[\s\S]{0,400}?scale\(var\(--pc-depth/.test(css) && !js.includes("--pc-depth"), "Lower carousel should stay flat and front-facing — no perspective scaling");
 expect(html.includes('class="pc-track"') && html.includes('class="pc-rope"') && html.includes('class="pc-top-line"') && html.includes('assets/system/clothesline-top.svg') && html.includes('clothesline.js'), "Selected projects should keep the two-rope clothesline scene (vector artwork top rope + perspective zipline)");
 expect(html.includes('class="pc-bun"') && html.includes('pc-bun-eye-l'), "The orange bun mascot should hang from the fixed top rope with winkable eyes");
@@ -163,7 +175,8 @@ expect(/\.hh-photo\s*{[\s\S]*?touch-action:\s*none/.test(css) && /\.hh-title\s*{
 expect(/\.home-intro-screen\s*{[\s\S]*?position:\s*fixed[\s\S]*?background:\s*#ffffff[\s\S]*?font-family:\s*var\(--hand\)/.test(css), "Home intro screens should use the white Gaegu prototype style");
 expect(/\.intro-line\s*{[\s\S]*?font-size:\s*clamp\(33px,\s*2\.25vw,\s*36px\)[\s\S]*?font-weight:\s*300[\s\S]*?text-shadow:\s*none/.test(css), "Home intro should keep the prototype-like light type scale (user-tuned 2026-07-23: 33-36px)");
 expect(/\.home-gallery-screen\s*{[\s\S]*?min-height:\s*100svh[\s\S]*?background:\s*#ffffff/.test(css), "Home gallery should be a full white screen before Projects");
-expect(/body\.home-opening-complete\s+\.home-gallery-screen\s*{[\s\S]*?display:\s*none/.test(css), "Home gallery should leave normal page flow after the opening completes");
+expect(/body\[data-page="home"\]\.home-opening-complete:not\(\.home-gallery-active\)\s+\.home-gallery-screen\s*{[\s\S]*?display:\s*none/.test(css), "Home gallery leaves normal flow only when completed WITHOUT the hero (nav/direct/reduced-motion); in native-scroll home (complete + gallery-active) the hero stays in flow");
+expect(/body\[data-page="home"\]\.home-gallery-active\s+\.home-gallery-screen\s*{[\s\S]*?position:\s*relative[\s\S]*?min-height:\s*100svh/.test(css), "Native-scroll home: the hero (home-gallery-active) is an in-flow 100vh section so Projects flows below it");
 expect(!/body\[data-theme="dark"\]\s+\.home-intro-screen/.test(css), "Intro screens should stay white and should not have a dark mode override");
 expect(/body\[data-theme="dark"\]\s+\.home-gallery-screen\s*{[\s\S]*?background:\s*#000000/.test(css), "Home gallery should support dark mode after the intro");
 expect(/body\[data-theme="dark"\]\[data-page="home"\]\s+\.home-gallery-screen\s*{[\s\S]*?background:\s*#000000/.test(css), "Home gallery dark override should win over later home-specific light rules");
@@ -185,7 +198,8 @@ expect(!js.includes("--work-preview-") && !css.includes("--work-preview-"), "Hom
 expect(!css.includes("home-gallery-screen::after"), "Home gallery should not draw a duplicate Selected projects overlay heading");
 expect(!js.includes("--home-work-title-") && !css.includes("--home-work-title-"), "Home opening handoff should not use heading-only CSS variables");
 expect(js.includes("home-work-handoff") && css.includes(".home-opening-active.home-work-handoff .work-section"), "Home opening should reveal the real Work section during the video handoff");
-expect(/body\[data-page="home"\]\.home-opening-active:not\(\.home-work-handoff\)\s+\.work-section,\s*body\[data-page="home"\]\.home-opening-active\s+\.site-footer\s*{[\s\S]*?visibility:\s*hidden/.test(css), "Home opening should hide Projects until the real handoff begins and keep the footer hidden");
+expect(/body\[data-page="home"\]\.home-opening-active:not\(\.home-work-handoff\):not\(\.home-gallery-active\)\s+\.work-section,\s*body\[data-page="home"\]\.home-opening-active:not\(\.home-gallery-active\)\s+\.site-footer\s*{[\s\S]*?visibility:\s*hidden/.test(css), "Home opening should hide Projects and footer only while the intro text pages (before the gallery/native-scroll appears)");
+expect(/body\[data-page="home"\]\.home-opening-active\.home-gallery-active\s*{\s*overflow:\s*visible/.test(css), "Home gallery (screen 1) should lift the opening scroll-lock so hero→projects is native page scrolling");
 expect(!js.includes("snapToWorkGroup") && !js.includes("getWorkSnapTargets") && !js.includes("workSnapLock"), "Home Work should no longer use embedded snap scrolling after the opening animation");
 expect(caseHtml.includes('class="case-theme-toggle pull-chain"'), "Voderrn case page should include the pull-chain theme toggle");
 expect(/body\[data-theme="dark"\]\[data-page="case-study"\]\s*{[\s\S]*?background:\s*#000000/.test(css), "Voderrn case page should support whole-page dark mode");

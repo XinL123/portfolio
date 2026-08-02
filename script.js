@@ -2085,16 +2085,24 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       ? writeIntroLineInk(line)
       : writeIntroLineStrokes(line, screenIndex === 0 ? null : HW_FAST_PACE);
 
+  // The page scrolls normally now, so the header is a plain sticky bar — shown
+  // once you scroll off the hero, hidden while the hero fills the screen (keeps
+  // the clean opening). Driven by scroll position below; this just clears any
+  // stale timer/flag and is a no-op armer kept for its existing call sites.
   const showHeaderTemporarily = () => {
-    if (!header || !document.body.classList.contains("home-gallery-active")) return;
-    header.classList.remove("is-auto-hidden");
+    if (!header) return;
     window.clearTimeout(headerHideTimer);
-    headerHideTimer = window.setTimeout(() => {
-      if (document.body.classList.contains("home-gallery-active") && !header.classList.contains("nav-open")) {
-        header.classList.add("is-auto-hidden");
-      }
-    }, 3200);
+    header.classList.remove("is-auto-hidden");
   };
+
+  // Keep the header out of the clean hero, bring it in once Projects scrolls up.
+  const syncHomeHeaderByScroll = () => {
+    if (!header) return;
+    if (!document.body.classList.contains("home-gallery-active")) return;
+    const hide = window.scrollY < window.innerHeight * 0.6;
+    header.classList.toggle("is-auto-hidden", hide && !header.classList.contains("nav-open"));
+  };
+  window.addEventListener("scroll", syncHomeHeaderByScroll, { passive: true });
 
   const activateIntroScreen = (nextIndex) => {
     // The opening has begun the moment a screen is activated — mark it so the
@@ -2110,13 +2118,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 
     if (isGallery) {
       stopIntroWriting();
-      galleryProgress = 0;
-      galleryTargetProgress = 0;
-      gallerydriftStop();
-      galleryArmed = false;
-      galleryReadyAt = Date.now() + 950;
-      setHomeGalleryProgress(0);
-      showHeaderTemporarily();
+      // The intro animation is over → drop into the SAME native-scroll state every
+      // other entry uses (hero as first in-flow section, opening complete so the
+      // Projects pin / studio peeker / cards / nav all work). One shared path =
+      // no state drift between "first visit" and "logo refresh / direct link".
+      enterHomeNative(false);
       return;
     }
 
@@ -2264,10 +2270,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // Finalize the opening's own state so no later event (resize etc.) can see
     // a lingering mid-choreography progress value and wake the ride back up.
     galleryProgress = 0;
-    galleryTargetProgress = 0;
     gallerydriftStop();
     homeRevealProgress = 0;
-    rideReverseAccum = 0;
 
     // No work section to bridge to — just complete instantly.
     if (!workRevealSection) {
@@ -2339,157 +2343,98 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     if (carryDelta > 0) scrubWorkLanding(carryDelta);
   };
 
-  // Ratchet for the handoff ride: macOS trackpads emit small REVERSE deltas as
-  // fingers lift off, and with the section riding at ~1.3x gain those wobbles
-  // read as the arriving content visibly retreating ("reached the height, then
-  // shrank back"). Swallow reverse motion during the ride until it accumulates
-  // into a deliberate gesture; any forward motion re-arms the ratchet.
-  let rideReverseAccum = 0;
-  const RIDE_REVERSE_THRESHOLD = 90;
+  /* Hero → Projects is a SCRUB the wheel/finger drives — like scrolling anywhere
+     else on the page. Your scroll sets a TARGET (`scrubTarget`) 1:1, and the
+     rendered position eases toward that target every frame. That easing is the
+     ONLY smoothing: it silkens chunky input and frame hitches, and it approaches
+     the target asymptotically so it can NEVER overshoot or snap. The target is
+     wherever YOU scrolled to — never a section boundary — so stopping leaves it
+     exactly where you left it (after a ~100ms silky catch-up), the page never
+     forces itself onto Projects, and there is no clip you can't interrupt.
 
-  // Forward deltas must add up to a real push before the handoff launches.
-  let launchAccum = 0;
-  const LAUNCH_THRESHOLD = 55;
-
-  /* One deliberate gesture launches a TIME-BASED glide between the two scenes.
-     This used to lerp progress toward a target each frame, which sounds smooth
-     but stacked TWO ease-outs: the lerp is itself an ease-out, and the ride
-     then applies easeOutCubic on top. Measured result — 45% of the travel
-     landed in the FIRST frame and 95% inside 84ms, so the transition read as
-     an instant snap with a long invisible tail ("一瞬间"). Now progress is
-     tweened LINEARLY over an explicit duration and the ride's easeOutCubic is
-     the single ease: calm start, most of the motion in the first half, a long
-     gentle settle (先快后慢). GLIDE_MS is the one dial for the whole feel. */
-  const HANDOFF_GLIDE_MS = 900;
+     (History, so it isn't reintroduced: v1 = 55px launch + 90px reverse dead-zone
+     then a 900ms auto-glide → "费劲 + 切割". v2 = scrub that SNAPPED onto Projects
+     on release → "强制定位 / 太快". v3 = pure 1:1, no smoothing → wanted silkier.
+     This is v4: 1:1 target + follow-ease, no snap. scrubUnit ≈ 1.2 screens.) */
   const HANDOFF_TRAVEL = GALLERY_RELEASE_PROGRESS - HANDOFF_FLOOR;
-  let galleryTargetProgress = 0;
-  let galleryPendingRelease = false;
-  let galleryPendingHome = false;
-  let gallerySmoothFrame = null;
-  let gallerySmoothTimer = null;
-  let glideFrom = 0;
-  let glideStartedAt = 0;
-  let glideDuration = HANDOFF_GLIDE_MS;
-  let glideActive = false;
+  // Pixels of scroll that scrub the whole hero→projects travel ≈ 1.2 viewports,
+  // so the pace is a touch slower than one screen — unhurried, never twitchy.
+  const scrubUnit = () => Math.max(720, Math.min((window.innerHeight || 800) * 1.2, 1300));
+  // Per-frame approach fraction toward the scrub target. Lower = silkier + more
+  // lag; higher = snappier. 0.16 ≈ a ~100ms time constant at 60fps — smooth but
+  // still tracks the finger closely (never a detached, floaty feel).
+  const SCRUB_EASE = 0.16;
+  const SCRUB_EPS = 0.0015; // "arrived" band, in progress units
+
+  let scrubTarget = 0;
+  let scrubRaf = null;
+  let scrubTimer = null;
 
   const gallerydriftStop = () => {
-    if (gallerySmoothFrame) cancelAnimationFrame(gallerySmoothFrame);
-    gallerySmoothFrame = null;
-    window.clearTimeout(gallerySmoothTimer);
-    gallerySmoothTimer = null;
-    glideActive = false;
-    galleryPendingRelease = false;
-    galleryPendingHome = false;
-    launchAccum = 0;
+    if (scrubRaf) cancelAnimationFrame(scrubRaf);
+    scrubRaf = null;
+    window.clearTimeout(scrubTimer);
+    scrubTimer = null;
+    scrubTarget = galleryProgress;
   };
 
-  // Glide from wherever we are to `to`, scaling the duration by how far we
-  // actually travel so an interrupted/partial move isn't slowed to a crawl.
-  const startGalleryGlide = (to) => {
-    glideFrom = galleryProgress;
-    galleryTargetProgress = to;
-    glideStartedAt = performance.now();
-    glideDuration = HANDOFF_GLIDE_MS *
-      clamp(Math.abs(to - glideFrom) / HANDOFF_TRAVEL, 0.3, 1);
-    glideActive = true;
-    scheduleGallerySmooth();
-  };
-
-  // rAF while visible; timeout heartbeat while hidden (rAF pauses there) —
-  // same convention as the clothesline and buddy renderers
-  const scheduleGallerySmooth = () => {
-    if (gallerySmoothFrame || gallerySmoothTimer !== null) return;
+  // rAF while visible; timeout heartbeat while hidden (rAF pauses there) — same
+  // convention as the clothesline / buddy renderers.
+  const scheduleScrub = () => {
+    if (scrubRaf || scrubTimer !== null) return;
     if (document.visibilityState === "hidden") {
-      gallerySmoothTimer = window.setTimeout(() => {
-        gallerySmoothTimer = null;
-        gallerySmoothStep(performance.now());
-      }, 50);
+      scrubTimer = window.setTimeout(() => { scrubTimer = null; scrubStep(); }, 32);
     } else {
-      gallerySmoothFrame = requestAnimationFrame(gallerySmoothStep);
+      scrubRaf = requestAnimationFrame(scrubStep);
     }
   };
 
-  const gallerySmoothStep = (t) => {
-    gallerySmoothFrame = null;
-    if (!glideActive) return;
+  const scrubStep = () => {
+    scrubRaf = null;
+    const diff = scrubTarget - galleryProgress;
 
-    // Linear in time — the ride's easeOutCubic supplies the ONE ease. Being
-    // time-based (not a per-frame lerp) also means a throttled or dropped frame
-    // resumes at the right place instead of stretching the whole transition.
-    const u = clamp((t - glideStartedAt) / glideDuration, 0, 1);
-    setHomeGalleryProgress(glideFrom + (galleryTargetProgress - glideFrom) * u);
-
-    if (u < 1) {
-      scheduleGallerySmooth();
+    // Reached the top of the travel (you scrolled all the way through) → hand to
+    // native scrolling. Trip a touch early so the exponential tail isn't laggy.
+    if (scrubTarget >= GALLERY_RELEASE_PROGRESS - SCRUB_EPS &&
+        galleryProgress >= GALLERY_RELEASE_PROGRESS - 0.03) {
+      setHomeGalleryProgress(GALLERY_RELEASE_PROGRESS);
+      finishHomeOpening(0);
       return;
     }
-
-    glideActive = false;
-    if (galleryPendingRelease) {
-      galleryPendingRelease = false;
-      finishHomeOpening(0);
-    } else if (galleryPendingHome) {
-      // Arrived at the bottom of the visible range — drop the rest in one step
-      // (nothing paints below the floor) so the hero is fully at rest.
-      galleryPendingHome = false;
+    // Eased back onto the hero.
+    if (scrubTarget <= HANDOFF_FLOOR + SCRUB_EPS &&
+        galleryProgress <= HANDOFF_FLOOR + 0.03) {
       setHomeGalleryProgress(0);
-      galleryTargetProgress = 0;
+      return;
     }
+    // Arrived at the scrubbed position — land exactly on it and rest there.
+    if (Math.abs(diff) < SCRUB_EPS) {
+      setHomeGalleryProgress(scrubTarget);
+      return;
+    }
+    setHomeGalleryProgress(galleryProgress + diff * SCRUB_EASE);
+    scheduleScrub();
   };
 
   const applyHomeGalleryDelta = (delta) => {
-
     if (!galleryArmed || Date.now() < galleryReadyAt) return;
+    if (Math.abs(delta) < 0.5) return;
 
-    // ONE deliberate gesture plays the whole transition. The old behaviour
-    // scrubbed progress with the wheel (each event capped at 90px against a
-    // 760px unit), so reaching Projects took ~7 hard notches — the reported
-    // "have to keep flicking, feels stuck".
-    if (delta > 0) {
-      rideReverseAccum = 0;
-      if (glideActive || galleryPendingRelease) return; // already on its way
-
-      // A gesture, not a graze. One stray wheel tick (or trackpad momentum
-      // dribbling out of the intro paging) must not fire the whole transition —
-      // that read as "微微一碰就迅速滑走". Accumulate until the push is clearly
-      // intentional; a real swipe crosses this within its first 2-3 events, so
-      // it still feels like a single gesture.
-      launchAccum += delta;
-      if (launchAccum < LAUNCH_THRESHOLD) return;
-      launchAccum = 0;
-
-      // Start AT the floor: progress 0→FLOOR is a leftover of the old collage's
-      // reveal scrub and now paints nothing at all, so easing across it just
-      // spent the first ~80ms of the glide on a still frame (read as lag on the
-      // first flick). Jumping it is invisible by construction, and the whole
-      // ease is then real motion.
-      if (galleryProgress < HANDOFF_FLOOR) setHomeGalleryProgress(HANDOFF_FLOOR);
-      galleryPendingRelease = true;
-      galleryPendingHome = false;
-      startGalleryGlide(GALLERY_RELEASE_PROGRESS);
-      return;
+    // Jump the invisible 0→FLOOR dead range (a leftover of the deleted collage
+    // reveal — it paints nothing) so the first pixel of scroll is real motion.
+    if (galleryProgress < HANDOFF_FLOOR) {
+      if (delta <= 0) return; // sitting on the hero; scrolling up does nothing
+      setHomeGalleryProgress(HANDOFF_FLOOR);
+      scrubTarget = HANDOFF_FLOOR;
     }
 
-    launchAccum = 0; // any upward motion cancels a part-built forward gesture
-
-    // Reverse: swallow trackpad lift-off wobble during the ride, then glide
-    // all the way home — same single-gesture rule in the other direction.
-    if (galleryProgress > HANDOFF_FLOOR) {
-      rideReverseAccum += -delta;
-      if (rideReverseAccum < RIDE_REVERSE_THRESHOLD) {
-        traceOpening("wobble-swallowed", { delta: Math.round(delta), accum: Math.round(rideReverseAccum) });
-        return;
-      }
-    }
-    if (glideActive && galleryPendingHome) return; // already gliding home
-
-    // Aim at the floor, not 0, for the same reason: below it nothing paints, so
-    // targeting 0 would spend the ease's visible portion in its first ~40ms and
-    // the rest settling invisibly — the reverse would read as a snap. The
-    // glide drops to 0 once it arrives (see gallerySmoothStep).
-    galleryPendingRelease = false;
-    galleryPendingHome = true;
-    startGalleryGlide(HANDOFF_FLOOR);
+    // At rest, a new gesture starts from the true current position; mid-ease it
+    // accumulates onto the pending target — so fast and slow scrolls both track.
+    const loopIdle = scrubRaf === null && scrubTimer === null;
+    const base = loopIdle ? galleryProgress : scrubTarget;
+    // 1:1 — the target moves exactly with the scroll (then the ease follows it).
+    scrubTarget = clamp(base + (delta / scrubUnit()) * HANDOFF_TRAVEL, HANDOFF_FLOOR, GALLERY_RELEASE_PROGRESS);
+    scheduleScrub();
   };
 
   const reenterHomeGalleryFromProjects = () => {
@@ -2528,10 +2473,9 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     // Re-enter INSIDE the handoff, parked at its release point: the ride puts
     // the work section exactly where it just sat (fixedTop(u=1) = landed top)
     // and the hero exactly off-screen above — so this swap changes NOTHING
-    // visually, and the continued upward scroll simply plays the same ride
-    // backwards through the smoother. Entering at progress 1 instead (the old
-    // collage behaviour) hard-cut straight to the hero in one frame.
-    galleryTargetProgress = GALLERY_RELEASE_PROGRESS;
+    // visually, and the continued upward scroll simply scrubs the same ride
+    // backwards. Entering at progress 1 instead (the old collage behaviour)
+    // hard-cut straight to the hero in one frame.
     setHomeGalleryProgress(GALLERY_RELEASE_PROGRESS);
     showHeaderTemporarily();
 
@@ -2584,109 +2528,60 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
     syncHeaderScroll();
   };
 
-  const skipHomeOpening = () => {
+  // Scroll the native-scroll home to the Projects section (it sits in flow right
+  // below the hero). Read live from the settled layout each call.
+  const scrollHomeToProjects = () => {
+    if (!workRevealSection) return;
+    const top = Math.round(workRevealSection.getBoundingClientRect().top + window.scrollY);
+    window.scrollTo({ top, behavior: "instant" });
+  };
+
+  /* THE canonical way every entry lands on the home page: the native-scroll
+     state — hero (home-gallery-active) is the first in-flow section, the opening
+     is COMPLETE (so Projects pin, studio peeker, work cards, nav all work), and
+     the browser scrolls between the screens natively. `atProjects` only changes
+     the initial scroll position. Every path (intro finish, logo return, /projects
+     direct, from another page, reduced motion) routes through here, so the whole
+     site stays in ONE consistent state — no more "logo refresh loses the pin". */
+  const enterHomeNative = (atProjects) => {
     cancelWorkLanding();
-    document.body.classList.remove("home-opening-active", "home-gallery-active", "home-gallery-revealing", "home-work-handoff");
-    document.body.classList.add("home-opening-complete");
+    document.body.classList.remove("home-opening-active", "home-gallery-revealing", "home-work-handoff");
+    document.body.classList.add("home-opening-complete", "home-gallery-active");
     homeIntroScreens.forEach((screen) => screen.classList.remove("is-active"));
-    setGalleryVideosPlaying(false);
-    workRevealSection?.classList.add("is-visible");
-    workCards.forEach((card) => card.classList.add("is-visible"));
-    syncWorkSceneFade();
-  };
-
-  let workSceneFadeTimer = null;
-  const goToWorkSection = () => {
-    skipHomeOpening();
-
-    // Soft arrival WITHOUT a smooth scroll. A smooth scrollTo here is async and
-    // interruptible, and it reintroduced the alternating blank-band bug: the
-    // page must be RE-ASSERTED at the section top to defeat the layout drop that
-    // skipHomeOpening()/cancelWorkLanding() causes, and a one-shot glide cannot
-    // do that (its rAF/load re-runs would each snap-interrupt the glide). So the
-    // scroll is an INSTANT, re-asserted jump — deterministic and self-correcting
-    // (verified: repeated clicks stay locked at the section top). The gentleness
-    // instead comes from easing the scene's OPACITY to its resting value: it
-    // fades in when arriving from a scrolled-away / faded state, and is an
-    // invisible no-op when already at Work. The transition is cleared after ~½s
-    // so ordinary scroll-scrubbing stays instant.
-    if (workScene && !prefersReducedMotion.matches) {
-      workScene.style.transition = "opacity 480ms ease";
-      clearTimeout(workSceneFadeTimer);
-      workSceneFadeTimer = window.setTimeout(() => {
-        workScene.style.transition = "";
-      }, 560);
-    }
-
-    const moveToWork = () => {
-      workRevealSection?.classList.add("is-visible");
-      workCards.forEach((card) => card.classList.add("is-visible"));
-
-      if (workRevealSection) {
-        // instant (re-asserted below) so the section is pinned deterministically
-        // at the top; target is read live from the settled layout.
-        const top = Math.round(workRevealSection.getBoundingClientRect().top + window.scrollY);
-        window.scrollTo({ top, behavior: "instant" });
-      }
-
-      // Clean address bar: the section is reachable at its own /projects url.
-      // REPLACE, never push — moveToWork re-runs (immediately, across two rAFs
-      // and again on load), so pushing here would stack duplicate entries. The
-      // single history entry for a click is pushed at the click site instead.
-      history.replaceState(null, "", PROJECTS_PATH);
-      syncVisibleWorkCards();
-      // sets the scene's resting opacity; with the transition above active, that
-      // change eases in gently when arriving from a faded state.
-      syncWorkSceneFade();
-    };
-
-    moveToWork(); // immediately, so there is no blank frame after the layout finalizes
-    requestAnimationFrame(() => requestAnimationFrame(moveToWork)); // re-assert after layout settles
-
-    // 等图片等内容加载完成后，再校准一次位置
-    if (document.readyState !== "complete") {
-      window.addEventListener("load", moveToWork, { once: true });
-    }
-  };
-
-  const showHomeGalleryFromLogo = () => {
-    window.scrollTo(0, 0);
-    setGalleryVideosPlaying(true);
-
-    document.body.classList.add(
-      "home-opening-active",
-      "home-gallery-active",
-      "home-gallery-revealing"
-    );
-  
-    document.body.classList.remove(
-      "home-opening-complete",
-      "home-work-handoff"
-    );
-  
-    clearHomeHandoffVars();
-    workRevealSection?.classList.remove("is-visible");
-    workCards.forEach((card) => card.classList.remove("is-visible"));
-    homeIntroScreens.forEach((screen) => screen.classList.remove("is-active"));
-  
     activeIntroIndex = homeIntroScreens.length;
-    galleryArmed = false;
-  
-    // The logo return used to reverse-play the collage's disperse animation.
-    // With the hero design there is nothing in the 0→1 progress range to play
-    // back (the old photo hooks are gone), so the 650ms rAF sweep it ran was a
-    // pure no-op that only delayed re-arming the scroll. Land on the hero
-    // directly — visually identical, minus the dead choreography.
-    setHomeGalleryProgress(0);
-    document.body.classList.remove("home-gallery-revealing");
+    clearHomeHandoffVars();
+    setGalleryVideosPlaying(true);
+    workRevealSection?.classList.add("is-visible");
+    workCards.forEach((card) => {
+      card.classList.add("is-visible");
+      card.style.removeProperty("opacity");
+      card.style.removeProperty("transform");
+      card.style.removeProperty("transition");
+    });
+    if (atProjects) scrollHomeToProjects();
+    else window.scrollTo({ top: 0, behavior: "instant" });
+    window.clearTimeout(headerHideTimer);
+    syncHomeHeaderByScroll();
+    requestAnimationFrame(() => { syncVisibleWorkCards(); syncWorkSceneFade(); });
+  };
 
-    galleryProgress = 0;
-    galleryTargetProgress = 0;
-    gallerydriftStop();
-    galleryArmed = false;
-    galleryReadyAt = Date.now() + 500;
+  // Complete straight to the hero (no intro animation): default load, reduced
+  // motion fall-throughs, and the logo return all land on the hero at the top.
+  const skipHomeOpening = () => enterHomeNative(false);
+  const showHomeGalleryFromLogo = () => enterHomeNative(false);
 
-    showHeaderTemporarily();
+  const goToWorkSection = () => {
+    enterHomeNative(true);
+    // Clean address bar: the section has its own /projects url. REPLACE, never
+    // push (this re-runs across rAFs / on load, which would stack entries).
+    history.replaceState(null, "", PROJECTS_PATH);
+    // Re-assert the landing after layout settles — image loads below shift the
+    // section top, and /projects must stay parked on Projects.
+    const reassert = () => { scrollHomeToProjects(); syncVisibleWorkCards(); syncWorkSceneFade(); };
+    requestAnimationFrame(() => requestAnimationFrame(reassert));
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", reassert, { once: true });
+    }
   };
 
   window.addEventListener(
@@ -2707,6 +2602,11 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       }
 
       if (document.body.classList.contains("home-opening-active")) {
+        // Once the gallery (screen 1) is up, hero → projects is plain NATIVE
+        // page scrolling — the wheel is never intercepted. Only the intro text
+        // screens above it are wheel-paged.
+        if (document.body.classList.contains("home-gallery-active")) return;
+
         event.preventDefault();
 
         if (Math.abs(event.deltaY) < 1) return;
@@ -2715,14 +2615,15 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
           Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY), 90);
 
         pageHomeOpening(smoothDelta > 0 ? 1 : -1, smoothDelta);
-
-        if (galleryProgress <= 0.001) showHeaderTemporarily();
         return;
       }
 
       if (
         document.body.dataset.page === "home" &&
         document.body.classList.contains("home-opening-complete") &&
+        // Native-scroll home keeps the hero as a real section above Projects, so
+        // scrolling up just shows it — never re-run the old JS re-entry there.
+        !document.body.classList.contains("home-gallery-active") &&
         // Deliberate gestures only: a firmer threshold plus a short cooldown
         // after arrival, so trackpad lift-off wobble right after landing can't
         // yank the whole collage back ("two versions switching").
@@ -2786,6 +2687,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       if (
         document.body.dataset.page === "home" &&
         document.body.classList.contains("home-opening-complete") &&
+        // Native-scroll home shows the hero by scrolling up — no JS re-entry.
+        !document.body.classList.contains("home-gallery-active") &&
         homeTouchStartY !== null
       ) {
         const completeY = event.touches[0]?.clientY ?? homeTouchStartY;
@@ -2803,9 +2706,12 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       }
 
       if (!document.body.classList.contains("home-opening-active") || homeTouchStartY === null) return;
+      // Once the gallery (screen 1) is up, hero → projects is native touch
+      // scrolling — never intercepted. Only the intro text screens are paged.
+      if (document.body.classList.contains("home-gallery-active")) return;
       const currentY = event.touches[0]?.clientY ?? homeTouchStartY;
       const delta = homeTouchStartY - currentY;
-      if (Math.abs(delta) < 60) return;
+      if (Math.abs(delta) < 60) return; // a deliberate swipe pages the intro
       event.preventDefault();
       pageHomeOpening(delta > 0 ? 1 : -1, delta);
       homeTouchStartY = currentY;
@@ -2822,6 +2728,8 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
       return;
     }
     if (!document.body.classList.contains("home-opening-active")) return;
+    // Gallery up → native keyboard scrolling (arrows/space scroll the page).
+    if (document.body.classList.contains("home-gallery-active")) return;
     event.preventDefault();
     pageHomeOpening(direction, direction * 240);
   });
@@ -2906,7 +2814,10 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
   goToWorkSectionRef = goToWorkSection;
 
 } else if (document.body.dataset.page === "home") {
-  document.body.classList.add("home-opening-complete");
+  // No opening choreography (reduced motion, or no intro/gallery on this load).
+  // Still land in the SAME native-scroll layout: hero (home-gallery-active) as
+  // the first in-flow section, complete so Projects pins and the peeker works.
+  document.body.classList.add("home-opening-complete", "home-gallery-active");
   clearHomeHandoffVars();
   revealSections.forEach((section) => section.classList.add("is-visible"));
   workCards.forEach((card) => card.classList.add("is-visible"));
@@ -2937,8 +2848,9 @@ if (isHomePage) {
       } else if (goToWorkSectionRef) {
         goToWorkSectionRef();
       } else {
-        // no opening choreography on this load — reveal + jump to the section
-        document.body.classList.add("home-opening-complete");
+        // no opening choreography on this load — reveal + jump to the section,
+        // in the same native-scroll layout (hero kept as the first section).
+        document.body.classList.add("home-opening-complete", "home-gallery-active");
         revealSections.forEach((section) => section.classList.add("is-visible"));
         workCards.forEach((card) => card.classList.add("is-visible"));
         workSection?.scrollIntoView({ block: "start" });
@@ -2976,7 +2888,10 @@ if (revealSections.length && !prefersReducedMotion.matches) {
     (entries) => {
       entries.forEach((entry) => {
         if (entry.target === workRevealSection) {
-          if (document.body.classList.contains("home-opening-active")) return;
+          // Skip only while the intro TEXT screens are paging. Once the gallery
+          // is up the page scrolls natively, so Projects reveals on scroll.
+          if (document.body.classList.contains("home-opening-active") &&
+              !document.body.classList.contains("home-gallery-active")) return;
           if (entry.isIntersecting) {
             workRevealSection.classList.add("is-visible");
             syncVisibleWorkCards();
@@ -3006,7 +2921,10 @@ if (revealSections.length && !prefersReducedMotion.matches) {
       if (workFrame) return;
       workFrame = requestAnimationFrame(() => {
         workFrame = null;
-        if (!document.body.classList.contains("home-opening-active")) {
+        // Run during native scroll (gallery up) and after completion; skip only
+        // while the intro text screens are still paging.
+        if (!document.body.classList.contains("home-opening-active") ||
+            document.body.classList.contains("home-gallery-active")) {
           syncVisibleWorkCards();
           syncWorkSceneFade();
         }
