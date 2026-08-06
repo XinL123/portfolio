@@ -93,9 +93,28 @@
     ropePath.setAttribute("d", "M " + pts.join(" L "));
   };
 
+  /* ---- top artwork rope: hold its stroke at exactly the --pc-rope-w dial's
+     CSS px at any viewport width, zoom or DPI. The artwork lives in a
+     2172-unit viewBox stretched to 100vw, so the needed user-unit width is
+     plain arithmetic: dial * 2172 / rendered-width. (vector-effect:
+     non-scaling-stroke was tried first, but it strokes against different
+     coordinate bases on different display scalings — thin on some machines,
+     right on others. Math can't disagree with itself.) ---- */
+  const topLineSvg = document.querySelector(".pc-top-line");
+  const topLinePath = topLineSvg ? topLineSvg.querySelector("path") : null;
+  const TOP_LINE_VB_W = 2172; // artwork viewBox width (scripts/trace-clothesline.py)
+  const syncTopRope = () => {
+    if (!topLineSvg || !topLinePath) return;
+    const w = topLineSvg.clientWidth || window.innerWidth;
+    const host = topLineSvg.closest(".pc-scene") || topLineSvg;
+    const dial = parseFloat(getComputedStyle(host).getPropertyValue("--pc-rope-w")) || 1.5;
+    topLinePath.style.strokeWidth = ((dial * TOP_LINE_VB_W) / w).toFixed(3);
+  };
+
   const measure = () => {
     W = Math.max(1, viewport.clientWidth);
     vpTop = viewport.offsetTop;
+    syncTopRope();
     inset = parseFloat(getComputedStyle(track).paddingLeft) || 0;
     cardW = cards[0] ? cards[0].offsetWidth : 1;
     const gap = parseFloat(getComputedStyle(track).columnGap) || 40;

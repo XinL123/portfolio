@@ -16,12 +16,19 @@ import { defineConfig } from "vite";
    Registered inside configureServer (rather than returned from it) so it runs
    BEFORE Vite's own static/html middleware, which is what makes the rewrite
    land on the html transform pipeline as if index.html had been requested. */
-const PROJECTS_ROUTES = new Set(["/projects", "/projects.html"]);
+const ROUTE_REWRITES = new Map([
+  ["/projects", "/index.html"],
+  ["/projects.html", "/index.html"],
+  // Chushubao case study: clean canonical url over land-of-wisdom.html
+  // (mirrors the status=200 rule in netlify.toml — keep the two in sync)
+  ["/projects/chushubao", "/land-of-wisdom.html"],
+]);
 
 const projectsRoute = () => {
   const rewrite = (req, _res, next) => {
     const [pathname] = (req.url || "").split("?");
-    if (PROJECTS_ROUTES.has(pathname)) req.url = "/index.html";
+    const target = ROUTE_REWRITES.get(pathname);
+    if (target) req.url = target;
     next();
   };
 

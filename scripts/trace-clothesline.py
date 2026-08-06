@@ -14,6 +14,14 @@ This is only valid because the artwork is a bare rope: every one of the 2172
 columns carries a single thin ink run (the clothespins, charms and drawing are
 separate DOM elements). If decorations are ever painted back into the PNG, the
 per-column centroid below would average across them and this script must go.
+
+NOTE (2026-08): the rope is now INLINED into index.html as <svg class=
+"pc-top-line">, not referenced as an <img> — because vector-effect:
+non-scaling-stroke only takes effect on live SVG, and as an <img> it was inert
+(the stroke scaled thin with width:100vw). This script still writes the .svg
+file below; to update the rope, run it, then copy the fresh <path d="…"/> into
+that inline svg in index.html. Stroke width + colour now come from CSS
+(.pc-top-line path in styles.css), so STROKE/COLOR here are cosmetic only.
 """
 
 from __future__ import annotations

@@ -1,0 +1,480 @@
+/* =============================================================================
+   Project detail page — minimal hand-drawn case study, paged screens.
+   Isolated from the big styles.css: this file owns everything under
+   body[data-page="project"] except the shared pull-chain + theme tokens, which
+   still come from styles.css. Pure white paper, black ink, Gaegu, lots of air.
+   All arrows are ARROWHEADS ONLY (chevrons — no stem), drawn with a wobbly
+   double-stroke so they read as pencil, not geometry.
+   ============================================================================= */
+
+body[data-page="project"] {
+  /* Two dials for the quiet chrome (100% = full ink, lower = lighter):
+     --pj-quiet  the "Scroll or click" label + its down arrow, and
+                 "Return to beginning" + its up arrow — these always match.
+     --pj-ring   the resting progress dots — solid fills traced from the
+                 reference image; 24% ink = the reference's measured grey
+                 (median L 195 on white). */
+  --pj-quiet: 60%;
+  --pj-ring: 24%;
+
+  /* Dials for the small note under the demo phone (.pj-demonote) — tweak
+     these four and reload to see the effect:
+       --pj-note-size    font size
+       --pj-note-weight  300 = Gaegu light, 400 = regular, 700 = bold
+       --pj-note-gap     vertical distance below the phone frame
+       --pj-note-ink     text darkness (100% = full ink, lower = lighter) */
+  --pj-note-size: 13px;
+  --pj-note-weight: 300;
+  --pj-note-gap: 0px;
+  --pj-note-ink: 50%;
+
+  margin: 0;
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--hand, "Gaegu", cursive);
+  overflow: hidden; /* the deck pages; the document itself never scrolls */
+}
+
+/* ---- top bar : same inner width / top padding as the site header so the back
+   arrow, progress and chain line up with every other page ---- */
+.pj-topbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(100% - 112px, 1280px);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding-top: 36px;
+  pointer-events: none; /* only the controls catch clicks, not the empty band */
+  transition: opacity 320ms ease, translate 320ms ease, visibility 320ms ease;
+}
+.pj-topbar > * { pointer-events: auto; }
+
+/* ---- idle auto-hide : the chrome gets out of the way of the work, and comes
+   back the moment you reach for it (same 3400ms rhythm + edge-zone reveal as
+   the home header). `.is-idle` is separate from `.is-hidden` (which the end
+   screen uses to retire the scroll cue) so the two can never fight. ---- */
+.pj-topbar.is-idle {
+  opacity: 0;
+  translate: 0 -10px;
+  visibility: hidden;
+}
+.pj-scrollcue.is-idle,
+.pj-returncue.is-idle {
+  opacity: 0;
+  translate: 0 10px;
+  visibility: hidden;
+}
+
+/* bare, chromeless controls — no button box, no border, just the arrowhead */
+.pj-back,
+.pj-next,
+.pj-return {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit; /* buttons don't inherit Gaegu on their own */
+}
+
+/* back — a bare left arrowhead, no stem, no ring */
+.pj-back {
+  justify-self: start;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  transition: transform 180ms ease, opacity 180ms ease;
+  opacity: 0.85;
+}
+/* the back arrow stays put — no hover reaction, by request */
+.pj-back:focus-visible { outline: none; }
+
+/* every chevron: a thin single stroke, round cap, roughened by the filter —
+   same felt of the home-page doodle lines */
+.pj-chev { width: 24px; height: 24px; overflow: visible; }
+.pj-chev use {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pj-back .pj-chev { transform: rotate(-2deg); }
+
+/* the home header turns its chain white in dark mode with a rule scoped to
+   .site-header — mirror it for this page's top bar */
+body[data-theme="dark"][data-page="project"] .pj-topbar .pull-chain .chain-image {
+  filter: invert(1) brightness(1.15) contrast(1.06);
+}
+.pj-topbar .chain-image { transition: filter 240ms ease; }
+
+/* progress — felt-tip dots + a chunky ink capsule on the current screen, drawn
+   as ONE svg and roughened by the pencil filter so the marks look laid down by
+   hand (soft, each a touch different) rather than snapped to a grid. The capsule
+   slides between slots; JS translates it by SLOT (30 svg units) per screen. */
+.pj-progress {
+  justify-self: center;
+  position: relative;   /* the sliding capsule svg is absolutely placed inside */
+  width: 232px;         /* 1 svg unit = 1px, so the scribble strokes stay crisp */
+  height: 24px;
+}
+.pj-prog { display: block; width: 232px; height: 24px; overflow: visible; }
+/* the current-screen pill: its own <svg>, centred over dot slot 0 (dot cx=12,
+   svg 34 wide → left −5). project.js slides it between slots with a WAAPI
+   translateX animation — translation only, the shape itself never deforms. */
+.pj-cap {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 34px;
+  height: 24px;
+  overflow: visible;
+  transform: translateX(0);
+}
+/* Resting dots (per the reference): SOLID soft grey blobs. The shape is defined
+   ONCE (#pj-dot-shape in the svg defs); these <use> copies only place it, and
+   fill inherits through the <use> onto the shape. */
+.pj-prog-dots use {
+  fill: color-mix(in srgb, var(--ink) var(--pj-ring), transparent);
+  stroke: none;
+}
+/* Current-screen pill (#pj-pill-shape in defs; the .pj-cap svg just carries a
+   <use> that the page slides). The silhouette is TRACED from the reference, so
+   the drawn outline thickness is part of the fill — no stroke. 82% ink = the
+   reference's measured pill tone (median L 47). The light slivers are holes in
+   the path; the mask (outer loop, paper fill) sits underneath so the grey dot
+   the pill parks over never shows through them. */
+.pj-cap-fill {
+  fill: color-mix(in srgb, var(--ink) 82%, var(--paper));
+}
+.pj-cap-mask { fill: var(--paper); }
+
+/* Balance the top bar (this page only — the site header elsewhere is untouched).
+   The back arrow's box is 40px wide and sits flush left, so its ink centres
+   ~20px in from the edge. The chain image is only ~13px wide, so flush-right
+   put its centre ~6px from the edge — visibly closer to the edge than the arrow,
+   and 27px further from the progress bar. Nudging it in by --pj-chain-inset
+   lines both centres up at the same inset, left and right. */
+.pj-topbar .pull-chain {
+  justify-self: end;
+  margin-right: var(--pj-chain-inset, 13.5px);
+}
+
+/* ---- the paged deck : stacked full-viewport screens ---- */
+.pj-deck {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+}
+.pj-screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  /* two EQUAL halves split on the page's central axis, with each side centred
+     inside its own half — art and text always balance around the middle, no
+     matter which side either sits on or how wide each happens to be. (The old
+     auto+auto centring centred the PAIR, so unequal halves drifted off-axis:
+     screen 1 leaned right, screen 2 leaned left.) */
+  grid-template-columns: 1fr 1fr;
+  justify-items: center;
+  align-items: center;
+  align-content: center;
+  gap: 0;
+  padding: 120px clamp(40px, 7vw, 120px) 120px;
+  box-sizing: border-box;
+  opacity: 0;
+  transform: translateY(26px);
+  visibility: hidden;
+  transition: opacity 520ms ease, transform 640ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 560ms;
+  pointer-events: none;
+}
+.pj-screen.is-active {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  transition: opacity 520ms ease, transform 640ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: auto;
+}
+/* screens leaving upward (already visited) drift up rather than down */
+.pj-screen.is-past {
+  transform: translateY(-26px);
+}
+
+/* left : illustration / scene. Light + dark covers OVERLAY in one grid cell
+   (styles.css crossfades their opacity on theme switch) — stacked cells would
+   let the invisible twin push the visible one around, which is exactly the
+   dark-mode position shift being avoided. */
+.pj-art {
+  display: grid;
+  place-items: center;
+}
+.pj-art img {
+  grid-area: 1 / 1;
+  max-width: min(100%, 420px);
+  height: auto;
+  display: block;
+}
+/* Testing image: slightly larger while preserving its original aspect ratio. */
+.pj-screen[data-screen="5"] .pj-art img {
+  width: min(100%, 480px);
+  max-width: 100%;
+  height: auto;
+}
+/* AI Feature 1 embeds the live phone demo (chushubao-demo.html) instead of an
+   image. Sized by HEIGHT (the phone is portrait 424x874) so it fits the slide;
+   width follows the aspect ratio. Transparent + pointer-events:none so it reads
+   like the other illustrations and never eats the deck's wheel/click paging. */
+.pj-demoframe {
+  grid-area: 1 / 1;
+  border: 0;
+  background: transparent;
+  height: min(67vh, 655px);
+  aspect-ratio: 424 / 874;
+  width: auto;
+  max-width: 100%;
+  display: block;
+  pointer-events: none;
+  color-scheme: light; /* the demo is a light phone UI in both site themes */
+}
+/* the 聊聊球 demo (chatball-demo.html) on the Feature II screen. Same contract
+   as .pj-demoframe: transparent, non-interactive, auto-looping. The component
+   inside scales itself to this box and centres on both axes, so the frame's
+   own box is what the layout centres on the page axis. */
+.pj-ballframe {
+  grid-area: 1 / 1;
+  border: 0;
+  background: transparent;
+  /* box matches the demo's design size INCLUDING its 75px glow padding
+     (382x411) — the halo must finish fading inside the iframe, or it clips
+     into a visible square. Sized by HEIGHT like the phone frame: .pj-art is a
+     shrink-to-fit grid item, so a percentage width here resolves against an
+     auto-width parent and collapses to the iframe default (300px). The demo
+     letterboxes itself to any box shape, so nothing ever distorts. */
+  height: min(62vh, 590px);
+  aspect-ratio: 382 / 411;
+  width: auto;
+  max-width: 100%;
+  display: block;
+  pointer-events: none;
+  /* REQUIRED for the frame to stay see-through. In dark mode the page's
+     color-scheme:dark propagates to the iframe element, and because the
+     embedded document declares no scheme of its own the UA paints its base
+     canvas opaque — a white box around the ball. Pinning light here (same as
+     .pj-demoframe) keeps the child canvas transparent in both themes. */
+  color-scheme: light;
+}
+/* small disclaimer under the demo frame — all knobs are the --pj-note-* dials
+   at the top of this file */
+.pj-demonote {
+  margin: var(--pj-note-gap) 0 0;
+  font-size: var(--pj-note-size);
+  font-weight: var(--pj-note-weight);
+  letter-spacing: 0.2px;
+  text-align: center;
+  color: color-mix(in srgb, var(--ink) var(--pj-note-ink), transparent);
+}
+
+/* right : the words — title + body only, modest sizes with generous air */
+.pj-info {
+  max-width: 430px;
+}
+.pj-title {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 3.4vw, 42px);
+  font-weight: 700;
+  line-height: 1.1;
+}
+/* Keep the Feature II title together on one line. */
+.pj-screen[data-screen="4"] .pj-title {
+  white-space: nowrap;
+}
+.pj-screen[data-screen="4"] {
+  --pj-feature2-y: -30px; /* move the ball and text together */
+}
+.pj-screen[data-screen="4"] .pj-art {
+  transform: translateY(var(--pj-feature2-y));
+}
+/* Chinese characters (写写 / 聊聊) and their pinyin gloss — set in Kaiti, the
+   SAME typeface the about page uses for "欣欣 [Xīn xīn]", so Chinese reads
+   consistently site-wide. Gaegu carries no CJK glyphs, so without this they
+   fell back to whatever system face the OS picked.
+   Weight 400 on purpose: Kaiti has no bold cut, and the title's 700 would make
+   the browser synthesise a smeared faux-bold. */
+.pj-cn {
+  font-family: "FZKai-Z03S", "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+  font-weight: 400;
+}
+/* Separate size dials for Chinese labels in titles and body copy. */
+.pj-title .pj-cn {
+  font-size: 0.78em;
+}
+.pj-body .pj-cn {
+  font-size: 0.9em;
+}
+/* the bracketed pinyin: same Kaiti stack as the about page's <em>, kept small
+   and quiet so it reads as an annotation rather than part of the headline */
+.pj-pinyin {
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", "楷体", serif;
+  font-size: 0.58em;
+  font-weight: 400;
+  font-style: normal;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  transform: translateY(-0.18em); /* optical lift, matching the about page */
+  display: inline-block;
+}
+.pj-body {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--ink) 82%, transparent);
+}
+/* a screen's body can run to several paragraphs — one blank-ish line between */
+.pj-body + .pj-body {
+  margin-top: 0.9em;
+}
+
+/* ---- ending screen : one centered column — big image, words below ---- */
+.pj-screen.pj-screen-end {
+  /* wide enough that the info block below can hold its closing line unwrapped */
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center; /* single column sits on the axis itself */
+  justify-items: center;
+  text-align: center;
+  gap: 30px;
+}
+.pj-screen-end .pj-art img {
+  max-width: min(100%, 460px);
+}
+.pj-screen-end .pj-info {
+  /* 660px fits "Chushubao will launch soon, … to everyone." on ONE line
+     (measured 626px at 19px Gaegu) */
+  max-width: 660px;
+  transform: translateY(15px);
+}
+
+/* ---- bottom cues, centred. "Scroll or click" + down arrowhead on every
+   screen except the last; there it swaps for "Return to beginning". ---- */
+.pj-scrollcue,
+.pj-returncue {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  /* the ink itself, just faded back — understated, not attention-seeking */
+  color: color-mix(in srgb, var(--ink) var(--pj-quiet), transparent);
+  transition: opacity 300ms ease;
+}
+.pj-scrollcue span,
+.pj-return span {
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+.pj-next {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 22px;
+  color: inherit;
+  transform: rotate(1.5deg);
+  animation: pj-bob 1.8s ease-in-out infinite;
+}
+/* the down arrow, a touch smaller than the top-bar chevrons */
+.pj-next .pj-chev {
+  width: 19px;
+  height: 19px;
+  transition: opacity 180ms ease;
+}
+/* hover/focus feedback that stays quiet: the arrow LIGHTENS rather than darkens,
+   so it acknowledges the pointer without shouting */
+.pj-next:hover .pj-chev,
+.pj-next:focus-visible .pj-chev { opacity: 0.53; }
+.pj-next:focus-visible { outline: none; }
+.pj-scrollcue.is-hidden,
+.pj-returncue.is-hidden { opacity: 0; pointer-events: none; }
+
+/* return-to-beginning: one quiet button, label + up arrowhead */
+.pj-return {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: inherit;
+  transition: color 200ms ease;
+}
+.pj-return .pj-chev {
+  width: 19px;
+  height: 19px;
+  transform: rotate(-2deg);
+  /* same gentle bob as the down arrow, mirrored upward (the keyframes carry
+     the -2deg tilt because animating transform would otherwise drop it) */
+  animation: pj-bob-up 1.8s ease-in-out infinite;
+}
+/* same quiet lightening on hover as the down arrow — the ARROW only; the
+   label never reacts (matches the scroll cue, whose label sits outside the
+   button and so never changed) */
+.pj-return .pj-chev { transition: opacity 180ms ease; }
+.pj-return:hover .pj-chev,
+.pj-return:focus-visible .pj-chev { opacity: 0.53; }
+.pj-return:focus-visible { outline: none; }
+
+@keyframes pj-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+@keyframes pj-bob-up {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-4px) rotate(-2deg); }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .pj-screen { transition: opacity 200ms ease; transform: none; }
+  .pj-screen.is-past { transform: none; }
+  .pj-next { animation: none; }
+  .pj-return .pj-chev { animation: none; }
+}
+
+/* ---- iPad PORTRAIT + phones : stack the columns — art on top, words below.
+   900px catches every iPad portrait width (768/810/834) while iPad landscape
+   (1024+) keeps the two-column desktop composition. Everything is sized by
+   HEIGHT too (svh caps) so a stacked screen can never spill past the viewport
+   of the non-scrolling deck. ---- */
+@media (max-width: 900px) {
+  .pj-topbar { width: min(100% - 44px, 1280px); padding-top: 22px; }
+  .pj-screen {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+    gap: 22px;
+    padding: 96px 26px 112px;
+  }
+  /* desktop alternates art/text sides in DOM order; stacked, the art always
+     leads regardless of which side it sat on */
+  .pj-art { order: -1; }
+  .pj-art img { max-width: min(78%, 340px); max-height: 34svh; width: auto; }
+  .pj-screen-end .pj-art img { max-width: min(88%, 380px); max-height: 36svh; width: auto; }
+  .pj-info { max-width: 100%; }
+  /* live demos: shorter than their desktop caps so title + body fit below */
+  .pj-demoframe { height: min(46svh, 480px); }
+  .pj-ballframe { height: min(38svh, 400px); }
+}
+
+/* short landscape phones (e.g. 844x390): compress the stack further */
+@media (max-width: 900px) and (max-height: 500px) {
+  .pj-screen { padding: 78px 26px 90px; gap: 14px; }
+  .pj-art img, .pj-screen-end .pj-art img { max-height: 30svh; }
+  .pj-demoframe { height: min(50svh, 280px); }
+  .pj-ballframe { height: min(44svh, 240px); }
+}

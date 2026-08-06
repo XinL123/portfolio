@@ -24,6 +24,23 @@
   status = 301
   force = true
 
+# The Chushubao case study lives in land-of-wisdom.html but its canonical url
+# is clean: /projects/chushubao. Same recipe as / and /projects — the .html
+# address 301s to the clean form (force = true because the file really exists,
+# and Netlify skips unforced redirects over real files), then the clean form
+# 200-rewrites to the document. The page's internal urls are all root-absolute,
+# so serving it from a nested path resolves correctly.
+[[redirects]]
+  from = "/land-of-wisdom.html"
+  to = "/projects/chushubao"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/projects/chushubao"
+  to = "/land-of-wisdom.html"
+  status = 200
+
 # /projects is served BY THE SERVER from the home document — status 200 is a
 # rewrite, not a redirect, so the address bar keeps /projects and the browser
 # never sees index.html or #work. The Projects carousel is not duplicated; it

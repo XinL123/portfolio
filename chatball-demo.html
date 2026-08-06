@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chushubao · AI Chat Demo</title>
+<style>
+  /* preview page only — the component is everything inside .cbb.
+     Background is transparent so this file can be dropped into an <iframe> on
+     any page (light or dark) and only the ball + caption show. */
+  html, body { margin: 0; padding: 0; background: transparent; height: 100%; }
+  /* NOTE: the root is NOT centred by body layout. When the unscaled design box
+     overflows the host viewport, grid/flex "center" falls back to start-
+     alignment (safe alignment), which un-centres the scaled result — so fit()
+     centres via the transform instead, from a fixed 0,0 origin. */
+  body { box-sizing: border-box; }
+  .cbb { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+  /* ============ 聊聊球 looping demo ============
+     The ball itself is the untouched design SVG + the WebGL fog layer from
+     聊聊球.html. The microphone is replaced by a scripted "conversation":
+     the ball murmurs a prompt, then "hears" a reply (syllable-shaped level
+     bursts), swelling and stirring its clouds; prompt lines cross-fade
+     below. All classes prefixed cbb-. */
+
+  .cbb {
+    display: flex; flex-direction: column; align-items: center; gap: 46px;
+    /* breathing room for the glow: the 46px-blur halo is visually gone by
+       ~1.5x its blur (~70px), and an iframe clips at its rectangle — without
+       this padding the fade gets sliced into a visible square. Kept as TIGHT
+       as the glow allows so the ball renders as large as possible in the
+       host box. (Bottom needs none: gap + caption already provide ~104px,
+       which also covers the 24px-offset drop shadow.) */
+    padding: 75px 75px 0;
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    user-select: none;
+  }
+  .cbb, .cbb * { box-sizing: border-box; }
+
+  /* ball outline fixed at 232px; scale rides on the wrapper (compositor) */
+  .cbb-ball {
+    width: 232px; height: 232px; border-radius: 116px;
+    position: relative; overflow: hidden;
+    will-change: transform;
+    /* Definition without an outline (the hairline stroke read too hard against
+       the white top). Two soft layers, ChatGPT-orb style, in the ball's own
+       warm red:
+       1. an ambient halo all around — faintly separates the white top from a
+          white page, reads as the orb glowing;
+       2. a deeper grounding shadow below — lifts the ball off the page.
+       Dials: --cbb-halo (glow colour/strength) · --cbb-drop (under-shadow) */
+    box-shadow:
+      0 0 46px var(--cbb-halo, rgba(200, 57, 46, 0.13)),
+      0 24px 60px -14px var(--cbb-drop, rgba(200, 57, 46, 0.30));
+  }
+  .cbb-ball svg.cbb-base { position: absolute; inset: 0; width: 232px; height: 232px; }
+  .cbb-ball canvas {
+    position: absolute; left: -12px; top: -12px;
+    width: 256px; height: 256px; display: block;
+    filter: blur(6px);
+  }
+
+  .cbb-hint {
+    min-height: 58px; display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    /* matches the page's 聊聊 pinyin exactly: color-mix(--ink 55%, transparent)
+       = #050505 at 55% in light. (var(--ink) isn't available inside the iframe,
+       so the two theme values are resolved here.) */
+    color: rgba(5, 5, 5, 0.55); font-size: 15px;
+    /* SF Pro Text Regular — the prompts are English now, and this is the
+       system voice ChatGPT / Claude speak in. (-apple-system resolves to SF
+       Pro on macOS/iOS; the rest are fallbacks for other platforms.) */
+    font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 400; line-height: 26px; word-wrap: break-word;
+    opacity: 1; transition: opacity .6s ease;
+  }
+  .cbb-hint.cbb-gone { opacity: 0; }
+  /* embedded on the dark site theme the default near-black caption would be
+     invisible, so mirror the page's cream ink (the ball itself is unchanged —
+     it reads as a glowing orb on either background) */
+  /* lighter grey than the light-mode 55% — on black the same alpha read too
+     dim, so the dark caption gets its own brighter step */
+  .cbb.cbb-dark .cbb-hint { color: rgba(249, 243, 235, 0.72); }
+</style>
+</head>
+<body>
+
+<div class="cbb" id="cbbRoot">
+  <div class="cbb-ball" id="cbbBall">
+    <!-- Base Layer：原始设计稿，像素级不变（出自 聊聊球.html） -->
+    <svg class="cbb-base" width="232" height="232" viewBox="0 0 232 232" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g filter="url(#cbb_i)">
+    <g clip-path="url(#cbb_clip)">
+    <rect width="232" height="232" rx="116" fill="white"/>
+    <g filter="url(#cbb_f1)"><rect x="85" y="83" width="181" height="176" rx="63.3" fill="url(#cbb_p0)"/></g>
+    <g filter="url(#cbb_f2)"><rect x="85" y="96.6133" width="227" height="173.67" rx="63.3" transform="rotate(-8.26076 85 96.6133)" fill="url(#cbb_p1)"/></g>
+    <g filter="url(#cbb_f3)"><rect x="69.4062" y="61.75" width="248.82" height="191.617" rx="63.3" transform="rotate(-8.26076 69.4062 61.75)" fill="url(#cbb_p2)"/></g>
+    <g filter="url(#cbb_f4)"><rect x="-34" y="141" width="265" height="49" rx="24.5" fill="url(#cbb_p3)"/></g>
+    <g filter="url(#cbb_f5)"><rect x="-66.3164" y="128" width="265" height="24" rx="12" transform="rotate(4.02393 -66.3164 128)" fill="url(#cbb_p4)"/></g>
+    <g filter="url(#cbb_f6)"><rect x="-21.5156" y="156.277" width="272" height="94" rx="47" transform="rotate(7.66566 -21.5156 156.277)" fill="url(#cbb_p5)"/></g>
+    <g filter="url(#cbb_f7)"><rect x="-26.4609" y="171" width="272" height="94" rx="47" transform="rotate(7.66566 -26.4609 171)" fill="url(#cbb_p6)"/></g>
+    <g filter="url(#cbb_f8)"><rect x="12" width="206" height="204" rx="36.54" fill="url(#cbb_p7)" fill-opacity="0.6"/></g>
+    <g filter="url(#cbb_f9)"><rect x="-29.4609" y="193" width="272" height="21.0266" rx="10.5133" transform="rotate(7.66566 -29.4609 193)" fill="url(#cbb_p8)"/></g>
+    <g filter="url(#cbb_f10)"><rect x="-29.1953" y="202" width="272" height="14.7367" rx="7.36835" transform="rotate(7.66566 -29.1953 202)" fill="url(#cbb_p9)"/></g>
+    </g>
+    </g>
+    <defs>
+    <filter id="cbb_i" x="0" y="0" width="239" height="241" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+    <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+    <feOffset dx="7" dy="9"/>
+    <feGaussianBlur stdDeviation="11"/>
+    <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.85 0"/>
+    <feBlend mode="normal" in2="shape" result="effect1_innerShadow"/>
+    </filter>
+    <filter id="cbb_f1" x="65" y="63" width="221" height="216" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10" result="b"/></filter>
+    <filter id="cbb_f2" x="73.4297" y="52.4297" width="272.738" height="227.621" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="10" result="b"/></filter>
+    <filter id="cbb_f3" x="37.8359" y="-5.57031" width="336.91" height="288.52" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="20" result="b"/></filter>
+    <filter id="cbb_f4" x="-64" y="111" width="325" height="109" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="15" result="b"/></filter>
+    <filter id="cbb_f5" x="-97.1875" y="98.8125" width="324.406" height="100.914" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="15" result="b"/></filter>
+    <filter id="cbb_f6" x="-58.2109" y="132.121" width="330.422" height="177.754" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="15" result="b"/></filter>
+    <filter id="cbb_f7" x="-73.1562" y="136.844" width="350.422" height="197.754" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="20" result="b"/></filter>
+    <filter id="cbb_f8" x="9" y="-3" width="212" height="210" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="1.5" result="b"/></filter>
+    <filter id="cbb_f9" x="-60.957" y="164.309" width="329.758" height="114.504" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="15" result="b"/></filter>
+    <filter id="cbb_f10" x="-60.2461" y="172.918" width="329.703" height="109.055" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur stdDeviation="15" result="b"/></filter>
+    <radialGradient id="cbb_p0" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(175.5 171) rotate(-31.2807) scale(155.037 150.754)">
+    <stop stop-color="#C8392E" stop-opacity="0.11"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cbb_p1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(198.5 183.448) scale(160.513 122.803)">
+    <stop stop-color="#C8392E" stop-opacity="0.4"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cbb_p2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(193.816 157.559) rotate(-36.6157) scale(170.341 131.18)">
+    <stop stop-color="#C8392E" stop-opacity="0.2"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cbb_p3" cx="0" cy="0" r="1" gradientTransform="matrix(213.737 10.5795 -54.0985 39.5212 72.1464 154.92)" gradientUnits="userSpaceOnUse">
+    <stop offset="0.35" stop-color="#FDA19B" stop-opacity="0.33"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0.2"/></radialGradient>
+    <radialGradient id="cbb_p4" cx="0" cy="0" r="1" gradientTransform="matrix(213.737 5.18182 -54.0985 19.3573 39.83 134.818)" gradientUnits="userSpaceOnUse">
+    <stop offset="0.35" stop-color="#FDA19B" stop-opacity="0.33"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0.2"/></radialGradient>
+    <radialGradient id="cbb_p5" cx="0" cy="0" r="1" gradientTransform="matrix(367.859 -28.1546 57.6762 128.918 -9.53325 203.504)" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#C8392E" stop-opacity="0.2"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0.5"/></radialGradient>
+    <radialGradient id="cbb_p6" cx="0" cy="0" r="1" gradientTransform="matrix(367.859 -28.1546 57.6762 128.918 -14.4786 218.227)" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#C8392E" stop-opacity="0.3"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0.7"/></radialGradient>
+    <radialGradient id="cbb_p7" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(98.52 73.44) scale(155.079 204.798)">
+    <stop stop-color="white" stop-opacity="0.96"/><stop offset="0.7" stop-color="white" stop-opacity="0"/></radialGradient>
+    <radialGradient id="cbb_p8" cx="0" cy="0" r="1" gradientTransform="matrix(367.859 -6.29783 57.6762 28.8374 -17.4786 203.564)" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#C8392E" stop-opacity="0.3"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0.7"/></radialGradient>
+    <radialGradient id="cbb_p9" cx="0" cy="0" r="1" gradientTransform="matrix(367.859 -4.41389 57.6762 20.211 -17.2129 209.404)" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#C8392E" stop-opacity="0.4"/><stop offset="0.7" stop-color="#C8392E" stop-opacity="0.8"/></radialGradient>
+    <clipPath id="cbb_clip"><rect width="232" height="232" rx="116" fill="white"/></clipPath>
+    </defs>
+    </svg>
+    <!-- Fog Layer -->
+    <canvas id="cbbFog"></canvas>
+  </div>
+  <!-- must match PROMPTS[0] — this is the first frame, before the script
+       starts cycling the lines -->
+  <div class="cbb-hint" id="cbbHint">What&rsquo;s on your mind?</div>
+</div>
+
+<script>
+(function () {
+'use strict';
+
+/* ================= 云雾层（WebGL，透明 canvas）—— 引擎与 聊聊球.html 一致 ================= */
+
+var BALL = 232, OVER = 12, CSIZE = BALL + OVER * 2;
+
+var canvas = document.getElementById('cbbFog');
+var dpr = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width = CSIZE * dpr;
+canvas.height = CSIZE * dpr;
+
+var gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false });
+
+var VERT = 'attribute vec2 a_pos;\nvoid main() { gl_Position = vec4(a_pos, 0.0, 1.0); }';
+
+var FRAG = [
+'precision highp float;',
+'uniform vec2  u_res;',
+'uniform float u_scale;',
+'uniform float u_life;',
+'uniform float u_drift;',
+'uniform float u_amp;',
+'uniform float u_spread;',
+'uniform float u_turb;',
+'uniform float u_soft;',
+'uniform float u_push;',
+'float rnd(float s) { return fract(sin(s * 78.233) * 43758.5453); }',
+'float hash(vec2 p) {',
+'  p = fract(p * vec2(123.34, 456.21));',
+'  p += dot(p, p + 45.32);',
+'  return fract(p.x * p.y);',
+'}',
+'float noise(vec2 p) {',
+'  vec2 i = floor(p);',
+'  vec2 f = fract(p);',
+'  vec2 u = f * f * (3.0 - 2.0 * f);',
+'  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),',
+'             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);',
+'}',
+'float fbm(vec2 p) {',
+'  float v = 0.0, amp = 0.62;',
+'  mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);',
+'  for (int i = 0; i < 3; i++) {',
+'    v += amp * noise(p);',
+'    p = rot * p * 1.9;',
+'    amp *= 0.45;',
+'  }',
+'  return v;',
+'}',
+'float blob(vec2 q, vec2 c, float rad, float squash) {',
+'  vec2 d = (q - c) / rad;',
+'  d.x *= squash;',
+'  return exp(-dot(d, d));',
+'}',
+'void main() {',
+'  vec2 uv = gl_FragCoord.xy / u_res;',
+'  vec2 p  = (uv * 2.0 - 1.0) * u_scale;',
+'  float r = length(p);',
+'  vec2 w = vec2(fbm(p * 0.85 + vec2(u_drift * 0.6, 0.0)),',
+'                fbm(p * 0.85 + vec2(0.0, -u_drift * 0.5) + 5.7));',
+'  vec2 q = p + (w - 0.5) * (0.20 + 0.42 * u_turb);',
+'  float d = 0.0;',
+'  for (int i = 0; i < 12; i++) {',
+'    float fi = float(i);',
+'    float s  = fi + 1.0;',
+'    float even = fi / 12.0;',
+'    float a1 = u_life * (0.50 + 0.42 * rnd(s * 1.7)) + even * 6.2831 + rnd(s * 3.3);',
+'    float a2 = u_life * (0.38 + 0.36 * rnd(s * 2.9)) + even * 3.8829 + rnd(s * 4.1);',
+'    float cx = 0.84 * sin(a1);',
+'    float cy = (-0.55 + 0.60 * u_spread) + (0.35 + 0.50 * u_spread) * sin(a2);',
+'    float lp = fract(u_life * 0.085 * (0.88 + 0.24 * rnd(s * 5.7)) + even);',
+'    float op = sin(3.14159265 * lp);',
+'    op *= op;',
+'    float rad = (0.28 + 0.13 * rnd(s * 7.9) + 0.05 * sin(u_life * 0.8 + s * 2.0))',
+'              * (1.0 + 0.34 * u_push);',
+'    vec2 c = vec2(cx, cy) * (1.0 + 0.17 * u_push);',
+'    c.y += 0.11 * u_push;',
+'    d += op * blob(q, c, rad, 0.72);',
+'  }',
+'  float streak = fbm(vec2(q.x * 2.3, q.y * 0.42 - u_drift * 1.15) + 9.3);',
+'  float tex = fbm(q * 1.5 + vec2(u_drift * 0.55, -u_drift * 0.35) + 3.3);',
+'  d *= (0.45 + 0.95 * streak) * (0.70 + 0.58 * tex);',
+'  float thr = 0.42 - 0.11 * u_push;',
+'  float a = smoothstep(thr, thr + u_soft, d);',
+'  a *= u_amp;',
+'  a *= 0.58 + 0.42 * smoothstep(-1.10, -0.30, p.y);',
+'  a *= 1.0 - smoothstep(0.90, 1.0, r);',
+'  a = clamp(a, 0.0, 0.92);',
+'  gl_FragColor = vec4(vec3(a), a);',
+'}'
+].join('\n');
+
+var uLife, uDrift, uAmp, uSpread, uTurb, uSoft, uPush;
+if (gl) {
+  var compile = function (type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      throw new Error('shader compile failed: ' + gl.getShaderInfoLog(s));
+    }
+    return s;
+  };
+  var prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var locPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(locPos);
+  gl.vertexAttribPointer(locPos, 2, gl.FLOAT, false, 0, 0);
+  var U = function (n) { return gl.getUniformLocation(prog, n); };
+  uLife = U('u_life'); uDrift = U('u_drift');
+  uAmp = U('u_amp'); uSpread = U('u_spread');
+  uTurb = U('u_turb'); uSoft = U('u_soft'); uPush = U('u_push');
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.uniform2f(U('u_res'), canvas.width, canvas.height);
+  gl.uniform1f(U('u_scale'), CSIZE / BALL);
+  gl.clearColor(0, 0, 0, 0);
+}
+
+/* ================= 参数（沿用 聊聊球.html 调好的值） ================= */
+var CONFIG = {
+  attack:      0.040,
+  release:     0.16,
+  inertia:     2.20,
+  follow:      1.00,
+  ballScale:   0.070,
+  activeSpeed: 1.15,
+  idleSpeed:   0.09,
+  amount:      0.76,
+  spread:      1.00,
+  softness:    0.55,
+  turbulence:  0.60,
+};
+
+/* ================= 模拟对话（代替麦克风） =================
+   一轮 = 一句提示词：
+     murmur  球自己轻声说出这句话（文字淡入，轻微起伏）
+     pause   安静片刻
+     listen  “听到”对方说话 —— 音节状的音量包络，球放大、云涌动
+     settle  余韵平息
+     swap    文字淡出，换下一句
+   每轮的时长与包络都由种子噪声决定，永不完全重复。 */
+
+/* English openers in the register ChatGPT / Claude use — short, warm, and
+   inviting rather than task-y ("What can I help with?"). Same meanings as the
+   original Chinese lines, kept brief so they stay on one line in the caption. */
+var PROMPTS = [
+  'What’s on your mind?',   // ’ = typographic apostrophe, matches the
+  'I’m here. Take your time.', // markup's &rsquo; on the first frame
+
+  'How are you feeling today?',
+  'What have you been up to?',
+  'Tell me about your day.',
+  'Start anywhere you like.',
+];
+
+/* 1D value noise：种子化，用来生成音节 / 词间隙 / 语速波动 */
+function h1(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function n1(t) {
+  var i = Math.floor(t), f = t - i;
+  var u = f * f * (3 - 2 * f);
+  return h1(i) * (1 - u) + h1(i + 1) * u;
+}
+
+/* 音节状语音包络：t 秒（窗口内），seed 让每轮不同 */
+function speechLevel(t, seed) {
+  var rate = 3.1 + 1.3 * n1(t * 0.5 + seed * 3.1);          /* 语速本身也在变 */
+  var syl = Math.max(0, Math.sin(6.28318 * rate * t + seed));
+  syl = Math.pow(syl, 0.75);                                 /* 音节脉冲 */
+  var word = 0.12 + 0.88 * Math.min(1, Math.max(0, (n1(t * 1.05 + seed * 7.7) - 0.30) * 3.2)); /* 词间隙 */
+  var base = 0.42 + 0.34 * n1(t * 0.23 + seed * 13.7);       /* 整句的强弱起伏 */
+  return Math.min(1, (0.15 + 0.9 * syl) * word * base * 1.9);
+}
+
+/* 球自己轻声说话：小而柔的起伏 */
+function murmurLevel(t, seed) {
+  var syl = Math.max(0, Math.sin(6.28318 * 2.6 * t + seed * 2.2));
+  return 0.10 + 0.16 * Math.pow(syl, 0.8) * (0.5 + 0.5 * n1(t * 0.9 + seed));
+}
+
+var hintEl = document.getElementById('cbbHint');
+var ballEl = document.getElementById('cbbBall');
+
+var promptIdx = 0, cycle = 0;
+var phase = 'murmur', phaseT = 0;
+var seed = 0.7;
+/* 每轮随种子变化的时长 */
+var durlisten = 2.25, durMurmur = 1.3;
+
+/* phases run ~25% shorter than the original so the prompt cycles a touch
+   faster — still calm, not hurried. swap stays 0.65 (it's the CSS fade). */
+function phaseDur() {
+  switch (phase) {
+    case 'murmur': return durMurmur;
+    case 'pause':  return 0.68 + 0.6 * h1(cycle * 3.3);
+    case 'listen': return durListen;
+    case 'settle': return 1.0;
+    case 'swap':   return 0.65;   /* 同 CSS 淡出时长 */
+  }
+  return 1;
+}
+var durListen = 2.25;
+
+function nextPhase() {
+  phaseT = 0;
+  switch (phase) {
+    case 'murmur': phase = 'pause'; break;
+    case 'pause':  phase = 'listen';
+      durListen = 1.8 + 1.2 * h1(cycle * 7.9 + 1);
+      break;
+    case 'listen': phase = 'settle'; break;
+    case 'settle': phase = 'swap';
+      hintEl.classList.add('cbb-gone');
+      break;
+    case 'swap':
+      promptIdx = (promptIdx + 1) % PROMPTS.length;
+      cycle++;
+      seed = cycle * 5.13 + 0.7;
+      durMurmur = 1.15 + 0.45 * h1(cycle * 11.3);
+      hintEl.textContent = PROMPTS[promptIdx];
+      hintEl.classList.remove('cbb-gone');
+      phase = 'murmur';
+      break;
+  }
+}
+
+function scriptedLevel() {
+  switch (phase) {
+    case 'murmur': return murmurLevel(phaseT, seed);
+    case 'listen': return speechLevel(phaseT, seed);
+    /* 安静阶段仍有极小的底噪，让球保持似有似无的呼吸 */
+    default: return 0.02 + 0.02 * n1(phaseT * 0.6 + seed);
+  }
+}
+
+/* ================= 音量包络 → 云雾 / 球体（与 聊聊球.html 相同的动力学） ================= */
+
+var rawLevel = 0, level = 0, levelSlow = 0, pulse = 0, energy = 0;
+var lifeT = 0, driftT = 0, ballScaleCur = 1, breathT = 0;
+
+function smooth(cur, target, tau, dt) { return cur + (target - cur) * (1 - Math.exp(-dt / tau)); }
+
+function step(dt) {
+  /* 剧本推进 */
+  phaseT += dt;
+  if (phaseT >= phaseDur()) nextPhase();
+  rawLevel = scriptedLevel();
+
+  level = smooth(level, rawLevel, rawLevel > level ? CONFIG.attack : CONFIG.release, dt);
+  levelSlow = smooth(levelSlow, rawLevel, 0.28, dt);
+  var onset = Math.max(0, rawLevel - levelSlow);
+  pulse = Math.max(smooth(pulse, 0, 0.20, dt), Math.min(1, onset * 2.6));
+  energy = smooth(energy, rawLevel, rawLevel > energy ? CONFIG.attack * 4 : CONFIG.inertia, dt);
+
+  var drive = Math.min(1, energy * 0.72 + level * 0.28);
+  var react = Math.min(1, level * 0.78 + pulse * 0.45) * CONFIG.follow;
+
+  /* 涌动速度：随音量之外再叠一层慢波动 —— 云一会儿快、一会儿慢 */
+  var mood = 0.72 + 0.56 * n1(lifeT * 0.11 + 31.7);
+  lifeT  += dt * (CONFIG.idleSpeed + CONFIG.activeSpeed * mood * (0.45 * drive + 0.55 * level));
+  driftT += dt * (CONFIG.idleSpeed * 0.9 + CONFIG.activeSpeed * 0.75 * mood * drive);
+  lifeT  += pulse * 0.055 * dt * 60;
+
+  var presence = Math.min(1, drive * 2.4);
+  var amp = 0.05 + CONFIG.amount * Math.min(1, presence * (0.72 + 0.38 * react));
+
+  if (gl) {
+    gl.uniform1f(uLife, lifeT);
+    gl.uniform1f(uDrift, driftT);
+    gl.uniform1f(uAmp, amp);
+    gl.uniform1f(uSpread, CONFIG.spread);
+    gl.uniform1f(uTurb, CONFIG.turbulence * (0.35 + 0.65 * drive));
+    gl.uniform1f(uSoft, CONFIG.softness);
+    gl.uniform1f(uPush, react);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  /* 球体缩放：音量 + 起音瞬态，再叠一丝常驻呼吸 */
+  breathT += dt;
+  var breath = 0.006 * Math.sin(breathT * 1.5);
+  var scaleTarget = 1 + breath + CONFIG.ballScale * Math.min(1.15, level * 0.75 + pulse * 0.55);
+  ballScaleCur = smooth(ballScaleCur, scaleTarget, 0.055, dt);
+  ballEl.style.transform = 'scale(' + ballScaleCur.toFixed(4) + ')';
+}
+
+/* ================= 主循环（离屏暂停） ================= */
+
+/* ---------- embedding: fit to the iframe, follow the page's theme ----------
+   The component is intrinsically fixed-size (232 ball + 46 gap + 58 caption),
+   so scale the whole column to whatever box the host gives it; body is a
+   centred grid, so the scaled column stays centred on both axes. */
+(function () {
+  var rootEl = document.getElementById('cbbRoot');
+  /* design box incl. the 75px glow padding: 232 ball + 150 = 382 wide;
+     75 + 232 + 46 gap + 58 caption = 411 tall */
+  var DW = 382, DH = 411;
+  function fit() {
+    var cw = document.documentElement.clientWidth;
+    var ch = document.documentElement.clientHeight;
+    var s = Math.min(cw / DW, ch / DH);
+    /* translate centres the SCALED box — origin is 0,0, see the CSS note */
+    rootEl.style.transform =
+      'translate(' + ((cw - DW * s) / 2).toFixed(2) + 'px,' +
+                     ((ch - DH * s) / 2).toFixed(2) + 'px) scale(' + s.toFixed(4) + ')';
+  }
+  fit();
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(document.documentElement);
+  else window.addEventListener('resize', fit);
+
+  /* same-origin embed: mirror body[data-theme] so the caption stays legible.
+     Standalone (or cross-origin) the try/catch leaves it in light styling. */
+  try {
+    if (window.parent !== window) {
+      var pbody = window.parent.document.body;
+      var sync = function () { rootEl.classList.toggle('cbb-dark', pbody.dataset.theme === 'dark'); };
+      sync();
+      new MutationObserver(sync).observe(pbody, { attributes: true, attributeFilter: ['data-theme'] });
+    }
+  } catch (e) { /* cross-origin: stay light */ }
+})();
+
+var running = true, gate = /nogate/.test(location.search);
+if (!gate && 'IntersectionObserver' in window) {
+  new IntersectionObserver(function (e) { running = e[0].isIntersecting; }, { threshold: 0.05 })
+    .observe(document.getElementById('cbbRoot'));
+}
+
+var lastT = performance.now();
+function frame(now) {
+  var dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+  if (running) step(dt);
+  requestAnimationFrame(frame);
+}
+
+if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  /* 静态一帧：有云、微缩放，不再动 */
+  step(1 / 60);
+} else {
+  requestAnimationFrame(frame);
+}
+
+/* 调试钩子：__advance(秒数) 手动快进（自动跑剧本），便于无头验证 */
+window.__advance = function (sec) {
+  var n = Math.ceil(sec / (1 / 60));
+  for (var i = 0; i < n; i++) step(1 / 60);
+  return { phase: phase, prompt: PROMPTS[promptIdx], level: rawLevel.toFixed(3), scale: ballScaleCur.toFixed(4) };
+};
+})();
+</script>
+</body>
+</html>

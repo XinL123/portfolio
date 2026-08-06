@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Chushubao — an AI-powered book-writing app for older adults. A case study by Xin.L." />
+    <meta property="og:title" content="Xin.L | Portfolio" />
+    <meta property="og:description" content="Chushubao — an AI-powered book-writing app for older adults. A case study by Xin.L." />
+    <meta property="og:type" content="website" />
+    <title>Xin.L | Portfolio</title>
+    <script>
+      (function () {
+        var t = "light";
+        try {
+          var nav = performance.getEntriesByType("navigation")[0];
+          if (nav && nav.type === "reload") sessionStorage.removeItem("portfolio-theme");
+          if (sessionStorage.getItem("portfolio-theme") === "dark") t = "dark";
+        } catch (e) {}
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frijole&family=Gaegu:wght@300;400;700&display=swap" />
+    <link rel="icon" type="image/png" href="/favicon.png?v=3" />
+    <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+    <link rel="stylesheet" href="/styles.css?v=202607211h" />
+    <link rel="stylesheet" href="/project.css?v=21" />
+  </head>
+  <body data-page="project">
+    <script>
+      document.body.dataset.theme = document.documentElement.dataset.theme;
+    </script>
+
+    <!-- Shared defs. `pj-rough` is a pencil-roughen filter: fractal-noise
+         turbulence displaces the clean geometry so every edge wobbles like a
+         hand line. The noise is sampled in absolute space, so one filter gives
+         each shape its own wobble. Chevrons are thin single strokes (round cap,
+         gently curved — never a straight V) to echo the home-page doodles. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <filter id="pj-rough" x="-35%" y="-70%" width="170%" height="240%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <!-- plain chevrons (the original simple look) — two limbs meeting at a
+             point, just barely bowed so the roughen filter reads as a hand line
+             rather than a drafted V. Nothing fancy. -->
+        <path id="pj-chev-left" d="M 15.5 4.8 Q 11.5 8.4, 8.3 12 Q 11.5 15.6, 15.5 19.2" />
+        <path id="pj-chev-down" d="M 4.8 8.8 Q 8.4 12.4, 12 15.6 Q 15.6 12.4, 19.2 8.8" />
+        <path id="pj-chev-up"   d="M 4.8 15.2 Q 8.4 11.6, 12 8.4 Q 15.6 11.6, 19.2 15.2" />
+      </defs>
+    </svg>
+
+    <!-- ============ top bar (same inner width as every page) ============ -->
+    <div class="pj-topbar">
+      <a class="pj-back" href="/projects" aria-label="Back to Projects">
+        <svg class="pj-chev" viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#pj-rough)"><use href="#pj-chev-left" /></g></svg>
+      </a>
+
+      <div class="pj-progress" aria-label="Project progress">
+        <!-- Solid grey dots + dark pill (from the reference image). The shapes
+             live once in the defs below; the row is 7 <use> copies and the
+             current-screen pill (.pj-cap) is a separate svg that project.js
+             SLIDES between slots. -->
+        <svg class="pj-prog" viewBox="0 0 232 24" fill="none" aria-hidden="true">
+          <defs>
+            <!-- shapes TRACED from project/出书宝/progress-reference.png
+                 (Moore contour + Douglas-Peucker; IoU vs source mask:
+                 dot 0.98, pill 0.96). Dot centred at 0,0; pill centred at
+                 17,12 of the 34x24 cap box. The pill's light slivers are
+                 HOLES (fill-rule evenodd); the mask path (outer loop, paper
+                 fill) sits under it so the grey dot beneath never shows
+                 through the holes. -->
+            <path id="pj-dot-shape" d="M -1.08 -4.81 L 0.98 -4.69 L 3.15 -3.73 L 4.24 -2.64 L 4.72 -1.31 L 4.85 0.26 L 3.88 3.41 L 3.52 3.77 L 1.22 4.49 L -0.47 4.73 L -2.77 4.13 L -4.22 2.56 L -4.95 0.5 L -4.7 -1.19 L -3.5 -3.36 L -2.41 -4.33 Z" />
+            <g id="pj-pill-shape">
+              <path class="pj-cap-mask" d="M 23.71 7.1 L 27.7 7.23 L 28.91 7.71 L 30.48 9.04 L 31.2 10.37 L 31.45 12.42 L 30.96 13.99 L 29.51 15.69 L 28.06 16.41 L 25.76 16.77 L 10.17 16.77 L 7.99 16.9 L 5.46 16.41 L 4.13 15.57 L 3.16 14.36 L 2.55 12.42 L 2.68 10.85 L 3.16 9.76 L 4.37 8.43 L 7.27 7.47 L 20.32 7.59 Z" />
+              <path class="pj-cap-fill" fill-rule="evenodd" d="M 23.71 7.1 L 27.7 7.23 L 28.91 7.71 L 30.48 9.04 L 31.2 10.37 L 31.45 12.42 L 30.96 13.99 L 29.51 15.69 L 28.06 16.41 L 25.76 16.77 L 10.17 16.77 L 7.99 16.9 L 5.46 16.41 L 4.13 15.57 L 3.16 14.36 L 2.55 12.42 L 2.68 10.85 L 3.16 9.76 L 4.37 8.43 L 7.27 7.47 L 20.32 7.59 Z M 7.39 8.8 L 5.7 9.28 L 5.58 9.76 L 6.42 9.52 L 14.4 9.28 L 16.21 9.16 L 16.21 8.92 Z M 27.7 14.36 L 26.25 14.72 L 19.6 15.08 L 19.6 15.32 L 20.45 15.32 L 26.25 15.45 L 28.42 14.72 L 28.54 14.36 Z M 24.43 8.43 L 23.59 8.55 L 23.59 8.8 L 25.64 8.8 L 26.13 9.4 L 27.7 9.4 L 28.54 9.52 L 28.67 9.28 L 27.46 8.55 Z M 5.82 14.72 L 5.82 15.08 L 6.91 15.45 L 9.93 15.45 L 9.93 15.2 L 7.75 15.08 L 7.27 14.72 Z M 21.65 11.58 L 18.87 11.94 L 18.87 12.18 L 20.08 12.18 L 22.74 11.94 L 22.74 11.58 Z M 14.16 12.54 L 13.31 12.66 L 13.07 13.03 L 15.73 12.91 L 16.82 12.79 L 16.82 12.54 Z M 4.25 10.85 L 3.88 11.21 L 3.76 12.18 L 3.88 12.66 L 4.25 12.79 L 4.37 11.94 L 4.73 11.58 L 4.73 11.09 Z M 29.75 10.97 L 29.51 11.21 L 29.63 12.18 L 29.03 12.91 L 29.39 13.03 L 29.99 12.54 L 29.99 11.21 Z M 13.43 14.96 L 12.95 15.32 L 14.04 15.32 L 14.52 15.32 L 14.52 15.08 Z M 12.95 11.09 L 12.23 11.34 L 13.31 11.46 L 14.04 11.21 Z" />
+            </g>
+          </defs>
+          <g class="pj-prog-dots">
+            <use href="#pj-dot-shape" x="12" y="12" />
+            <use href="#pj-dot-shape" x="46" y="12" />
+            <use href="#pj-dot-shape" x="80" y="12" />
+            <use href="#pj-dot-shape" x="114" y="12" />
+            <use href="#pj-dot-shape" x="148" y="12" />
+            <use href="#pj-dot-shape" x="182" y="12" />
+            <use href="#pj-dot-shape" x="216" y="12" />
+          </g>
+        </svg>
+        <svg class="pj-cap" viewBox="0 0 34 24" fill="none" aria-hidden="true">
+          <use href="#pj-pill-shape" />
+        </svg>
+      </div>
+
+      <button class="pull-chain" type="button" aria-label="Pull chain to switch to dark mode" aria-pressed="false">
+        <img class="chain-image" src="/assets/system/chain.png" alt="" draggable="false" />
+      </button>
+    </div>
+
+    <!-- ============ paged deck ============ -->
+    <main class="pj-deck">
+      <!-- 1 · Overview : art left / text right -->
+      <section class="pj-screen is-active" data-screen="0" aria-label="Overview">
+        <div class="pj-art">
+          <img class="pc-cover-light" src="/assets/project/chushubao-overview.png?v=20260805c" alt="A grandmother telling a story to a child under a ginkgo tree: &quot;When I was a little girl…&quot;" />
+          <img class="pc-cover-dark" src="/assets/project/chushubao-overview-dark.png?v=20260805c" alt="" aria-hidden="true" />
+        </div>
+        <div class="pj-info">
+          <h1 class="pj-title">Overview</h1>
+          <p class="pj-body">Chushubao is an AI-powered mobile app that guides people from shaping an initial idea to completing a book. It is designed especially for older adults who want to write their own memoirs.</p>
+        </div>
+      </section>
+
+      <!-- 2 · My Role : text left / art right -->
+      <section class="pj-screen" data-screen="1" aria-label="My Role">
+        <div class="pj-info">
+          <h2 class="pj-title">My Role</h2>
+          <p class="pj-body">New technology can feel intimidating to older adults.</p>
+          <p class="pj-body">Our goal was to use AI to make book writing more accessible to them. As the AI designer, I focused on refining human–AI interactions to create an experience that helped older adults use technology with confidence.</p>
+        </div>
+        <div class="pj-art">
+          <img class="pc-cover-light" src="/assets/project/chushubao-myrole.png?v=20260805c" alt="A nervous orange with grey hair and cracked glasses facing a huge mountain with AI carved into it" />
+          <img class="pc-cover-dark" src="/assets/project/chushubao-myrole-dark.png?v=20260805c" alt="" aria-hidden="true" />
+        </div>
+      </section>
+
+      <!-- 3 · Research : art left / text right -->
+      <section class="pj-screen" data-screen="2" aria-label="Research">
+        <div class="pj-art">
+          <img class="pc-cover-light" src="/assets/project/chushubao-research.png?v=20260805c" alt="A board of five hand-written research notes asking how older adults approach unfamiliar apps, what challenges they face on mobile devices, and when they need AI guidance" />
+          <img class="pc-cover-dark" src="/assets/project/chushubao-research-dark.png?v=20260805c" alt="" aria-hidden="true" />
+        </div>
+        <div class="pj-info">
+          <h2 class="pj-title">Research</h2>
+          <p class="pj-body">To create a truly user-friendly app, I analyzed competitors, developed design mock-ups, and examined how mobile device use differs between younger and older adults in their daily lives.</p>
+        </div>
+      </section>
+
+      <!-- 4 · AI Feature 1 : text left / art right -->
+      <section class="pj-screen" data-screen="3" aria-label="Feature I — 写写">
+        <div class="pj-info">
+          <h2 class="pj-title">Feature I — <span class="pj-cn">写写</span> <span class="pj-pinyin">[Xiěxiě]</span></h2>
+          <p class="pj-body"><span class="pj-cn">写写</span> is the core AI writing feature. It helps users brainstorm, plan, and turn their thoughts into a complete, well-structured book.</p>
+        </div>
+        <div class="pj-art">
+          <!-- the live interaction demo replaces the illustration here. It's a
+               fully self-contained page (chushubao-demo.html, all .cbd-* scoped
+               + one IIFE, no external deps) embedded in an iframe so it stays
+               independently maintainable. pointer-events:none so wheel/click
+               still page the deck; the demo auto-loops, no interaction needed. -->
+          <iframe class="pj-demoframe" src="/chushubao-demo.html" title="Chushubao · AI Writing Demo" loading="lazy" scrolling="no"></iframe>
+          <!-- auto-places into the grid row BELOW the frame (only the frame is
+               pinned to grid-area 1/1) -->
+          <p class="pj-demonote">Demo only. All rights reserved.</p>
+        </div>
+      </section>
+
+      <!-- 5 · AI Feature 2 : art left / text right -->
+      <section class="pj-screen" data-screen="4" aria-label="Feature II — 聊聊">
+        <div class="pj-art">
+          <!-- live 聊聊球 demo — same embedding contract as the phone on the
+               previous screen: self-contained page, pointer-events:none so the
+               deck still pages, auto-loops with no interaction. -->
+          <iframe class="pj-ballframe" src="/chatball-demo.html" title="Chushubao · AI Chat Demo" loading="lazy" scrolling="no"></iframe>
+        </div>
+        <div class="pj-info">
+          <h2 class="pj-title">Feature II — <span class="pj-cn">聊聊</span> <span class="pj-pinyin">[Liáoliao]</span></h2>
+          <p class="pj-body"><span class="pj-cn">聊聊</span> is the core AI conversation feature. It allows users to ask everyday questions, seek emotional support, and express themselves freely, just like talking to a friend.</p>
+        </div>
+      </section>
+
+      <!-- 6 · Testing : text left / art right -->
+      <section class="pj-screen" data-screen="5" aria-label="Testing">
+        <div class="pj-info">
+          <h2 class="pj-title">Testing</h2>
+          <p class="pj-body">To ensure a smooth and reliable experience, I conducted extensive testing to evaluate the AI model’s accuracy, stability, and response quality.</p>
+        </div>
+        <div class="pj-art">
+          <img class="pc-cover-light" src="/assets/project/chushubao-testing.png?v=20260805c" alt="The orange says “I scream whenever I see a spider” and the AI mishears, replying “Ice cream? What flavor?”" />
+          <img class="pc-cover-dark" src="/assets/project/chushubao-testing-dark.png?v=20260805c" alt="" aria-hidden="true" />
+        </div>
+      </section>
+
+      <!-- 7 · Ending : one centered column — big image, words below -->
+      <section class="pj-screen pj-screen-end" data-screen="6" aria-label="Final Reflection">
+        <div class="pj-art">
+          <img class="pc-cover-light" src="/assets/project/chushubao-reflection.png?v=20260805c" alt="The grandmother and child oranges watching a sunset over the sea, long shadows behind them, as a small winged AI robot flies off into the sky" />
+          <img class="pc-cover-dark" src="/assets/project/chushubao-reflection-dark.png?v=20260805c" alt="" aria-hidden="true" />
+        </div>
+        <div class="pj-info">
+          <h2 class="pj-title">Final Reflection</h2>
+          <p class="pj-body">Building Chushubao from 0 to 1 strengthened my technical and collaboration skills. Most importantly, I turned the AI into a unique, 24/7 professional editor.</p>
+          <p class="pj-body">Chushubao will launch soon, making book writing more accessible to everyone.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============ bottom cues ============ -->
+    <div class="pj-scrollcue">
+      <span>Scroll or click</span>
+      <button class="pj-next" type="button" aria-label="Next screen">
+        <svg class="pj-chev" viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#pj-rough)"><use href="#pj-chev-down" /></g></svg>
+      </button>
+    </div>
+
+    <div class="pj-returncue is-hidden">
+      <button class="pj-return" type="button" aria-label="Return to beginning">
+        <span>Return to beginning</span>
+        <svg class="pj-chev" viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#pj-rough)"><use href="#pj-chev-up" /></g></svg>
+      </button>
+    </div>
+
+    <script src="/script.js?v=202607211h"></script>
+    <script src="/project.js?v=16"></script>
+  </body>
+</html>

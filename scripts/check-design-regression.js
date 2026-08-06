@@ -5,6 +5,7 @@ const aboutHtml = fs.readFileSync("about.html", "utf8");
 const caseHtml = fs.readFileSync("work.html", "utf8");
 const css = fs.readFileSync("styles.css", "utf8");
 const js = fs.readFileSync("script.js", "utf8");
+const clothesJs = fs.readFileSync("clothesline.js", "utf8");
 
 const failures = [];
 
@@ -159,7 +160,7 @@ expect(/class="pc-media pc-media-wentong">[\s\S]*?<\/div>\s*<div class="pc-capti
 // this passes whether or not that wiring is live.
 expect((html.includes('class="pc-go">view project') || html.includes('class="pc-go">visit site')) && html.includes('class="pc-go">case study') && html.includes('class="pc-go">pitch deck') && /\.pc-go\s*{[\s\S]*?transition:\s*color/.test(css), "Each linked clothesline card should carry a quiet destination hint that warms on hover");
 expect(!/\.pc-card[\s\S]{0,400}?scale\(var\(--pc-depth/.test(css) && !js.includes("--pc-depth"), "Lower carousel should stay flat and front-facing — no perspective scaling");
-expect(html.includes('class="pc-track"') && html.includes('class="pc-rope"') && html.includes('class="pc-top-line"') && html.includes('assets/system/clothesline-top.svg') && html.includes('clothesline.js'), "Selected projects should keep the two-rope clothesline scene (vector artwork top rope + perspective zipline)");
+expect(html.includes('class="pc-track"') && html.includes('class="pc-rope"') && html.includes('<svg class="pc-top-line"') && clothesJs.includes("syncTopRope") && clothesJs.includes("TOP_LINE_VB_W"), "Selected projects should keep the two-rope clothesline scene: INLINE top rope whose stroke is held at the --pc-rope-w dial by clothesline.js syncTopRope (dial * 2172 / rendered width — deterministic on any zoom/DPI; vector-effect and <img> both rendered inconsistently)");
 expect(html.includes('class="pc-bun"') && html.includes('pc-bun-eye-l'), "The orange bun mascot should hang from the fixed top rope with winkable eyes");
 expect(js.includes("const workCards = Array.from") && js.includes("syncVisibleWorkCards") && js.includes("(enterLine - top) / (enterLine - settleLine)"), "Work card reveal should be scroll-scrubbed (position-driven progress, glide-compensated), settling into .is-visible — never a triggered pop animation");
 expect(html.includes('class="home-intro-screen is-active"') && html.includes('data-text="Hi, I\'m Xin.L"'), "Home should start with the prototype intro sequence");

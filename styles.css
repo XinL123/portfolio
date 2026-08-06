@@ -8990,6 +8990,11 @@ body[data-theme="dark"] .mascot-img {
      are 1.5px on pure ink). Was #333 gray — the clothesline scene read light. */
   --pc-line: #111111;
   --pc-line-soft: rgba(17, 17, 17, 0.6);
+  /* ONE dial for BOTH clotheslines' weight (top rope + lower zipline share it,
+     so they can never drift apart again). 1.5 = the lower zipline's long-time
+     original weight; the top rope now holds this SAME px at every viewport via
+     non-scaling-stroke (as an <img> it used to shrink with the viewport). */
+  --pc-rope-w: 1.5;
   --pc-card-bg: #fdfbf6;
   --pc-blue: #6ba8ff;
   /* The smaller, flatter notes stay right-weighted, preserving the generous
@@ -9005,8 +9010,9 @@ body[data-theme="dark"] .mascot-img {
 }
 
 body[data-theme="dark"] .pc-scene {
-  /* #eee = exactly invert(1) of the #111 top-rope SVG, so both clotheslines
-     stay identical in dark mode too (the top rope flips via a CSS invert). */
+  /* both clotheslines read this same --pc-line, so they stay identical in dark
+     mode (#eee) exactly as they match at #111 in light — the top rope is inline
+     svg now, themed by the variable, not a CSS invert on an <img>. */
   --pc-line: #eeeeee;
   --pc-line-soft: rgba(238, 238, 238, 0.6);
   --pc-card-bg: #121212;
@@ -9045,18 +9051,29 @@ body[data-theme="dark"] .pc-scene {
   z-index: 2; /* above the bun so the drawn clip + rope strokes hold the dome */
   width: 100vw;
   max-width: none; /* the global img cap would clamp it to the content column */
-  height: auto;
+  height: auto;    /* inline svg derives height from the 2172:250 viewBox ratio */
+  overflow: visible; /* the round stroke sits a hair outside the path box */
   user-select: none;
-  transition: filter 240ms ease; /* invert crossfades with the theme switch */
+  display: block;
 }
-
-body[data-theme="dark"] .pc-top-line {
-  filter: invert(1);
+/* Colour lives in CSS so the rope themes via --pc-line and matches the lower
+   .pc-rope exactly. The WIDTH is set by clothesline.js (syncTopRope): the
+   artwork sits in a 2172-unit viewBox stretched to 100vw, so the script sets
+   stroke-width = --pc-rope-w * 2172 / rendered-width, which lands the on-screen
+   weight at exactly the dial's px on any viewport/zoom/DPI. (The value below is
+   only the pre-script first paint; vector-effect:non-scaling-stroke was
+   abandoned — it strokes against different bases on different displays.) */
+.pc-top-line path {
+  stroke: var(--pc-line);
+  stroke-width: 5.6; /* ≈ dial 1.5 at a 582px viewport; syncTopRope overrides */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 240ms ease; /* theme switch, same as .pc-rope */
 }
 
 .pc-rope path {
   stroke: var(--pc-line);
-  stroke-width: 1.5; /* one weight with .pc-top-line — both clotheslines match */
+  stroke-width: var(--pc-rope-w, 2); /* one weight with .pc-top-line — both clotheslines match */
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: stroke 240ms ease; /* theme switch */
