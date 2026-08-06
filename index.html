@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- The tail scripts (script.js / clothesline.js) are separate fetches, so
+         the browser may paint this document BEFORE clothesline.js has hung the
+         project cards on the rope — one frame of cards stacked at their static
+         CSS spot ("回到 /projects 时的错乱一闪"). pc-boot veils the cards until
+         the first real place() lands (clothesline.js removes it synchronously
+         before that frame paints); the timeout is a safety net so cards can
+         never stay hidden if clothesline.js fails to run. -->
+    <script>
+      document.documentElement.classList.add("pc-boot");
+      setTimeout(() => document.documentElement.classList.remove("pc-boot"), 8000);
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
@@ -39,7 +50,7 @@
     <link rel="icon" type="image/png" href="/favicon.png?v=3" />
     <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-    <link rel="stylesheet" href="styles.css?v=202607211h" />
+    <link rel="stylesheet" href="styles.css?v=20260806a" />
     <link rel="stylesheet" href="orange-buddy.css?v=20260721a" />
   </head>
   <body data-page="home">
@@ -669,6 +680,6 @@
 
     <script src="script.js?v=202607211h"></script>
     <script src="orange-buddy.js?v=20260721a"></script>
-    <script src="clothesline.js?v=202607211h"></script>
+    <script src="clothesline.js?v=20260806a"></script>
   </body>
 </html>

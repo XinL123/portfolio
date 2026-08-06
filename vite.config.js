@@ -50,9 +50,13 @@ export default defineConfig({
     port: 4173,
     strictPort: true,
     // dev only: never let the browser hold a stale styles.css/script.js --
-    // the ?v= cache token only changes on release bumps
+    // the ?v= cache token only changes on release bumps. Must be no-cache,
+    // NOT no-store: same always-revalidate guarantee (Vite sends ETags), but
+    // Chrome refuses to run cross-document view transitions ("渐隐渐入")
+    // to or from a page served with no-store, which made the fade
+    // untestable on localhost while working fine on Netlify.
     headers: {
-      "Cache-Control": "no-store",
+      "Cache-Control": "no-cache",
     },
   },
   preview: {

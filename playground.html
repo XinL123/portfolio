@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>document.documentElement.classList.add("pg-enter");</script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Playground projects and vibe coding experiments by Christus Luo." />
@@ -36,7 +37,7 @@
     <link rel="icon" type="image/png" href="/favicon.png?v=3" />
     <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-    <link rel="stylesheet" href="styles.css?v=202607211h" />
+    <link rel="stylesheet" href="styles.css?v=20260806a" />
   </head>
   <body data-page="playground">
     <script>
@@ -193,5 +194,10 @@
     </footer>
 
     <script src="script.js?v=202607211h"></script>
+    <script>
+      // Keep the initial year group opacity-only, then restore the usual
+      // scroll-reveal geometry for later groups without changing their behavior.
+      setTimeout(() => document.documentElement.classList.remove("pg-enter"), 700);
+    </script>
   </body>
 </html>

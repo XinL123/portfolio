@@ -478,3 +478,19 @@ body[data-theme="dark"][data-page="project"] .pj-topbar .pull-chain .chain-image
   .pj-demoframe { height: min(50svh, 280px); }
   .pj-ballframe { height: min(44svh, 240px); }
 }
+
+/* ---- entrance 渐隐渐入 : only opacity changes. The armed state lives behind
+   html.pj-enter so no-JS browsers and any failure path always see the page. */
+body[data-page="project"] {
+  transition:
+    opacity 420ms ease,
+    background-color 240ms ease,
+    color 240ms ease;
+}
+html.pj-enter body[data-page="project"] {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-page="project"] { transition: background-color 240ms ease, color 240ms ease; }
+  html.pj-enter body[data-page="project"] { opacity: 1; }
+}

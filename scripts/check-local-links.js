@@ -1,9 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 
-const htmlFiles = ["index.html", "work.html", "about.html", "resume.html", "playground.html", "404.html"];
+const htmlFiles = ["index.html", "work.html", "about.html", "resume.html", "playground.html", "404.html", "land-of-wisdom.html"];
 const localReferencePattern = /(?:href|src)="([^"]+)"/g;
-const virtualRoutes = new Set(["projects.html", "/projects.html", "projects", "/projects"]);
+// /projects/chushubao is rewritten to land-of-wisdom.html (vite.config.js +
+// netlify.toml, keep the three lists in sync)
+const virtualRoutes = new Set(["projects.html", "/projects.html", "projects", "/projects", "/projects/chushubao"]);
 const missing = [];
 
 for (const file of htmlFiles) {

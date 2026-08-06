@@ -145,4 +145,12 @@
 
   render();
   wakeChrome(); // visible on arrival, then it quietly steps aside
+
+  /* Entrance: clear the html.pj-enter armed state (added by the inline <head>
+     script) one painted frame after arrival, so the deck fades in without a
+     position shift. Under reduced motion this is immediate; the inline script's
+     own 1600ms timeout stays as the safety net. */
+  const liftEnter = () => document.documentElement.classList.remove("pj-enter");
+  if (reduce) liftEnter();
+  else requestAnimationFrame(() => requestAnimationFrame(liftEnter));
 })();

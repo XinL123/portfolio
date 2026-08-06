@@ -427,17 +427,33 @@
     }
   });
 
-  window.addEventListener("resize", () => {
-    // re-measure and pin the current card instantly — never animate a resize
+  const stabilizeCards = () => {
+    // Keep the cards behind the boot veil until their geometry and inline
+    // transforms agree. This is used for first paint and return paths alike,
+    // so no static, un-hung card can leak through between a restore and place().
+    document.documentElement.classList.add("pc-boot");
     stepTo(activeProjectIndex, true);
+    document.documentElement.classList.remove("pc-boot");
+  };
+
+  window.addEventListener("resize", stabilizeCards);
+  // Returning to the page after it was away — tab switch back, bfcache
+  // restore, or a discarded-tab reload ("长时间不动，突然回页面"): while the
+  // page was hidden rAF never ran, and a resize/zoom/font settle in that gap
+  // leaves the cards pinned to stale geometry for one visible frame. Re-pin
+  // instantly in the same task, before that frame can paint.
+  window.addEventListener("pageshow", stabilizeCards);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") stabilizeCards();
   });
   window.addEventListener("load", () => {
     measure();
     kick();
   });
 
-  measure();
-  kick();
+  // The first paint uses the exact same guarded path as a bfcache/visibility
+  // restore. That keeps the initial and return states mechanically identical.
+  stabilizeCards();
 
   /* ---- bun: calm two-eye blink every 4–6s, occasionally a quick double ---- */
   if (bun && !reduceMotion) {

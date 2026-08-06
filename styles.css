@@ -420,24 +420,18 @@ body[data-page="home"].home-opening-active:not(.home-gallery-active) .site-heade
   background: #ffffff;
   color: #000000;
   font-family: var(--hand);
-  filter: blur(12px);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(10px) scale(0.992);
   transition:
     opacity 560ms ease,
-    filter 640ms ease,
-    transform 640ms ease,
     visibility 640ms ease;
   visibility: hidden;
   will-change: opacity, filter, transform;
 }
 
 .home-intro-screen.is-active {
-  filter: blur(0);
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0) scale(1);
   visibility: visible;
   /* the screen advances on click as well as on scroll */
   cursor: pointer;
@@ -923,35 +917,20 @@ body[data-page="home"]:not(.home-gallery-active) .hh-flowers {
   opacity: 0;
 }
 
-body[data-page="home"]:not(.home-gallery-active) .hh-title {
-  transform: translateY(14px);
-}
-
-body[data-page="home"]:not(.home-gallery-active) .home-gallery-screen .home-orange-wrap,
-body[data-page="home"]:not(.home-gallery-active) .hh-annot,
-body[data-page="home"]:not(.home-gallery-active) .hh-flowers {
-  translate: 0 14px;
-}
-
 .hh-title {
-  transition: opacity 520ms ease 60ms, transform 600ms cubic-bezier(0.22, 1, 0.36, 1) 60ms;
+  transition: opacity 520ms ease 60ms;
 }
 
 .home-gallery-screen .home-orange-wrap {
   transition:
     opacity 540ms ease 140ms,
-    translate 620ms cubic-bezier(0.22, 1, 0.36, 1) 140ms,
     filter 160ms linear,
     transform 160ms linear;
 }
 
-.hh-annot {
-  transition: opacity 520ms ease 480ms, translate 600ms cubic-bezier(0.22, 1, 0.36, 1) 480ms;
-}
+.hh-annot { transition: opacity 520ms ease 480ms; }
 
-.hh-flowers {
-  transition: opacity 520ms ease 540ms, translate 600ms cubic-bezier(0.22, 1, 0.36, 1) 540ms;
-}
+.hh-flowers { transition: opacity 520ms ease 540ms; }
 
 body.home-gallery-active .hh-photo {
   animation: hh-photo-in 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -962,8 +941,8 @@ body.home-gallery-active .hh-photo-2 { animation-delay: 340ms; }
 body.home-gallery-active .hh-photo-3 { animation-delay: 420ms; }
 
 @keyframes hh-photo-in {
-  from { opacity: 0; transform: translateY(14px) rotate(var(--tilt, 0deg)); }
-  to { opacity: 1; transform: rotate(var(--tilt, 0deg)); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ---- handoff exit: the hero leaves like scrolled content — it glides UP and
@@ -2107,13 +2086,19 @@ body[data-page="home"] .home-hero.is-visible .orange-stage {
 @keyframes home-soft-arrive {
   from {
     opacity: 0;
-    transform: translateY(18px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
+}
+
+/* Major page arrivals are opacity-only. Their page-local scroll and interaction
+   motion remains below; only the first observed reveal drops its vertical lift. */
+body[data-page="about"] .about-hero.reveal-section,
+body[data-page="resume"] .resume-page.reveal-section {
+  transform: none;
+  transition: opacity 520ms ease, background-color 240ms ease;
 }
 
 .page-shell {
@@ -5163,6 +5148,19 @@ body[data-theme="dark"] .game-feature h1 {
   transform: translateY(0);
 }
 
+/* The first Playground group is the page entrance. Fade it in without moving
+   it; later scroll-triggered year groups regain their existing motion once the
+   small boot marker is removed. */
+html.pg-enter .art-year-group {
+  transform: none;
+  transition: opacity 420ms ease;
+}
+
+html.pg-enter .art-card.filled {
+  transform: translateY(var(--lift)) rotate(var(--tilt));
+  transition: opacity 420ms ease, box-shadow 220ms ease;
+}
+
 .art-year-group h2 {
   margin: 0;
   font-family: var(--stamp);
@@ -5654,12 +5652,10 @@ body.is-lightbox-open {
 @keyframes about-soft-arrive {
   from {
     opacity: 0;
-    transform: translateY(18px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -10464,6 +10460,16 @@ body[data-theme="dark"] .pc-note {
   color: var(--ink);
 }
 
+/* Boot veil: an inline <head> script stamps .pc-boot on <html> before any
+   paint; clothesline.js lifts it synchronously right after the first place()
+   positions the cards on the rope. Between those two moments the browser may
+   paint the page (tail scripts are still downloading) — without this, that
+   frame shows the project cards stacked un-placed at their static CSS spot
+   (the "回到 /projects 错乱一闪"). Cards only; the rope itself paints fine. */
+.pc-boot .pc-card {
+  visibility: hidden;
+}
+
 /* =============================================================================
    Cross-page 渐隐渐入 — the old page fades out while the new one fades in on
    every same-origin navigation (home card -> /projects/chushubao, the project
@@ -10474,13 +10480,18 @@ body[data-theme="dark"] .pc-note {
 @view-transition {
   navigation: auto;
 }
+/* Staggered, not a plain crossfade: the old page fades to the canvas colour
+   first; the new page stays transparent briefly, then arrives slowly enough
+   for the fade to read clearly instead of feeling like an instant swap. */
 ::view-transition-old(root) {
-  animation-duration: 300ms;
-  animation-timing-function: ease;
+  animation-duration: 240ms;
+  animation-timing-function: ease-in;
 }
 ::view-transition-new(root) {
-  animation-duration: 300ms;
-  animation-timing-function: ease;
+  animation-duration: 480ms;
+  animation-delay: 220ms;
+  animation-fill-mode: backwards;
+  animation-timing-function: ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
