@@ -10463,3 +10463,26 @@ body[data-theme="dark"] .pc-note {
   line-height: 1.2;
   color: var(--ink);
 }
+
+/* =============================================================================
+   Cross-page 渐隐渐入 — the old page fades out while the new one fades in on
+   every same-origin navigation (home card -> /projects/chushubao, the project
+   page's back arrow, and the rest of the site alike). Cross-document View
+   Transitions: pure CSS, no interception of any existing click logic; browsers
+   without support (older Safari/Firefox) simply navigate instantly as before.
+   ============================================================================= */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation-duration: 300ms;
+  animation-timing-function: ease;
+}
+::view-transition-new(root) {
+  animation-duration: 300ms;
+  animation-timing-function: ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}
