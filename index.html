@@ -678,6 +678,21 @@
          over it (position: sticky has nothing to hold onto without this). -->
     <div class="home-reveal-spacer" aria-hidden="true"></div>
 
+    <script>
+      // /projects arrivals: park the FIRST PAINT on the Projects section. The
+      // tail scripts below are separate fetches, so without this the browser
+      // paints the top of the home document first and only jumps down once
+      // script.js runs — the "回到 /projects 页面错乱一闪". This inline script
+      // runs pre-paint (the parser blocks on it), so frame one is already the
+      // Projects section; .projects-arrive also lifts the section's reveal
+      // fade so it paints fully formed (script.js removes the class on landing).
+      (function () {
+        if (!/\/projects(\.html)?$/.test(location.pathname) && location.hash !== "#work") return;
+        document.documentElement.classList.add("projects-arrive");
+        var w = document.getElementById("work");
+        if (w) window.scrollTo({ top: Math.round(w.getBoundingClientRect().top + window.scrollY), behavior: "instant" });
+      })();
+    </script>
     <script src="script.js?v=202607211h"></script>
     <script src="orange-buddy.js?v=20260721a"></script>
     <script src="clothesline.js?v=20260806a"></script>

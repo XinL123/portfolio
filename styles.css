@@ -1380,6 +1380,8 @@ body[data-theme="dark"] .orange-body {
    Freed, the JS swaps this for .is-pop and it bounces straight back. */
 .orange-dough.is-photo-squish {
   animation: dough-photo-squish 600ms cubic-bezier(0.3, 1.1, 0.5, 1) both;
+  /* deeper levels ease between settles with a springy overshoot */
+  transition: transform 340ms cubic-bezier(0.34, 1.45, 0.55, 1);
 }
 
 @keyframes dough-photo-squish {
@@ -1390,10 +1392,32 @@ body[data-theme="dark"] .orange-body {
   100% { transform: scaleX(1.07) scaleY(0.85); }
 }
 
-/* the eyes squeeze into a put-upon squint under the weight */
+/* Progressive flattening: every extra photo on the dome presses it lower.
+   Level 1 keeps the bounce-in animation above (its `both` fill IS the level-1
+   settle); levels 2–3 drop the animation so the transitioned transforms win,
+   and going back down a level re-enters the animation's finished pose. */
+.orange-dough.is-photo-squish-2,
+.orange-dough.is-photo-squish-3 {
+  animation: none;
+}
+.orange-dough.is-photo-squish-2 {
+  transform: scaleX(1.14) scaleY(0.66) rotate(-0.6deg);
+}
+.orange-dough.is-photo-squish-3 {
+  transform: scaleX(1.24) scaleY(0.48) rotate(0.5deg);
+}
+
+/* the eyes squeeze into a put-upon squint under the weight — and flatter
+   still as the pile grows */
 .orange-stage.is-photo-squish .orange-eye {
   transform: var(--eye-translate) translateY(12%) scaleY(0.35);
   transition: transform 220ms ease;
+}
+.orange-stage.is-photo-squish-2 .orange-eye {
+  transform: var(--eye-translate) translateY(15%) scaleY(0.26);
+}
+.orange-stage.is-photo-squish-3 .orange-eye {
+  transform: var(--eye-translate) translateY(18%) scaleY(0.16);
 }
 
 /* double-poke — "hey! :)": squashed flat for a beat, then it POPS 16px into
@@ -1482,6 +1506,8 @@ body[data-theme="dark"] .orange-body {
   .orange-dough.is-spring,
   .orange-dough.is-breath,
   .orange-dough.is-photo-squish,
+  .orange-dough.is-photo-squish-2,
+  .orange-dough.is-photo-squish-3,
   .home-vibe-note.is-nudged {
     animation: none;
     transition: none;
@@ -2096,7 +2122,8 @@ body[data-page="home"] .home-hero.is-visible .orange-stage {
 /* Major page arrivals are opacity-only. Their page-local scroll and interaction
    motion remains below; only the first observed reveal drops its vertical lift. */
 body[data-page="about"] .about-hero.reveal-section,
-body[data-page="resume"] .resume-page.reveal-section {
+body[data-page="resume"] .resume-page.reveal-section,
+body[data-page="playground"] .playground-page.reveal-section {
   transform: none;
   transition: opacity 520ms ease, background-color 240ms ease;
 }
@@ -4965,6 +4992,7 @@ body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .
       var(--game-nav-gap) + var(--game-nav-gap)
     )
   );
+  transform: translateY(-15px);
   margin-inline: auto;
   gap: var(--game-nav-gap);
 }
@@ -5021,13 +5049,22 @@ body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .
   pointer-events: none;
 }
 
+.game-frame .game-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .game-open-cue {
   position: absolute;
   right: 22px;
   bottom: 20px;
   z-index: 3;
   padding: 8px 14px;
-  border: 2px solid var(--line);
+  /* stroke weight matches .pill-button (Let's Connect) */
+  border: 1.5px solid var(--line);
   border-radius: 999px;
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   color: var(--ink);
@@ -5041,11 +5078,30 @@ body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .
     transform 180ms ease;
 }
 
-.game-feature:hover .game-frame {
-  box-shadow: 0 28px 62px color-mix(in srgb, #000000 13%, transparent);
-  transform: translateY(-3px);
+/* Switching games cross-fades the artwork and title instead of hard-swapping.
+   Pure CSS animations — no JS timing: the departing layer fades out on top of
+   the arriving one, then gets removed on the next switch. */
+.game-frame .arriving {
+  animation: game-fade-in 320ms ease both;
+}
+.game-feature h1.arriving {
+  animation: game-fade-in 320ms ease both;
+}
+/* declared after .arriving so a stale arriving class can never outrank it */
+.game-frame .leaving {
+  animation: game-fade-out 240ms ease forwards;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes game-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes game-fade-out {
+  to { opacity: 0; }
 }
 
+/* hover: only the Open Game cue appears — no card lift or shadow */
 .game-feature:hover .game-open-cue {
   opacity: 1;
   transform: translateY(0);
@@ -5062,11 +5118,14 @@ body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .
 }
 
 body[data-theme="dark"] .game-kicker,
-body[data-theme="dark"] .game-feature h1 {
+body[data-theme="dark"] .game-feature h1,
+body[data-theme="dark"] .game-nav {
   color: var(--ink);
 }
 
 .game-nav {
+  /* live arrows: same tone as the "Click to Play" kicker, click-only —
+     deliberately no hover lift or other motion */
   display: grid;
   place-items: center;
   width: var(--game-nav-size);
@@ -5074,7 +5133,8 @@ body[data-theme="dark"] .game-feature h1 {
   padding: 0;
   border: 0;
   background: transparent;
-  color: color-mix(in srgb, var(--ink) 28%, transparent);
+  color: color-mix(in srgb, var(--ink) 44%, transparent);
+  cursor: pointer;
 }
 
 .game-nav span {
@@ -5614,6 +5674,7 @@ body.is-lightbox-open {
   align-items: center;
   column-gap: clamp(96px, 10vw, 152px);
   row-gap: clamp(34px, 5vw, 64px);
+  margin-top: 25px;
   /* The hero box starts ~144px down (sticky header 150 − the page's -30 margin
      + reveal settle). Centring content in a box of height 100vh − 2×144 would put
      the midline exactly on 50vh; we subtract a little less (248 instead of 288) so
@@ -10468,6 +10529,14 @@ body[data-theme="dark"] .pc-note {
    (the "回到 /projects 错乱一闪"). Cards only; the rope itself paints fine. */
 .pc-boot .pc-card {
   visibility: hidden;
+}
+
+/* /projects arrivals paint the work section fully formed on frame one — no
+   reveal fade, no lift — until script.js lands and removes the class. */
+.projects-arrive .work-section.reveal-section {
+  opacity: 1;
+  transform: none;
+  transition: none;
 }
 
 /* =============================================================================

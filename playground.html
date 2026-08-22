@@ -73,22 +73,22 @@
       </div>
     </header>
 
-    <main class="playground-page">
-      <section class="game-showcase" aria-labelledby="dog-fetch-heading">
-        <button class="game-nav game-nav-prev" type="button" aria-label="Previous game" disabled>
+    <main class="playground-page reveal-section">
+      <section class="game-showcase" aria-labelledby="game-heading">
+        <button class="game-nav game-nav-prev" type="button" aria-label="Previous game">
           <span aria-hidden="true"></span>
         </button>
 
-        <a class="game-feature" href="https://xinl123.github.io/Dog-Fetch-Game/" target="_blank" rel="noreferrer" aria-label="Open Dog Fetch Game in a new tab">
+        <a class="game-feature" href="https://xinl123.github.io/Mercury-Voice/" target="_blank" rel="noreferrer" aria-label="Open Mercury Voice in a new tab">
           <p class="game-kicker">Click to Play</p>
           <div class="game-frame">
-            <iframe src="https://xinl123.github.io/Dog-Fetch-Game/" title="Dog Fetch Game preview" loading="lazy"></iframe>
+            <img class="game-cover" src="assets/playground/covers/mercury-voice-cover.jpg?v=20260816" alt="Mercury Voice cover" />
             <span class="game-open-cue" aria-hidden="true">Open Game</span>
           </div>
-          <h1 id="dog-fetch-heading">Dog Fetch Game</h1>
+          <h1 id="game-heading">Mercury Voice</h1>
         </a>
 
-        <button class="game-nav game-nav-next" type="button" aria-label="Next game" disabled>
+        <button class="game-nav game-nav-next" type="button" aria-label="Next game">
           <span aria-hidden="true"></span>
         </button>
       </section>
@@ -198,6 +198,58 @@
       // Keep the initial year group opacity-only, then restore the usual
       // scroll-reveal geometry for later groups without changing their behavior.
       setTimeout(() => document.documentElement.classList.remove("pg-enter"), 700);
+    </script>
+    <script>
+      // Playground game carousel: the arrows page between the featured games.
+      // Cards show static covers (no live game embeds — they overloaded the page);
+      // a game without a cover yet falls back to a lazy iframe only while shown.
+      (function () {
+        var GAMES = [
+          { title: "Mercury Voice", url: "https://xinl123.github.io/Mercury-Voice/", cover: "assets/playground/covers/mercury-voice-cover.jpg?v=20260816" },
+          { title: "Dog Fetch Game", url: "https://xinl123.github.io/Dog-Fetch-Game/", cover: "assets/playground/covers/dog-fetch-cover.jpg?v=20260816" },
+        ];
+        var index = 0;
+        var feature = document.querySelector(".game-feature");
+        var frameBox = feature && feature.querySelector(".game-frame");
+        var title = document.getElementById("game-heading");
+        if (!feature || !frameBox || !title) return;
+        // Pre-load every cover so the cross-fade never fades into a blank frame.
+        GAMES.forEach(function (g) { if (g.cover) { var im = new Image(); im.src = g.cover; } });
+        function show(n) {
+          index = ((n % GAMES.length) + GAMES.length) % GAMES.length;
+          var g = GAMES[index];
+          feature.href = g.url;
+          feature.setAttribute("aria-label", "Open " + g.title + " in a new tab");
+          // Cross-fade: the old layer fades out on top while the new one fades
+          // in beneath it — pure CSS animations, cleaned up on the next switch.
+          frameBox.querySelectorAll(".leaving").forEach(function (e) { e.remove(); });
+          var old = frameBox.querySelector("img.game-cover, iframe");
+          if (old) {
+            old.classList.remove("arriving"); // else its fade-in rule outranks the fade-out
+            old.classList.add("leaving");
+          }
+          var el;
+          if (g.cover) {
+            el = document.createElement("img");
+            el.className = "game-cover arriving";
+            el.src = g.cover;
+            el.alt = g.title + " cover";
+          } else {
+            el = document.createElement("iframe");
+            el.className = "arriving";
+            el.src = g.url;
+            el.title = g.title + " preview";
+            el.loading = "lazy";
+          }
+          frameBox.insertBefore(el, frameBox.querySelector(".game-open-cue"));
+          title.textContent = g.title;
+          title.classList.remove("arriving");
+          void title.offsetWidth;                        // restart the title fade
+          title.classList.add("arriving");
+        }
+        document.querySelector(".game-nav-prev").addEventListener("click", function () { show(index - 1); });
+        document.querySelector(".game-nav-next").addEventListener("click", function () { show(index + 1); });
+      })();
     </script>
   </body>
 </html>

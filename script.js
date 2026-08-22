@@ -383,7 +383,10 @@ if (artYearGroups.length) {
     const syncVisibleArtYear = () => {
       artFrame = null;
       const viewportCenter = window.innerHeight / 2;
-      let closestGroup = artYearGroups[0];
+      // No default pick: a group only lights up once it actually enters the
+      // viewport, so 2026 starts dim and fades in on scroll like every other
+      // year (it used to be pre-lit as the page entrance).
+      let closestGroup = null;
       let closestDistance = Infinity;
 
       artYearGroups.forEach((group) => {
@@ -391,7 +394,10 @@ if (artYearGroups.length) {
         const groupCenter = rect.top + rect.height / 2;
         const distance = Math.abs(groupCenter - viewportCenter);
 
-        if (rect.bottom >= 0 && rect.top <= window.innerHeight && distance < closestDistance) {
+        // A group must meaningfully enter the viewport (top above the 78% line)
+        // before it can light up — a sliver peeking in at the bottom stays dim,
+        // so the first group fades in on arrival like every later one.
+        if (rect.bottom >= 0 && rect.top <= window.innerHeight * 0.78 && distance < closestDistance) {
           closestGroup = group;
           closestDistance = distance;
         }
@@ -1093,25 +1099,43 @@ if (wasGalleryActive) {
      STATE, not a timed reaction: a photo parked on the dome keeps the
      creature pressed flat and quietly protesting until it is moved away —
      then it pops straight back and gets its caption back. ---- */
-  const SQUISH_NOTE = "Hey! You're squishing me!";
+  /* The pile flattens it in stages: each extra photo presses the dough lower
+     and the caption escalates to match. Level 1 keeps the original bounce-in;
+     deeper levels ease down/up smoothly as photos land or leave. */
+  const SQUISH_NOTES = [
+    null,
+    "Hey! You're squishing me!",
+    "Oof — two?!",
+    "…Flat. Completely flat!",
+  ];
+  const SQUISH_LEVELS = ["is-photo-squish-1", "is-photo-squish-2", "is-photo-squish-3"];
+  let squishLevel = 0;
   window.addEventListener("orange-photo-squish", (event) => {
-    const on = !!(event.detail && event.detail.squished);
-    if (on === photoSquished) return;
+    const count = Math.max(0, Math.min(3, (event.detail && event.detail.count) | 0));
+    if (count === squishLevel) return;
+    const prev = squishLevel;
+    squishLevel = count;
 
-    if (on) {
-      stopPetting();
-      clearBody();
-      reactionUntil = 0;
-      photoSquished = true; // after clearBody/setNote paths, before the swap
-      dough.classList.add("is-photo-squish");
-      orangeStage.classList.add("is-photo-squish");
+    if (count > 0) {
+      if (prev === 0) {
+        stopPetting();
+        clearBody();
+        reactionUntil = 0;
+        photoSquished = true; // after clearBody/setNote paths, before the swap
+        dough.classList.add("is-photo-squish");
+        orangeStage.classList.add("is-photo-squish");
+      }
+      SQUISH_LEVELS.forEach((cls, i) => {
+        dough.classList.toggle(cls, i === count - 1);
+        orangeStage.classList.toggle(cls, i === count - 1);
+      });
       window.clearTimeout(noteTimer);
-      if (vibeNote) vibeNote.textContent = SQUISH_NOTE;
-      nudgeNote(); // the caption sways as the weight lands
+      if (vibeNote) vibeNote.textContent = SQUISH_NOTES[count];
+      nudgeNote(); // the caption sways as the weight lands or lifts
     } else {
       photoSquished = false;
-      dough.classList.remove("is-photo-squish");
-      orangeStage.classList.remove("is-photo-squish");
+      dough.classList.remove("is-photo-squish", ...SQUISH_LEVELS);
+      orangeStage.classList.remove("is-photo-squish", ...SQUISH_LEVELS);
       dough.classList.add("is-pop"); // freed — pops back like after play-dead
       window.clearTimeout(noteTimer);
       if (vibeNote) vibeNote.textContent = noteOriginal;
@@ -2572,6 +2596,9 @@ if (homeIntroScreens.length && homeGalleryScreen && !prefersReducedMotion.matche
 
   const goToWorkSection = () => {
     enterHomeNative(true);
+    // The inline pre-paint scroll's boot class has done its job once the real
+    // landing (with .is-visible applied) is in — restore normal reveal styling.
+    document.documentElement.classList.remove("projects-arrive");
     // Clean address bar: the section has its own /projects url. REPLACE, never
     // push (this re-runs across rAFs / on load, which would stack entries).
     history.replaceState(null, "", PROJECTS_PATH);
@@ -3271,35 +3298,42 @@ if (revealSections.length && !prefersReducedMotion.matches) {
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* ---- squishing the resident: how much of the dome a photo covers.
-     coverage = intersection(photo frame, dome box) / dome area, taken as the
-     MAX across all three photos (two half-covers don't add up to a squish).
-     Hysteresis so the caption can't flicker at the boundary: enters at 30%,
-     recovers below 15%. Evaluated per animation frame while any photo is in
-     flight and at every release — so a photo PARKED on the dome keeps the
-     state, and it lifts the moment the photo is carried away. The creature's
-     own module listens for the event and does the acting. ---- */
+  /* ---- squishing the resident: how many photos are pressing on the dome.
+     Each photo counts individually — coverage = intersection(photo frame,
+     dome box) / dome area, with per-photo hysteresis so nothing flickers at
+     the boundary (a photo joins the pile at 30% cover, leaves below 15%).
+     The COUNT of photos on the dome (0–3) rides in the event, so the creature
+     can flatten progressively: one photo is a squish, three is a pancake.
+     Evaluated per animation frame while any photo is in flight and at every
+     release — so parked photos keep their press, and it eases the moment one
+     is carried away. The creature's own module does the acting. ---- */
   const orangeBody = document.querySelector(".home-orange-wrap .orange-body");
   const SQUISH_ENTER = 0.30;
   const SQUISH_EXIT = 0.15;
-  let orangeSquished = false;
+  const photoPressing = new WeakMap();
+  let squishCount = 0;
 
   const syncOrangeSquish = () => {
     if (!orangeBody) return;
     const ob = orangeBody.getBoundingClientRect();
     const area = ob.width * ob.height;
     if (!area) return; // dome not on stage right now — keep the last state
-    let cover = 0;
+    let count = 0;
     for (const p of photos) {
       const r = p.getBoundingClientRect();
       const w = Math.min(r.right, ob.right) - Math.max(r.left, ob.left);
       const h = Math.min(r.bottom, ob.bottom) - Math.max(r.top, ob.top);
-      if (w > 0 && h > 0) cover = Math.max(cover, (w * h) / area);
+      const cover = w > 0 && h > 0 ? (w * h) / area : 0;
+      const was = photoPressing.get(p) === true;
+      const now = was ? cover >= SQUISH_EXIT : cover >= SQUISH_ENTER;
+      photoPressing.set(p, now);
+      if (now) count += 1;
     }
-    const next = orangeSquished ? cover >= SQUISH_EXIT : cover >= SQUISH_ENTER;
-    if (next === orangeSquished) return;
-    orangeSquished = next;
-    window.dispatchEvent(new CustomEvent("orange-photo-squish", { detail: { squished: next } }));
+    if (count === squishCount) return;
+    squishCount = count;
+    window.dispatchEvent(
+      new CustomEvent("orange-photo-squish", { detail: { squished: count > 0, count } })
+    );
   };
 
   photos.forEach((photo) => {
