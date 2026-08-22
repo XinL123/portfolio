@@ -9117,12 +9117,15 @@ body[data-theme="dark"] .pc-scene {
    .pc-rope exactly. The WIDTH is set by clothesline.js (syncTopRope): the
    artwork sits in a 2172-unit viewBox stretched to 100vw, so the script sets
    stroke-width = --pc-rope-w * 2172 / rendered-width, which lands the on-screen
-   weight at exactly the dial's px on any viewport/zoom/DPI. (The value below is
-   only the pre-script first paint; vector-effect:non-scaling-stroke was
-   abandoned — it strokes against different bases on different displays.) */
+   weight at exactly the dial's px on any viewport/zoom/DPI. (vector-effect:
+   non-scaling-stroke was abandoned — it strokes against different bases on
+   different displays.) The value below is a NO-JS floor only: an inline script
+   right after the svg in index.html runs the same arithmetic before the first
+   paint, because this fallback is calibrated for a narrow viewport and painted
+   the rope 2–3× too thick on desktop until clothesline.js finally landed. */
 .pc-top-line path {
   stroke: var(--pc-line);
-  stroke-width: 5.6; /* ≈ dial 1.5 at a 582px viewport; syncTopRope overrides */
+  stroke-width: 5.6; /* ≈ dial 1.5 at a 582px viewport; both syncs override it */
   stroke-linecap: round;
   stroke-linejoin: round;
   transition: stroke 240ms ease; /* theme switch, same as .pc-rope */
@@ -9237,23 +9240,40 @@ body[data-theme="dark"] .pc-bun img {
    • A cursor is an IMAGE and cannot inherit --ink, hence a cream variant for
      dark mode, where these cards are black.
    • 12 12 = the hotspot, dead centre of the 24x24 drawing. ---- */
+/* The two drawings live in custom properties so every rule below can name one
+   instead of repeating a 400-character data URL. Defined on body, where the
+   theme attribute also lives, so dark mode is a single override. */
+body {
+  --pc-cur-next: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3.4 12.6 C 8 11.9, 13.5 12.7, 18.4 12.1'/><path d='M13.6 8.1 C 15.6 9.6, 17.4 11, 18.9 12.2 C 17.2 13.5, 15.4 14.9, 13.9 16.6'/></g></svg>") 12 12, pointer;
+  --pc-cur-prev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 12.6 C 16 11.9, 10.5 12.7, 5.6 12.1'/><path d='M10.4 8.1 C 8.4 9.6, 6.6 11, 5.1 12.2 C 6.8 13.5, 8.6 14.9, 10.1 16.6'/></g></svg>") 12 12, pointer;
+}
+
+body[data-theme="dark"] {
+  --pc-cur-next: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23f9f3eb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3.4 12.6 C 8 11.9, 13.5 12.7, 18.4 12.1'/><path d='M13.6 8.1 C 15.6 9.6, 17.4 11, 18.9 12.2 C 17.2 13.5, 15.4 14.9, 13.9 16.6'/></g></svg>") 12 12, pointer;
+  --pc-cur-prev: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23f9f3eb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 12.6 C 16 11.9, 10.5 12.7, 5.6 12.1'/><path d='M10.4 8.1 C 8.4 9.6, 6.6 11, 5.1 12.2 C 6.8 13.5, 8.6 14.9, 10.1 16.6'/></g></svg>") 12 12, pointer;
+}
+
 @media (hover: hover) and (pointer: fine) {
+  /* The note uses .pc-hang:hover (plus .pc-hot as its recovery path). Mirror
+     both states for the cursor, and apply it to every child so the global
+     anchor cursor cannot reclaim the card's right-hand half. */
+  .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active .pc-hang:hover,
+  .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active .pc-hang:hover *,
+  .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active.pc-hot,
+  .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active.pc-hot *,
   .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active .pc-media {
-    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3.4 12.6 C 8 11.9, 13.5 12.7, 18.4 12.1'/><path d='M13.6 8.1 C 15.6 9.6, 17.4 11, 18.9 12.2 C 17.2 13.5, 15.4 14.9, 13.9 16.6'/></g></svg>") 12 12, pointer;
+    cursor: var(--pc-cur-next);
   }
 
+  .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active .pc-hang:hover,
+  .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active .pc-hang:hover *,
+  .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active.pc-hot,
+  .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active.pc-hot *,
   .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active .pc-media {
-    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 12.6 C 16 11.9, 10.5 12.7, 5.6 12.1'/><path d='M10.4 8.1 C 8.4 9.6, 6.6 11, 5.1 12.2 C 6.8 13.5, 8.6 14.9, 10.1 16.6'/></g></svg>") 12 12, pointer;
-  }
-
-  body[data-theme="dark"] .pc-viewport.pc-at-first:not(.is-dragging) .pc-card-active .pc-media {
-    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23f9f3eb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3.4 12.6 C 8 11.9, 13.5 12.7, 18.4 12.1'/><path d='M13.6 8.1 C 15.6 9.6, 17.4 11, 18.9 12.2 C 17.2 13.5, 15.4 14.9, 13.9 16.6'/></g></svg>") 12 12, pointer;
-  }
-
-  body[data-theme="dark"] .pc-viewport.pc-at-last:not(.is-dragging) .pc-card-active .pc-media {
-    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23f9f3eb' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20.6 12.6 C 16 11.9, 10.5 12.7, 5.6 12.1'/><path d='M10.4 8.1 C 8.4 9.6, 6.6 11, 5.1 12.2 C 6.8 13.5, 8.6 14.9, 10.1 16.6'/></g></svg>") 12 12, pointer;
+    cursor: var(--pc-cur-prev);
   }
 }
+
 
 .pc-track {
   position: relative;
@@ -9709,9 +9729,12 @@ body[data-theme="dark"] .pc-gem-spark.pc-l1drop i  { animation: pc-glint 5.4s ea
 }
 
 /* pure-image cards: no lift, but the drawing zooms in slightly on hover
-   (clipped by the card's overflow:hidden so it never spills past the border) */
+   (clipped by the card's overflow:hidden so it never spills past the border).
+   .pc-hot is the coordinate-driven twin of :hover, set by clothesline.js —
+   see syncHot there for why both paths exist. */
 .pc-card-cover .pc-card-link:not(.pc-card-static):hover .pc-media img,
-.pc-card-cover .pc-card-link:not(.pc-card-static):focus-visible .pc-media img {
+.pc-card-cover .pc-card-link:not(.pc-card-static):focus-visible .pc-media img,
+.pc-card-cover.pc-hot .pc-card-link:not(.pc-card-static) .pc-media img {
   transform: translate(var(--cover-x, 0px), var(--cover-y, 0px)) scale(calc(var(--cover-scale, 1) * 1.045));
 }
 
@@ -9905,8 +9928,10 @@ body[data-theme="dark"] .pc-media-soon {
     opacity 250ms ease;
 }
 
-/* hover the card: the note peeks --pc-note-peek below the bottom edge, fades to full */
-.pc-hang:hover .pc-note {
+/* hover the card: the note peeks --pc-note-peek below the bottom edge, fades
+   to full (.pc-hot = clothesline.js's coordinate-driven twin of :hover) */
+.pc-hang:hover .pc-note,
+.pc-card.pc-hot .pc-note {
   transform: translate(-50%, calc(-100% + var(--pc-note-peek)));
   opacity: 1;
 }
@@ -10007,12 +10032,14 @@ body[data-theme="dark"] .pc-note {
 }
 
 .pc-card-link:not(.pc-card-static):hover .pc-go,
-.pc-card-link:not(.pc-card-static):focus-visible .pc-go {
+.pc-card-link:not(.pc-card-static):focus-visible .pc-go,
+.pc-card.pc-hot .pc-card-link:not(.pc-card-static) .pc-go {
   color: var(--orange-deep);
 }
 
 .pc-card-link:not(.pc-card-static):hover .pc-go-arr,
-.pc-card-link:not(.pc-card-static):focus-visible .pc-go-arr {
+.pc-card-link:not(.pc-card-static):focus-visible .pc-go-arr,
+.pc-card.pc-hot .pc-card-link:not(.pc-card-static) .pc-go-arr {
   transform: translateX(2.5px);
 }
 
@@ -10531,12 +10558,54 @@ body[data-theme="dark"] .pc-note {
   visibility: hidden;
 }
 
-/* /projects arrivals paint the work section fully formed on frame one — no
-   reveal fade, no lift — until script.js lands and removes the class. */
+/* /projects arrivals: the section is already at the right scroll offset on
+   frame one (the pre-paint script in index.html), so the flash is gone — but
+   pinning it to opacity:1 also killed its entrance, and /projects then landed
+   with no 渐隐渐入 while every other page had one. The fade comes back as an
+   ANIMATION rather than the reveal transition: it starts on frame one with no
+   JS in the loop, so there is no gap waiting for script.js to land, and it
+   runs the same opacity-only 520ms as the About/Resume/Playground arrivals.
+   Opacity only — transform:none keeps the reveal's vertical lift out of it. */
 .projects-arrive .work-section.reveal-section {
-  opacity: 1;
   transform: none;
   transition: none;
+}
+
+/* The entrance rides its OWN class, deliberately not .projects-arrive:
+   script.js drops that one the instant it lands (goToWorkSection), which on a
+   warm cache is ~50ms in — it was cancelling the fade a tenth of the way
+   through, so the 渐隐渐入 showed on a cold load and vanished on a refresh.
+   Nothing in script.js touches .projects-fade; the inline script that sets it
+   clears it on animationend.
+
+   TWO-STEP on purpose. The scene is assembled from sources that arrive at
+   different times: the top rope's path is inline in the HTML (paints on frame
+   one), but the lower rope's path is COMPUTED by clothesline.js — the last
+   tail script — and the cards are veiled by .pc-boot until that same script
+   places them. Starting the fade on frame one therefore faded in half a scene
+   and let the rope + cards pop in afterwards. So .projects-fade alone only
+   HOLDS the section invisible; the animation starts when the tiny script
+   after the clothesline.js tag adds .projects-fade-go — at which point the
+   whole scene exists and fades in as one. */
+.projects-fade .work-section.reveal-section {
+  opacity: 0;
+}
+
+.projects-fade.projects-fade-go .work-section.reveal-section {
+  animation: projects-arrive-fade 520ms ease both;
+}
+
+@keyframes projects-arrive-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .projects-fade .work-section.reveal-section,
+  .projects-fade.projects-fade-go .work-section.reveal-section {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 /* =============================================================================

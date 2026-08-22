@@ -353,12 +353,13 @@ body[data-theme="dark"][data-page="project"] .pj-topbar .pull-chain .chain-image
 }
 .pj-screen-end .pj-art img {
   max-width: min(100%, 460px);
+  transform: translateY(-20px);
 }
 .pj-screen-end .pj-info {
-  /* 660px fits "Chushubao will launch soon, … to everyone." on ONE line
-     (measured 626px at 19px Gaegu) */
-  max-width: 660px;
-  transform: translateY(15px);
+  /* 720px keeps the first reflection sentence intact through "skills.",
+     then lets the following sentence begin on the next line. */
+  max-width: 720px;
+  transform: translateY(0px);
 }
 
 /* ---- bottom cues, centred. "Scroll or click" + down arrowhead on every

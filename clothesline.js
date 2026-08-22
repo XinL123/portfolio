@@ -106,6 +106,7 @@
   const syncTopRope = () => {
     if (!topLineSvg || !topLinePath) return;
     const w = topLineSvg.clientWidth || window.innerWidth;
+    if (!w) return; // never divide by zero — a bogus Infinity would blow the stroke up
     const host = topLineSvg.closest(".pc-scene") || topLineSvg;
     const dial = parseFloat(getComputedStyle(host).getPropertyValue("--pc-rope-w")) || 1.5;
     topLinePath.style.strokeWidth = ((dial * TOP_LINE_VB_W) / w).toFixed(3);
@@ -210,6 +211,7 @@
       // "coming soon" note, no clicks. CSS turns pointer-events off for every
       // card except .pc-card-active, so their hot-zones truly leave with them.
       c.classList.toggle("pc-card-active", i === activeProjectIndex);
+      if (i !== activeProjectIndex) c.classList.remove("pc-hot"); // hover never outlives the front slot
     });
 
     // Desktop cursor hint, only at the two ENDS of the row: on the first card a
@@ -261,6 +263,11 @@
       place();
       running = false;
       lastT = 0;
+      // The carousel just came to rest — a card may have slid UNDER a
+      // stationary cursor, which fires no pointermove. Re-judge the hover
+      // from the last known coordinates so the front card lights up without
+      // the user having to twitch the mouse.
+      syncHotAtRest();
     }
   };
 
@@ -318,6 +325,11 @@
     // Remember the card link under the press NOW: setPointerCapture below
     // retargets the later `click` to the viewport, so the <a> never receives it
     // — we navigate ourselves in the click handler using this.
+    // Scoped to the drawn frame on purpose: .pc-card-body sits inside the <a>,
+    // so every pixel of the frame resolves here, while the clothespins pinned
+    // above its top edge — siblings of the <a> — do not. That keeps the click
+    // target exactly aligned with the hover target (see .pc-card-body:hover in
+    // styles.css); a press with no hover feedback under it never navigates.
     pressLink = event.target.closest ? event.target.closest(".pc-card-link[href]") : null;
     if (isProjectAnimating) return; // one motion at a time — no mid-tween grabs
     dragging = true;
@@ -366,6 +378,124 @@
 
   viewport.addEventListener("pointerup", endDrag);
   viewport.addEventListener("pointercancel", endDrag);
+
+  /* ---- coordinate-driven hover (.pc-hot). On at least one machine the
+     browser's real-mouse hit test goes stale over part of the ACTIVE card
+     (its right side stops answering :hover) while coordinate hit-tests stay
+     correct — so the hover state is derived from the pointer's coordinates
+     directly. Every move hit-tests the point and lights .pc-hot on the card
+     it lands in; the CSS interaction rules (note peek, cover zoom, view-link
+     tint) key off BOTH :hover and .pc-hot, so whichever path survives, the
+     card responds. The hot zone is exactly the drawn frame — the hit-test
+     honours the border-radius — and matches the click zone by construction.
+     Window-level on purpose: even if a misrouted event lands outside the
+     viewport subtree, the coordinates still tell the truth. ---- */
+  let lastPX = -1;
+  let lastPY = -1;
+
+  const syncHot = (cx, cy) => {
+    // elementsFromPoint (plural): scan the whole stack under the point and
+    // take the first hit inside the active card. This sees THROUGH anything
+    // a browser extension floats over the page (VPN widgets and the like) —
+    // with elementFromPoint a foreign overlay was the only thing returned
+    // and the card under it went cold.
+    let hot = null;
+    if (!dragging) {
+      for (const el of document.elementsFromPoint(cx, cy)) {
+        const c = el.closest ? el.closest(".pc-card-active") : null;
+        if (c) { hot = c; break; }
+      }
+    }
+    // Touch the DOM only when the verdict actually changes. Style invalidation
+    // on every raw pointer event was heavy enough to drop frames on its own.
+    for (const c of cards) {
+      const want = c === hot;
+      if (c.classList.contains("pc-hot") !== want) c.classList.toggle("pc-hot", want);
+    }
+    /* The swipe-hint CURSOR needs no work here — it is pure CSS — but it does
+       lean on this class. Its rules list .pc-card-active.pc-hot alongside
+       .pc-hang:hover, so the hint survives wherever the browser's own hover
+       goes stale, and they append `*` so the card's descendants cannot
+       reclaim the pointer with their default hand. See the cursor: block in
+       styles.css. */
+  };
+  const syncHotAtRest = () => {
+    if (lastPX >= 0) syncHot(lastPX, lastPY);
+  };
+  // Self-healing clock: a parked cursor gets re-judged ~3×/s, so the state
+  // converges to the truth no matter what momentarily lied — stale hit-test
+  // data as the track settles, an extension overlay appearing or vanishing, a
+  // missed event. Scheduled on requestAnimationFrame, NOT setInterval: on the
+  // machine this saga was debugged on, a plain interval simply never fired
+  // (judge age grew unbounded) while rAF demonstrably ran — the carousel
+  // animates there. Ride the scheduler that is proven alive. Throttled inside
+  // the frame callback; the per-frame overhead is a subtraction and a compare.
+  let hotClockAt = 0;
+  const hotClock = (t) => {
+    // rAF re-armed FIRST: a throw inside the judge can never break the chain
+    // and strand the highlight (that failure mode is silent and permanent).
+    requestAnimationFrame(hotClock);
+    if (t - hotClockAt < 300) return;
+    hotClockAt = t;
+    try {
+      syncHotAtRest();
+    } catch (e) {
+      /* keep ticking */
+    }
+  };
+  requestAnimationFrame(hotClock);
+  // Every coordinate-bearing input feeds the judge — not just pointermove.
+  // The pure-trackpad flow (⌘R reload → two-finger scroll to the section →
+  // two-finger swipe between cards → wait) never moves the cursor at all, so
+  // after a reload the browser has NO idea where it is: no pointer event ever
+  // fires, native :hover is dead page-wide, and a pointermove-only judge sits
+  // blind forever. But WheelEvent extends MouseEvent — every scroll and swipe
+  // CARRIES the cursor position. Harvesting it closes the last gap: the
+  // moment any input happens, the clock below has true coordinates to judge.
+  // A trackpad fires well over a hundred moves a second, and the hit test is
+  // the expensive part of the judge. Coalescing it to at most one per
+  // animation frame keeps a fast sweep across the carousel off the critical
+  // path — 60Hz is all the screen can show anyway — while the coordinates
+  // themselves are recorded on every single event, so the frame that does run
+  // always judges the newest position.
+  let hitQueued = false;
+  const runQueuedHit = () => {
+    hitQueued = false;
+    syncHot(lastPX, lastPY);
+  };
+  const noteCursor = (event) => {
+    if (event.pointerType === "touch") return; // hover is a pointer concept
+    lastPX = event.clientX;
+    lastPY = event.clientY;
+    if (!hitQueued) {
+      hitQueued = true;
+      requestAnimationFrame(runQueuedHit);
+    }
+  };
+  // capture: window's capture listener fires FIRST, before any element (or
+  // any injected extension code) can stopPropagation the event away from us
+  ["pointermove", "pointerover", "pointerdown"].forEach((t) =>
+    window.addEventListener(t, noteCursor, { passive: true, capture: true })
+  );
+  window.addEventListener(
+    "wheel",
+    (event) => {
+      lastPX = event.clientX; // cursor position rides along on wheel events
+      lastPY = event.clientY;
+    },
+    { passive: true, capture: true }
+  );
+  /* No pointerout handler on purpose. An earlier one cleared the highlight and
+     dropped the cached coordinates whenever a pointerout arrived with a null
+     relatedTarget, read as "the cursor left the window". Anything that merely
+     takes focus away fires that too — a macOS screenshot, for one — and the
+     dropped coordinates then silently disabled the self-healing clock below,
+     so the card went dark and STAYED dark with no way back until the mouse
+     moved again. Native :hover does not behave that way either: it holds its
+     state through a focus change and updates on the next real move. The clock
+     re-judges from the last known point, so anything that actually matters —
+     the page scrolling, the carousel stepping, the cursor moving off — is
+     picked up within a tick anyway. */
 
   // A real drag/flick must not fire the card link underneath — but an ordinary
   // click always jitters a few px (trackpad drift, touch taps), so only swallow
