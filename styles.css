@@ -7351,13 +7351,35 @@ body[data-theme="dark"] .about-collage-card {
     font-size: 0.86em;
   }
 
+  /* Phone: the whole intro block reads CENTRED under the centred title
+     (user, 2026-09-02: "第二个统一变为居中对齐"). Before, the paragraph was
+     left-aligned but inherited the tablet's text-align-last:center, so the
+     line before the <br> floated to the middle on its own, and the facts
+     list sat flush left — three alignments in one block. */
   .about-intro-copy p {
     font-size: clamp(18px, 1.45vw, 23px);
-    text-align: left;
+    text-align: center;
+    text-align-last: auto;
   }
 
   .intro-facts {
+    width: 100%;
     font-size: clamp(18px, 1.45vw, 23px);
+    text-align: center;
+  }
+
+  /* each fact is one centred paragraph: the emoji rides inline at the head
+     of the first line instead of hanging in a fixed column at the left edge
+     (a flex row with a wrapping text cell only looks centred when it fits
+     on one line — the two-line "Favorite foods" row would have broken it) */
+  .intro-facts li {
+    display: block;
+  }
+
+  .intro-facts .emoji {
+    display: inline;
+    width: auto;
+    margin-right: 8px;
   }
 
   /* Phone: a compact two-column polaroid mosaic — keeps the scattered-wall
@@ -8160,6 +8182,18 @@ body[data-theme="dark"] .studio-service-media .studio-roll-inner {
   background-color: var(--ink);
   -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='6' viewBox='0 0 360 6'><path d='M0 3 C 40 2.4, 78 3.6, 120 3.05 C 162 2.5, 198 3.7, 240 3.1 C 282 2.55, 318 3.5, 360 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/></svg>") repeat-x left center / 360px 6px;
   mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='6' viewBox='0 0 360 6'><path d='M0 3 C 40 2.4, 78 3.6, 120 3.05 C 162 2.5, 198 3.7, 240 3.1 C 282 2.55, 318 3.5, 360 3' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'/></svg>") repeat-x left center / 360px 6px;
+}
+
+/* The horizon follows the clothesline ropes' weight (the ropes' dial is
+   --pc-rope-w on .pc-scene: 1.5 desktop / 0.9 on tablets + phones, matched
+   to the "Things I've worked on" arrow), so the line the orange peeks over
+   never reads heavier than the ropes above it. The width is baked into the
+   mask's data URI, hence the duplicated rule. */
+@media (max-width: 1080px), (max-width: 1180px) and (orientation: portrait) {
+  .studio-block::after {
+    -webkit-mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='6' viewBox='0 0 360 6'><path d='M0 3 C 40 2.4, 78 3.6, 120 3.05 C 162 2.5, 198 3.7, 240 3.1 C 282 2.55, 318 3.5, 360 3' fill='none' stroke='%23000' stroke-width='0.9' stroke-linecap='round'/></svg>") repeat-x left center / 360px 6px;
+    mask: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='6' viewBox='0 0 360 6'><path d='M0 3 C 40 2.4, 78 3.6, 120 3.05 C 162 2.5, 198 3.7, 240 3.1 C 282 2.55, 318 3.5, 360 3' fill='none' stroke='%23000' stroke-width='0.9' stroke-linecap='round'/></svg>") repeat-x left center / 360px 6px;
+  }
 }
 
 /* content sits higher than dead-center to trim the empty space above the text */
@@ -9711,6 +9745,22 @@ body[data-theme="dark"] .pc-gem-spark.pc-l1drop i  { animation: pc-glint 5.4s ea
     box-shadow 240ms ease;
 }
 
+/* Tablets + phones: the card edge follows the ropes down to 0.9px (the
+   "Things I've worked on" arrow's weight — user, 2026-09-02). A border can't
+   do 0.9px (it snaps to device pixels), so the border is dropped (border-box
+   sizing: the card's outer size and its spot on the rope don't move) and the
+   whole stroke is painted as an OUTER ring — box-shadow antialiases at
+   fractional widths and follows the uneven radii. Outer, not inset: the
+   pure-image cover cards fill the card edge-to-edge with their own white
+   ground, which painted over an inset ring and left only the corners.
+   Themes via --pc-line like everything else in the scene. */
+@media (max-width: 1080px), (max-width: 1180px) and (orientation: portrait) {
+  .pc-card-body {
+    border-width: 0;
+    box-shadow: 0 0 0 0.9px var(--pc-line);
+  }
+}
+
 /* the project image sits in its own restrained panel — airy, never crowded */
 .pc-media {
   display: grid;
@@ -10062,6 +10112,15 @@ body[data-theme="dark"] .pc-note {
     --pc-fade-l: 10px;
     --pc-fade-r: 9vw;
     --clothesline-drop: 36px;
+    /* Phones: both ropes drop from 1.5 → 0.9px, matched to the "Things I've
+       worked on" arrow, which the user picked as the reference weight
+       (2026-09-02): its 1.7-unit stroke in a 46-unit box renders 25px tall
+       here = 0.92px. The same 1.5px that suits the hero's rotated,
+       antialiased photo frames read visibly heavier as long solid-ink
+       strokes on an iPhone. One dial moves both ropes (clothesline.js
+       syncTopRope reads it live) — the horizon line under the scene is
+       thinned to match in its own phone rule. */
+    --pc-rope-w: 0.9;
   }
 
   .pc-top {
@@ -10174,6 +10233,10 @@ body[data-theme="dark"] .pc-note {
     --pc-fade-r: 5vw;
     --pw-size: clamp(45px, 6.2vw, 55px);
     padding-bottom: calc(var(--pw-size) * 3.5 + 26px);
+    /* mid-size (tablets, phones in landscape): the arrow's 25px floor holds
+       across this whole tier too (2vw ≤ 21.6px ≤ 1080), so the same 0.9 —
+       the ropes never jump weight when a phone rotates */
+    --pc-rope-w: 0.9;
   }
 
   /* hold the card at its resting drop so the scene hugs its own content */
@@ -10546,6 +10609,17 @@ body[data-theme="dark"] .pc-note {
   font-size: var(--reach-note-size);
   line-height: 1.2;
   color: var(--ink);
+}
+
+/* Phones: the note hugs the RIGHT END of the screen. At the desktop 50px
+   inset it floated mid-right on a 390px phone (user, 2026-09-02); 18px is
+   where the film strip's right fade visibly ends, so the ":)" now lines up
+   with the strip's end. Must come AFTER the base .marquee-section rule above
+   (same specificity — source order decides). */
+@media (max-width: 760px) {
+  .marquee-section {
+    --reach-note-x: 18px;
+  }
 }
 
 /* Boot veil: an inline <head> script stamps .pc-boot on <html> before any

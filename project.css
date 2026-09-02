@@ -165,6 +165,17 @@ body[data-theme="dark"][data-page="project"] .pj-topbar .pull-chain .chain-image
 .pj-topbar .pull-chain {
   justify-self: end;
   margin-right: var(--pj-chain-inset, 13.5px);
+  /* EXPLICIT box. The shared .pull-chain rule sizes itself from the site
+     header's --chain-width / --header-top-pad variables, which this page
+     never defines, so the button fell back to width:auto. Chrome resolved
+     that from the image's aspect ratio at 168px tall (≈13px) — Safari
+     resolved it from chain.png's NATURAL 115px width, drew the contained
+     image centred in that box, and the chain landed ~57px further left, on
+     top of the last progress dot (user's iPhone, 2026-09-02). Fixed numbers
+     render identically everywhere. */
+  top: -53px;
+  width: 14px;
+  height: 168px;
 }
 
 /* ---- the paged deck : stacked full-viewport screens ---- */
@@ -454,6 +465,10 @@ body[data-theme="dark"][data-page="project"] .pj-topbar .pull-chain .chain-image
    of the non-scrolling deck. ---- */
 @media (max-width: 900px) {
   .pj-topbar { width: min(100% - 44px, 1280px); padding-top: 22px; }
+  /* phone-length chain, same as the home header's (96px; handle bottoms out
+     at y≈72 there too) — the desktop 168px hung the handle ~45px below the
+     progress row */
+  .pj-topbar .pull-chain { top: -24px; width: 8px; height: 96px; }
   .pj-screen {
     grid-template-columns: minmax(0, 1fr);
     justify-items: center;
