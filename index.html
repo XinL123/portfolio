@@ -50,7 +50,7 @@
     <link rel="icon" type="image/png" href="/favicon.png?v=3" />
     <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-    <link rel="stylesheet" href="styles.css?v=20260822h" />
+    <link rel="stylesheet" href="styles.css?v=20260911a" />
     <link rel="stylesheet" href="orange-buddy.css?v=20260721a" />
   </head>
   <body data-page="home">
@@ -339,12 +339,10 @@
               <article class="pc-card pc-card-cover pc-card-voderrn" style="--sv: 1.1">
                 <div class="pc-hang">
                   <span class="pc-clip pc-clip-b pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span><span class="pc-clip pc-clip-b pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-back"/></svg></span>
-                  <!-- Route parked until the new project pages are ready. work.html (the Voderrn
-                       case study) stays in the repo untouched as the backup; only this card's
-                       connection to it is removed, so the card cannot navigate.
-                       To re-enable: restore the anchor and its matching closing tag.
-                       WAS: <a class="pc-card-link" href="work.html" target="_self"> -->
-                  <div class="pc-card-link">
+                  <!-- Opens the Voderrn case-study deck (voderrn.html behind the clean
+                       /projects/voderrn route). work.html, the old long-scroll case study,
+                       stays in the repo untouched as the backup. -->
+                  <a class="pc-card-link" href="/projects/voderrn" aria-label="Open the Voderrn project">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-voderrn">
                         <img class="pc-cover-light" src="assets/cover/voderrn-cover-scene.png?v=20260715f" alt="Voderrn — orange trying on looks at the mirror" loading="lazy" />
@@ -362,8 +360,7 @@
                       </div>
                       <svg class="pc-mini pc-mini-tag" style="--mx: auto; --mr: 6%; --my: 7%; --mb: auto" viewBox="0 0 26 30" aria-hidden="true"><path d="M13 2 v5" vector-effect="non-scaling-stroke" /><rect x="5.5" y="7" width="15" height="19" rx="3.4" transform="rotate(7 13 16.5)" vector-effect="non-scaling-stroke" /><circle cx="13" cy="11.6" r="1.1" /></svg>
                     </div>
-                  </div>
-                  <span class="pc-note" aria-hidden="true">coming soon</span>
+                  </a>
                   <span class="pc-clip pc-clip-f pc-clip-l" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span><span class="pc-clip pc-clip-f pc-clip-r" aria-hidden="true"><svg viewBox="0 0 20 34"><use href="#pc-clip-front"/></svg></span>
                 </div>
               </article>
@@ -735,7 +732,7 @@
     </script>
     <script src="script.js?v=202607211h"></script>
     <script src="orange-buddy.js?v=20260721a"></script>
-    <script src="clothesline.js?v=20260822i"></script>
+    <script src="clothesline.js?v=20260913a"></script>
     <script>
       // /projects entrance, part two. The tag above ran synchronously, so by
       // now clothesline.js has drawn the lower rope and placed the cards —

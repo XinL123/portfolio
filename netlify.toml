@@ -41,6 +41,18 @@
   to = "/land-of-wisdom.html"
   status = 200
 
+# Voderrn case study: same recipe, voderrn.html behind /projects/voderrn
+[[redirects]]
+  from = "/voderrn.html"
+  to = "/projects/voderrn"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/projects/voderrn"
+  to = "/voderrn.html"
+  status = 200
+
 # /projects is served BY THE SERVER from the home document — status 200 is a
 # rewrite, not a redirect, so the address bar keeps /projects and the browser
 # never sees index.html or #work. The Projects carousel is not duplicated; it

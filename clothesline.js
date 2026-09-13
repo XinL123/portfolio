@@ -581,6 +581,25 @@
     kick();
   });
 
+  // Coming back from a case study: rest on THAT project's card, not the first
+  // one. project.js stamps the slug into sessionStorage on every project page
+  // load; consume it here (one-shot) and match it against the card links, so
+  // the line opens on Voderrn after /projects/voderrn, on Chushubao after
+  // /projects/chushubao, and so on. Consumed before the first place(), so the
+  // boot veil never shows the wrong card. A bfcache restore skips all this and
+  // simply keeps the index it left with.
+  try {
+    const slug = sessionStorage.getItem("pc-return-project");
+    if (slug) {
+      sessionStorage.removeItem("pc-return-project");
+      const returnIndex = cards.findIndex((c) => {
+        const link = c.querySelector(".pc-card-link[href]");
+        return link && link.getAttribute("href") === `/projects/${slug}`;
+      });
+      if (returnIndex >= 0) activeProjectIndex = returnIndex;
+    }
+  } catch (e) { /* storage blocked — start at card 0 */ }
+
   // The first paint uses the exact same guarded path as a bfcache/visibility
   // restore. That keeps the initial and return states mechanically identical.
   stabilizeCards();

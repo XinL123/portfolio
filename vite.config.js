@@ -22,6 +22,8 @@ const ROUTE_REWRITES = new Map([
   // Chushubao case study: clean canonical url over land-of-wisdom.html
   // (mirrors the status=200 rule in netlify.toml — keep the two in sync)
   ["/projects/chushubao", "/land-of-wisdom.html"],
+  // Voderrn case study (mirrors netlify.toml)
+  ["/projects/voderrn", "/voderrn.html"],
 ]);
 
 const projectsRoute = () => {
