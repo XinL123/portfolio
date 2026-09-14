@@ -11,6 +11,9 @@ Usage: python3 scripts/mk-project-art.py <source.png> <out-stem> [--liftall] [--
            Keep the wash exactly as it looks on paper for the dark twin and
            push its alpha up so it sits ON the dark paper instead of sinking
            into it (Iterations ladybugs).
+--nokeep : no black is preserved at all — every neutral stroke and spot goes
+           cream on the dark twin (Iterations: ladybug spots + medal star
+           outline must read as white lines, per the user 2026-09-14).
 """
 import sys
 from collections import deque
@@ -65,12 +68,21 @@ def _keep_blobs(mask, a, chroma, max_px=1500):
         ring = np.ones((by1 - by0, bx1 - bx0), dtype=bool)
         ring[cy - by0, cx - bx0] = False
         ring &= a[by0:by1, bx0:bx1] > 0.25
-        if ring.sum() and chroma[by0:by1, bx0:bx1][ring].mean() > 0.6:
+        if not ring.sum() or chroma[by0:by1, bx0:bx1][ring].mean() <= 0.6:
+            continue
+        # ENCLOSURE: the colour must surround the blob (an eye sits inside a
+        # face), not merely touch its ends (a sofa line cut short by two
+        # orange bodies is still a line) — chromatic ring pixels have to cover
+        # at least 6 of 8 angular sectors around the centroid.
+        ry, rx = np.where(ring & chroma[by0:by1, bx0:bx1])
+        ang = np.arctan2(ry + by0 - cy.mean(), rx + bx0 - cx.mean())
+        sectors = np.unique(((ang + np.pi) / (2 * np.pi) * 8).astype(int) % 8)
+        if len(sectors) >= 6:
             keep[cy, cx] = True
     return keep
 
 
-def main(src, stem, liftall=False, pastel=False):
+def main(src, stem, liftall=False, pastel=False, nokeep=False):
     im = np.array(Image.open(src).convert("RGB")).astype(np.float64)
     mn = im.min(-1)
     border = np.concatenate([mn[0], mn[-1], mn[:, 0], mn[:, -1]])
@@ -94,6 +106,8 @@ def main(src, stem, liftall=False, pastel=False):
     solid = neutral & (a > 0.7) & (rgb.max(-1) < 90)
     cores = _dilate(_erode(solid, 3), 4) & neutral
     keep |= _keep_blobs(cores, a, chroma)
+    if nokeep:
+        keep[:] = False
 
     light = np.dstack([rgb, a * 255]).astype(np.uint8)
     d = rgb.copy()
@@ -121,4 +135,4 @@ def main(src, stem, liftall=False, pastel=False):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], "--liftall" in sys.argv, "--pastel" in sys.argv)
+    main(sys.argv[1], sys.argv[2], "--liftall" in sys.argv, "--pastel" in sys.argv, "--nokeep" in sys.argv)
