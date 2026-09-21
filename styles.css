@@ -38,7 +38,7 @@ html[data-theme="dark"] {
 body[data-theme="dark"],
 html[data-theme="dark"] body {
   color-scheme: dark;
-  --ink: #f9f3eb;
+  --ink: #ffffff;
   --paper: #070707;
   --paper-deep: #101010;
   --surface: #090909;
@@ -52,6 +52,19 @@ html[data-theme="dark"] body {
 
 * {
   box-sizing: border-box;
+}
+
+/* No picture on the site leaves it by being dragged out of the page — the one
+   gesture that copies artwork without asking. This kills the drag image in
+   WebKit/Blink; the draggable="false" on every <img> answers the browsers that
+   ignore it, and script.js cancels dragstart for pictures added at runtime.
+   (It does not stop right-click → Save, which is a different door.) */
+img,
+picture,
+svg,
+video,
+canvas {
+  -webkit-user-drag: none;
 }
 
 html {
@@ -4698,93 +4711,328 @@ body[data-theme="dark"][data-page="case-study"] .case-placeholder-section {
   padding: 18px;
 }
 
-.resume-page {
-  display: grid;
-  grid-template-columns: minmax(400px, 0.54fr) minmax(460px, 1fr);
-  align-items: stretch;
-  /* wide gutter so the enlarged "Where I am now" tree sits deep in it, clear of
-     the résumé column, which is itself pushed right. The vw term grows the gap on
-     wide screens; the reduced content min (460) lets the grid still fit in the
-     medium 1081–1200 range instead of the old overflow (was 560 min → overflowed). */
-  gap: clamp(140px, 15.5vw, 250px);
-  width: min(100% - 112px, 1380px);
-  margin: 0 auto;
-  padding: clamp(8px, 1.2vw, 18px) 0 clamp(54px, 6vw, 88px);
+/* ---- Résumé: ONE composition. A sheet pinned to the page on the left, the
+   résumé paging through Experience -> Experience + Education -> Skills on
+   the right (resume.js). Desktop is one screen: sticky header, then the two
+   columns filling the rest of the viewport; the footer is retired here like
+   on the project deck. Phones stack sheet, text and pager and scroll. ---- */
+body[data-page="resume"] {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.resume-tree-panel {
+body[data-page="resume"] .site-header {
+  flex: none;
+}
+
+body[data-page="resume"] .site-footer {
+  display: none;
+}
+
+.resume-page {
+  /* half the distance between the sheet and the text: each sits exactly this
+     far from the page's central axis, so the pair balances on the middle */
+  --rs-axis-gap: clamp(30px, 3.6vw, 56px);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  /* two EQUAL halves split on the central axis (the same idea as the project
+     deck's screens): the sheet hugs the axis from the left, the text from the
+     right, each --rs-axis-gap away from it */
+  grid-template-columns: 1fr 1fr;
+  /* the one row fills the screen so each column can cap itself at 100% and,
+     on a short viewport, scroll inside rather than run under the fold */
+  grid-template-rows: minmax(0, 1fr);
+  align-items: start;
+  column-gap: calc(var(--rs-axis-gap) * 2);
+  width: min(100% - 112px, 1280px);
+  margin: 0 auto;
+  padding: clamp(4px, 1.2svh, 14px) 0 clamp(28px, 4svh, 44px);
+}
+
+/* ---- the pin board: the sheet hangs from the pin ---- */
+.resume-board {
+  --rs-pin-y: 22px;      /* pivot: how far down the sheet the pin goes in */
+  --rs-rest: -1.1deg;    /* the sheet's resting tilt, hung slightly off-true */
   position: relative;
-  align-self: stretch;
-  min-height: 100%;
+  justify-self: end;     /* the sheet's right edge sits --rs-axis-gap off the axis */
+  display: grid;
+  justify-items: center;
+  width: min(100%, 396px);
+  min-height: 0;
+  padding: 4px 8px 0;    /* room for the pin and the tilt's swing */
+  color: var(--ink);
+}
+
+/* the sheet: plain paper on the page, a hairline edge and a breath of depth,
+   nothing like a card. It turns about the pin, never its centre. */
+.resume-paper {
+  position: relative;
+  width: 100%;
+  padding: 0;
+  /* the drawing is on white paper, so the sheet stays white on both themes —
+     a white sheet pinned to a dark board reads right, a tinted one does not */
+  background: #ffffff;
+  /* light: a hairline barely there, the sheet's edge implied by its shadow.
+     (Tried full black 2026-09-20 — too much of a frame round the drawing.) */
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ink) 9%, transparent),
+    0 1px 2px color-mix(in srgb, #000000 5%, transparent),
+    0 10px 24px -8px color-mix(in srgb, #000000 10%, transparent);
+  transform-origin: 50% var(--rs-pin-y);
+  rotate: var(--rs-rest);
+  will-change: rotate;
+}
+
+/* dark: the sheet turns over. The drawing is a photograph of black ink on
+   white paper, so the theme flips it rather than re-drawing it — invert takes
+   the paper to black and the ink to white, and the hue-rotate puts the colour
+   back into the apples the invert would otherwise turn cyan. The hairline
+   ring is what still reads as the sheet's edge against the page. */
+body[data-theme="dark"] .resume-paper {
+  background: #000000;
+  /* white, not a grey wash: the same drawn edge the light theme has, flipped */
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+body[data-theme="dark"] .resume-art {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* the pin is on the board, not on the sheet, so it does not turn with it:
+   a light head with a dark catchlight, the reverse of the light theme */
+body[data-theme="dark"] .resume-pin .rs-pin-head {
+  fill: #ece5db;
+  stroke: #ece5db;
+}
+
+body[data-theme="dark"] .resume-pin .rs-pin-light {
+  stroke: #1a1a1a;
+  opacity: 0.7;
+}
+
+body[data-theme="dark"] .resume-pin .rs-pin-shadow {
+  fill: rgba(0, 0, 0, 0.55);
+}
+
+/* the artwork slot: the drawing fills the sheet's width and is capped to the
+   screen's height so the composition stays one screen (2:3 sheet: 396px wide
+   = 594px tall, which a 900px-tall laptop shows whole) */
+.resume-paper > svg,
+.resume-paper > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(66svh, 640px);
+  object-fit: contain;
+  object-position: top center;
+  color: var(--ink);
   overflow: visible;
 }
 
-.resume-tree-large {
+/* the pushpin: sits on the board at the pivot, above the sheet, and does not
+   turn with it. Ink outline, the accent red for the head, a pencil shadow. */
+.resume-pin {
   position: absolute;
-  left: clamp(-54px, -2.8vw, -26px);
-  top: 0;
-  bottom: 0;
-  width: auto;
-  height: 100%;
-  max-width: none;
-  mix-blend-mode: normal;
-  object-fit: contain;
-  object-position: left top;
-  transform-origin: top left;
-}
-
-.resume-tree-small {
-  position: absolute;
-  /* shifted ~135px further right than the old sapling — it sits deep in the
-     widened gutter (the résumé column was pushed right to make room). Visible
-     label still clears the column; image right edge is transparent +
-     pointer-events:none, so any box that reaches the column can't block clicks. */
-  right: clamp(-211px, calc(-3.4vw - 135px), -173px);
+  top: calc(4px + var(--rs-pin-y) - 12px);
+  left: 50%;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  translate: -50% 0;
+  overflow: visible;
   pointer-events: none;
-  /* -7px lands the baked-in grass line (6.1% of image height) on the SAME
-     ground line as the large tree's (1.68% of its drawn height ≈ 22px above
-     the panel bottom): -7 + 0.061×489 ≈ 22.4 ✓ */
-  bottom: -7px;
-  /* sized so the baked-in "Where I am now" label renders at the SAME size as
-     the large tree's "Where I'm growing toward" (large label: 21px cap in a
-     2086px-tall source drawn at ~1331px → ~13.4px; small label: 25px cap in a
-     660px-wide source → needs ~354px width). The large tree's height is
-     content-driven (≈ constant across viewports), so the match is a constant,
-     not vw-based; narrow screens shrink gracefully. */
-  width: min(27.7vw, 354px);
-  max-width: none;
-  mix-blend-mode: normal;
 }
 
-body[data-theme="dark"] .resume-tree-large,
-body[data-theme="dark"] .resume-tree-small {
-  filter: invert(1) contrast(1.04);
-  mix-blend-mode: normal;
-  opacity: 0.9;
+/* fixed colours: the pin is stuck through a WHITE sheet on both themes */
+.resume-pin .rs-pin-shadow {
+  fill: rgba(0, 0, 0, 0.16);
 }
 
+.resume-pin .rs-pin-head {
+  fill: #151515;
+  stroke: #151515;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.resume-pin .rs-pin-light {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+/* ---- the breeze: one turn about the pin and back to rest. Triggered by
+   resume.js (once soon after the page is seen, then at long, irregular
+   intervals); the class comes off on animationend, so the sheet is
+   genuinely still in between. ---- */
+/* every draught is its own: resume.js hands each one its swing and its length,
+   so a long slow one and a short gentle one look like different gusts of the
+   same wind rather than one animation on a timer */
+.resume-paper.is-swaying {
+  animation: rs-breeze var(--rs-breeze-time, 2600ms) cubic-bezier(0.37, 0, 0.32, 1) both;
+}
+
+/* a gust catches the sheet and lets go: it swings out fast, then rings down —
+   four ever-smaller swings either side of rest before it hangs still. Each
+   peak is the one before it times the draught's own decay, and the whole thing
+   runs longer the harder the push (resume.js sets all five values). The first
+   segment eases OUT so the gust arrives quickly; the rest ease in and out, the
+   way a hanging thing swings. */
+@keyframes rs-breeze {
+  /* the push: the wind carries it over, easing into the turn without hanging
+     there. The old curve spent 74% of this phase in its first third and then
+     crawled the rest, which read as the sheet hunting for its high point. */
+  0% {
+    rotate: var(--rs-rest);
+    /* fast off the mark, then easing into the turn — the gust hits hardest at
+       the start. It can lean this far forward now only because the push itself
+       is short (21% of the clock, ~1.5s on the widest gust): the same curve
+       over a 2.2s push was what read as hunting for the high point. */
+    animation-timing-function: cubic-bezier(0.14, 0.62, 0.42, 1);
+  }
+  /* every swing after it: slowest at the ends, quickest through the middle,
+     the way anything hanging moves. Each one takes less of the clock than the
+     one before (21 / 34 / 22 / 13 / 10), so the flutter quickens as it dies —
+     and the gust shoving it out is quicker than the fall back, which is the
+     wind doing the work one way and gravity the other. */
+  21% {
+    rotate: calc(var(--rs-rest) + var(--rs-breeze-1, 0.9deg));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  55% {
+    rotate: calc(var(--rs-rest) - var(--rs-breeze-2, 0.4deg));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  77% {
+    rotate: calc(var(--rs-rest) + var(--rs-breeze-3, 0.17deg));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  90% {
+    rotate: calc(var(--rs-rest) - var(--rs-breeze-4, 0.07deg));
+    animation-timing-function: cubic-bezier(0.4, 0, 0.62, 1);
+  }
+  100% { rotate: var(--rs-rest); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume-paper,
+  .resume-paper.is-swaying { animation: none; }
+}
+
+/* ---- the paged column: three screens in one slot, the pager underneath ---- */
 .resume-content {
+  --rs-tool-size: clamp(56px, min(4.6vw, 8svh), 68px);
+  --rs-tool-gap: clamp(12px, 1.25vw, 18px);
+  justify-self: start;   /* the text's left edge sits --rs-axis-gap off the axis */
   display: grid;
-  gap: clamp(44px, 5vw, 68px);
-  max-width: 700px;
-  padding-top: 26px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: clamp(20px, 3.2svh, 36px);
+  width: 100%;
+  min-height: 0;
+  max-height: 100%;
+  max-width: 560px;
+  padding-top: clamp(6px, 1.4svh, 18px);
   color: var(--ink);
   font-family: var(--body);
 }
 
-.resume-section {
+@media (min-width: 821px) {
+  .resume-page {
+    flex: 0 1 auto;
+    grid-template-columns: minmax(0, 396px) minmax(0, 560px);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: clamp(70px, 9.5vw, 140px);
+    width: min(calc(100% - 112px), 1096px);
+    max-height: calc(100svh - 160px);
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    position: absolute;
+    /* the composition is centred on the channel between the sheet and the
+       text — the line the eye reads as the middle — not on the grid box,
+       whose sheet track and text column each carry their own slack.
+       resume.js measures the two inner edges and writes the correction. */
+    left: calc(50% + var(--rs-centre-shift, 0px));
+    top: 50%;
+    translate: -50% -50%;
+  }
+
+  /* the sheet hangs a little below the text's centre line — the pin reads
+     better with some board above it */
+  .resume-board {
+    translate: 0 4px;
+  }
+
+  .resume-content {
+    padding-top: 0;
+    position: relative;
+    /* the text hangs a little below the sheet's centre line: the full 40px on
+       any window at least ~589px tall, less on a short one so the pager stays
+       clear of the fold */
+    top: clamp(28px, 6.8svh, 40px);
+  }
+}
+
+/* every screen occupies the same grid cell, so the slot is exactly as tall as
+   the tallest screen on every page: the heading lands on the same line, the
+   pager never moves. On a viewport too short even for that, the slot scrolls
+   inside itself rather than pushing the pager off-screen. */
+.resume-screens {
   display: grid;
-  gap: 20px;
-  padding-bottom: clamp(34px, 4vw, 48px);
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.resume-section:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
+.resume-screens::-webkit-scrollbar { display: none; }
+
+.resume-screen {
+  grid-area: 1 / 1;
+  display: grid;
+  align-content: start;
+  gap: clamp(20px, 3svh, 32px);
+  opacity: 0;
+  transform: translateX(16px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 300ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 300ms;
 }
 
-.resume-section h2 {
+.resume-screen.is-active {
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 340ms ease 60ms, transform 400ms cubic-bezier(0.22, 1, 0.36, 1) 60ms;
+}
+
+/* screens already read leave to the left, the way they came */
+.resume-screen.is-past {
+  transform: translateX(-16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume-screen,
+  .resume-screen.is-active,
+  .resume-screen.is-past {
+    transform: none;
+    transition: opacity 220ms ease, visibility 0s linear 220ms;
+  }
+  .resume-screen.is-active {
+    transition: opacity 220ms ease;
+  }
+}
+
+/* ---- type ---- */
+.resume-heading {
   margin: 0;
   color: var(--ink);
   font-family: var(--stamp);
@@ -4795,10 +5043,33 @@ body[data-theme="dark"] .resume-tree-small {
   text-transform: none;
 }
 
-.education-entry,
-.experience-list {
+.experience-list,
+.education-entry {
   display: grid;
-  gap: 20px;
+  /* seven entries share one screen with the pager: 2svh = 18px at 900 tall,
+     which lands the page 16px inside its slot there (measured 2026-09-20) */
+  gap: clamp(10px, 1.9svh, 20px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* the second page is three short sections: heading, then its lines */
+.resume-section {
+  --rs-section-gap: clamp(14px, 2.25svh, 22px);
+  display: grid;
+  gap: var(--rs-section-gap);
+}
+
+/* a line of type starts ~3px inside the top of its box, but a tile's top edge
+   IS its ink — so the toolbox is handed those 3px back and all three headings
+   sit the same distance above what you actually see (measured 2026-09-20) */
+.resume-section:has(> .toolbox-grid) {
+  gap: calc(var(--rs-section-gap) + 3px);
+}
+
+.education-entry {
+  gap: clamp(3px, 0.7svh, 6px);
 }
 
 .school-name,
@@ -4808,43 +5079,40 @@ body[data-theme="dark"] .resume-tree-small {
   margin: 0;
 }
 
+.experience-entry {
+  display: grid;
+  gap: clamp(2px, 0.55svh, 5px);
+}
+
+/* role strongest, organisation on the same line but quieter, the date and
+   place a smaller, lighter line under it */
+.school-name,
+.degree-line,
+.experience-entry p {
+  /* height-aware: four entries (or three + Education) share one screen with
+     the pager, so on a short laptop viewport the type steps down instead of
+     the slot overflowing */
+  font-size: clamp(17px, min(1.55vw, 2.5svh), 23px);
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--ink) 74%, transparent);
+}
+
 .school-name,
 .degree-line strong,
 .experience-entry strong {
   color: var(--ink);
-  font-weight: 760;
+  font-weight: 700;
 }
 
-.school-name,
-.degree-line,
-.experience-entry p {
-  font-size: clamp(20px, 1.55vw, 23px);
-  line-height: 1.3;
-}
-
-.degree-line {
-  color: color-mix(in srgb, var(--ink) 72%, transparent);
-}
-
-.minor-divider {
-  display: inline-block;
-  padding: 0 8px;
-  color: color-mix(in srgb, var(--ink) 38%, transparent);
-}
-
-.experience-list {
-  gap: 25px;
-}
-
-.experience-entry {
-  display: grid;
-  gap: 5px;
+.experience-entry .at {
+  padding: 0 0.1em;
+  color: color-mix(in srgb, var(--ink) 40%, transparent);
 }
 
 .experience-entry > span {
   color: color-mix(in srgb, var(--ink) 48%, transparent);
-  font-size: clamp(16px, 1.25vw, 18px);
-  line-height: 1.45;
+  font-size: clamp(14px, min(1.25vw, 2svh), 18px);
+  line-height: 1.4;
 }
 
 .company-cjk {
@@ -4861,33 +5129,187 @@ body[data-theme="dark"] .company-cjk {
   color: var(--ink);
 }
 
-.skill-list,
-.toolbox-grid {
+/* ---- skills: words in full ink, divided by hairline rules — the same hand
+   as the rest of the sheet, where capsules read as buttons ---- */
+.resume-skill-tags {
+  --rs-skill-space: clamp(12px, 1.1vw, 18px);  /* text to rule, both sides */
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 0;
-  margin: 0;
+  align-items: center;
+  column-gap: var(--rs-skill-space);
+  /* the rows are spaced by the items' own margin, not row-gap: the empty item
+     that forces the wrap sits on a line of its own, and a row-gap would then
+     count twice around it (margins on it cannot take that back) */
+  row-gap: 0;
   list-style: none;
+  margin: 0 0 -12px;
+  padding: 0;
 }
 
-.skill-list li {
-  padding: 9px 14px 10px;
-  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
-  border-radius: 999px;
-  background: transparent;
-  color: color-mix(in srgb, var(--ink) 76%, transparent);
-  font-size: clamp(16px, 1.2vw, 18px);
-  line-height: 1;
+/* a full-width item with no height: everything after it starts a new row */
+.resume-skill-tags .skill-row-break {
+  flex: 0 0 100%;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.toolbox-grid {
+.resume-skill-tags li {
   display: flex;
-  flex-wrap: nowrap;
-  gap: clamp(12px, 1.25vw, 18px);
+  align-items: center;
+  gap: var(--rs-skill-space);
+  margin-bottom: 12px;
+  font-size: clamp(17px, min(1.45vw, 2.3svh), 21px);
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* the rule belongs to the word on its left, so it can never open a row: the
+   word before the forced break, and the last word of all, carry none */
+.resume-skill-tags li:not(:last-child):not(.skill-row-break):not(:has(+ .skill-row-break))::after {
+  content: "";
+  width: 1px;
+  height: 1.05em;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+/* ---- pager: two bare arrowheads with the project deck's progress marks
+   between them — felt-tip dots and the ink capsule that slides onto the
+   current page. Only the arrows do anything. ---- */
+.resume-pager {
+  --rs-ring: 24%;        /* the resting dots' ink, as on the deck */
+  justify-self: start;
+  justify-content: flex-end;
+  /* the arrows end where the text does — on the right edge of the longest
+     Experience line ("... @ Vanderbilt University"). That line's width rides
+     the type's own clamp() while the column is fixed, so no CSS expression
+     tracks it: resume.js measures it into --rs-pager-w. The fallback is the
+     six-tile toolbox row, which lands within a few px of it. */
+  width: min(100%, var(--rs-pager-w, calc(6 * var(--rs-tool-size) + 5 * var(--rs-tool-gap))));
+  position: relative;
+  /* the chevron's ink sits ~12.5px inside the pager's right edge (7px of hit
+     box + 9px of empty viewBox, scaled 0.78); this nudge and the +7.5px in
+     --rs-pager-w put the ink, not the box, on that edge */
+  left: 5px;
+  transform: scale(0.78);
+  transform-origin: right center;
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 1.6vw, 22px);
+  margin: 0;
+  color: var(--ink);
+}
+
+.resume-prev,
+.resume-next {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+
+/* at either end the arrow is really disabled: it stays where it is, faint,
+   and takes no pointer or keyboard */
+.resume-prev:disabled,
+.resume-next:disabled {
+  opacity: 0.26;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* the same thin single stroke as the deck's chevrons, a touch heavier so it
+   holds its own beside the ink capsule */
+.rs-chev {
+  width: 26px;
+  height: 26px;
+  overflow: visible;
+}
+
+.rs-chev use {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* keyboard focus: a loose pencilled ring */
+.resume-prev:focus-visible,
+.resume-next:focus-visible {
+  outline: 1.5px dashed color-mix(in srgb, var(--ink) 62%, transparent);
+  outline-offset: 2px;
+}
+
+/* progress: one svg of dots (1 svg unit = 1px so the traced strokes stay
+   crisp, one slot = 34px), the capsule its own svg slid by --rs-slot */
+.resume-progress {
+  position: relative;
+  width: 58px;
+  height: 24px;
+}
+
+.rs-prog {
+  display: block;
+  width: 58px;
+  height: 24px;
+  overflow: visible;
+}
+
+.rs-prog-dots use {
+  fill: color-mix(in srgb, var(--ink) var(--rs-ring), transparent);
+  stroke: none;
+}
+
+.rs-cap {
+  position: absolute;
+  top: 0;
+  left: -5px;            /* centred over dot slot 0 (dot cx 12, capsule 34 wide) */
+  width: 34px;
+  height: 24px;
+  overflow: visible;
+  transform: translateX(calc(var(--rs-slot, 0) * 34px));
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rs-cap-fill { fill: color-mix(in srgb, var(--ink) 82%, var(--paper)); }
+.rs-cap-mask { fill: var(--paper); }
+
+/* the page count for screen readers only — nothing is written on the page */
+.resume-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-chev,
+  .rs-cap { transition: none; }
+}
+
+/* ---- toolbox: the app tiles, six on the top row and two under it ---- */
+.toolbox-grid {
+  display: grid;
+  grid-template-columns: repeat(6, var(--rs-tool-size));
+  gap: var(--rs-tool-gap);
   max-width: none;
+  margin: 0;
+  padding: 0 0 4px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  list-style: none;
   scrollbar-width: none;
 }
 
@@ -4895,19 +5317,27 @@ body[data-theme="dark"] .company-cjk {
   display: none;
 }
 
+/* the six-tile row needs the full text column beside the sheet: below ~1002px
+   (measured 2026-09-20) the row runs past the page's right margin, so the
+   narrow desktops keep the old four-up grid */
+@media (min-width: 821px) and (max-width: 1023px) {
+  .toolbox-grid {
+    grid-template-columns: repeat(4, var(--rs-tool-size));
+  }
+}
+
 .tool-tile {
   position: relative;
   display: grid;
   place-items: center;
-  width: 74px;
-  height: 74px;
+  flex: none;
+  width: clamp(56px, min(4.6vw, 8svh), 68px);
+  height: clamp(56px, min(4.6vw, 8svh), 68px);
   min-height: 0;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 22%;
   background: var(--paper-deep);
   color: #111111;
-  box-shadow: none;
-  transition: transform 180ms ease;
 }
 
 .tool-tile img {
@@ -4929,7 +5359,7 @@ body[data-theme="dark"] .company-cjk {
   border-radius: inherit;
   background: transparent;
   font-family: "Avenir Next", Avenir, "Helvetica Neue", Arial, sans-serif;
-  font-size: 27px;
+  font-size: clamp(22px, 1.8vw, 25px);
   font-weight: 800;
   line-height: 1;
 }
@@ -4941,11 +5371,6 @@ body[data-theme="dark"] .company-cjk {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-
-.tool-tile:hover {
-  transform: none;
-  box-shadow: none;
 }
 
 .tool-tile.ae {
@@ -4961,10 +5386,6 @@ body[data-theme="dark"] .company-cjk {
 .tool-tile.ai {
   background: #360700;
   color: #ff9a00;
-}
-
-body[data-theme="dark"] .tool-tile:not(.figma, .codex, .claude, .ae, .ps, .ai, .wordpress) {
-  color: #111111;
 }
 
 .playground-page {
@@ -5137,16 +5558,18 @@ body[data-theme="dark"] .game-nav {
   cursor: pointer;
 }
 
-.game-nav span {
-  width: 12px;
-  height: 12px;
-  border-left: 3px solid currentColor;
-  border-bottom: 3px solid currentColor;
-  transform: rotate(45deg) translate(2px, -2px);
+.game-nav svg {
+  width: 24px;
+  height: 24px;
+  overflow: visible;
 }
 
-.game-nav-next span {
-  transform: rotate(225deg) translate(2px, -2px);
+.game-nav path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .game-nav:disabled {
@@ -5176,11 +5599,9 @@ body[data-theme="dark"] .game-nav {
     display: grid;
   }
 
-  .game-nav span {
-    width: 9px;
-    height: 9px;
-    border-left-width: 2.5px;
-    border-bottom-width: 2.5px;
+  .game-nav svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -5503,14 +5924,17 @@ body[data-theme="dark"] .art-card {
 .art-lightbox-close {
   top: clamp(12px, 1.8vw, 24px);
   right: clamp(18px, 2.4vw, 34px);
+  display: grid;
+  place-items: center;
   padding: 8px;
-  font-size: clamp(42px, 4vw, 58px);
-  line-height: 0.8;
+  line-height: 0;
   opacity: 0.86;
 }
 
 .art-lightbox-nav {
   top: 50%;
+  display: grid;
+  place-items: center;
   width: clamp(40px, 4vw, 62px);
   height: clamp(58px, 6vw, 86px);
   transform: translateY(-50%);
@@ -5525,23 +5949,38 @@ body[data-theme="dark"] .art-card {
   right: clamp(18px, 5vw, 92px);
 }
 
-.art-lightbox-nav span {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: clamp(16px, 1.8vw, 26px);
-  height: clamp(16px, 1.8vw, 26px);
-  border-top: 5px solid currentColor;
-  border-left: 5px solid currentColor;
-  border-radius: 3px;
+/* the marks themselves: one hand stroke each, sized so the ink covers the same
+   ground the old CSS-border glyphs did (measured 2026-09-20 at 1440: the V was
+   36.6px tall on a 5px stroke, the cross 30px on about the same) */
+.art-lightbox .pl-mark {
+  display: block;
+  overflow: visible;
 }
 
-.art-lightbox-prev span {
-  transform: translate(-35%, -50%) rotate(-45deg);
+.art-lightbox .pl-mark use {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.art-lightbox-next span {
-  transform: translate(-65%, -50%) rotate(135deg);
+/* …then taken down to four fifths of that: at full size the hand stroke read
+   heavier than the old glyph even at matching height (asked by eye) */
+.art-lightbox .pl-chev {
+  width: clamp(26px, 2.95vw, 43px);
+  height: clamp(26px, 2.95vw, 43px);
+}
+
+.art-lightbox .pl-cross {
+  width: clamp(25px, 2.4vw, 35px);
+  height: clamp(25px, 2.4vw, 35px);
+}
+
+/* the cross is drawn in a smaller box, so its stroke needs fewer units to
+   land on the same weight as the arrows */
+.art-lightbox .pl-cross use {
+  stroke-width: 4;
 }
 
 .art-lightbox-figure {
@@ -5682,6 +6121,15 @@ body.is-lightbox-open {
      (Replaces the old min(620px, …) cap, which drifted high on tall screens and
      low on short ones.) */
   min-height: calc(100vh - 248px);
+}
+
+/* the opening pair sits a touch right of the page's own centre: the collage
+   hugs the left of its column while the copy stops short of the right, so
+   dead centre reads left-heavy (asked for by eye, 2026-09-20) */
+@media (min-width: 821px) {
+  .about-hero {
+    translate: 20px 0;
+  }
 }
 
 .about-collage {
@@ -6416,40 +6864,11 @@ body[data-theme="dark"] .about-collage-card {
   }
 
   .resume-page {
-    grid-template-columns: minmax(300px, 0.47fr) minmax(390px, 1fr);
-    gap: clamp(108px, 11.5vw, 148px);
+    --rs-axis-gap: clamp(22px, 3vw, 40px);
   }
 
-  .resume-tree-large {
-    /* tucked ~25px further left so its bare trunk clears the enlarged small
-       tree at these narrower widths (panel is only ~300px here) */
-    left: clamp(-103px, calc(-5.8vw - 25px), -73px);
-  }
-
-  .resume-tree-small {
-    /* +25px right to pair with the large tree's left nudge — separates the two
-       trunks without pushing the tree into the résumé column */
-    right: clamp(-121px, calc(-7vw - 25px), -87px);
-    /* grass-line compensation at this size (see base rule) */
-    bottom: -5px;
-    /* ×2.36 of the old clamp — same scale factor as the label-size match */
-    width: min(30.7vw, 321px);
-  }
-
-  .resume-content {
-    max-width: none;
-  }
-
-  .resume-tree-panel {
-    min-height: 1160px;
-  }
-
-  .tree-sticky {
-    top: 112px;
-  }
-
-  .toolbox-grid {
-    gap: 12px;
+  .resume-board {
+    width: min(100%, 340px);
   }
 }
 
@@ -6573,20 +6992,68 @@ body[data-theme="dark"] .about-collage-card {
 }
 
 @media (max-width: 820px) {
+  /* phones and small tablets: the sheet, the text and the pager stack and the
+     page scrolls like any other; the sheet stays above the text on every
+     screen, only the text swaps (swipe sideways over it or use the pager) */
+  body[data-page="resume"] {
+    display: block;
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+
   .resume-page {
     grid-template-columns: 1fr;
-    max-width: 660px;
+    grid-template-rows: none;
+    align-items: start;
+    justify-items: center;
+    gap: clamp(30px, 6vw, 44px);
+    max-width: 560px;
     min-height: 0;
     padding-top: 4px;
   }
 
-  .resume-tree-panel {
-    display: none;
+  .resume-board {
+    justify-self: center;
+    width: min(100%, 300px);
+    padding: 4px 8px 0;
   }
 
   .resume-content {
+    justify-self: stretch;
+    text-align: center;
+  }
+
+  .resume-skill-tags {
+    justify-content: center;
+  }
+
+  .resume-content .toolbox-grid {
+    grid-template-columns: repeat(4, var(--rs-tool-size));
+    justify-content: center;
+  }
+
+  .resume-content .resume-pager {
+    justify-self: center;
+    justify-content: center;
+    left: 0;
+    transform-origin: center;
+  }
+
+  .resume-paper > svg,
+  .resume-paper > img {
+    max-height: none;
+  }
+
+  .resume-content {
+    grid-template-rows: auto auto;
     padding-top: 0;
     max-width: 100%;
+    max-height: none;
+  }
+
+  .resume-screens {
+    overflow: visible;
   }
 
   .home-hero {
@@ -6821,7 +7288,7 @@ body[data-theme="dark"] .about-collage-card {
     border: 0;
     border-radius: 0;
     /* Theme-aware: this full-screen sheet had a hardcoded #ffffff, so in dark
-       mode it stayed white while its links took the dark --ink (#f9f3eb) —
+       mode it stayed white while its links took the dark --ink (#ffffff) —
        cream on white, i.e. an invisible menu. --paper is #ffffff in light, so
        light mode renders exactly as before. */
     background: var(--paper);
@@ -7255,19 +7722,14 @@ body[data-theme="dark"] .about-collage-card {
   }
 
   .resume-page {
-    padding: 6px 0 54px;
+    padding: 6px 0 26px;
   }
 
-  .resume-content {
-    gap: 38px;
+  .resume-screen {
+    gap: 26px;
   }
 
-  .resume-section {
-    gap: 18px;
-    padding-bottom: 34px;
-  }
-
-  .resume-section h2 {
+  .resume-heading {
     font-size: clamp(21px, 1.65vw, 29px);
   }
 
@@ -7277,40 +7739,51 @@ body[data-theme="dark"] .about-collage-card {
     font-size: 19px;
   }
 
-  .degree-line {
-    display: grid;
-    gap: 3px;
-  }
-
-  .minor-divider {
-    display: none;
+  .experience-entry > span {
+    font-size: 15px;
   }
 
   .experience-list {
-    gap: 21px;
+    gap: 20px;
   }
 
-  .skill-list {
-    gap: 9px;
+  .skill-groups {
+    gap: 20px 32px;
   }
 
-  .skill-list li {
-    font-size: 16px;
+  .skill-group li {
+    font-size: 18px;
+  }
+
+  /* Keep the same four-column toolbox on phones. */
+  .resume-content {
+    --rs-tool-size: 56px;
+    --rs-tool-gap: 10px;
   }
 
   .toolbox-grid {
-    gap: 10px;
+    /* six across is a desktop row; a phone has no room for it */
+    grid-template-columns: repeat(4, var(--rs-tool-size));
+    gap: var(--rs-tool-gap);
+    overflow: visible;
   }
 
   .tool-tile {
-    width: 66px;
-    height: 66px;
-    min-height: 0;
-    border-radius: 14px;
+    width: 56px;
+    height: 56px;
   }
 
-  .tool-tile span {
-    font-size: 24px;
+  /* comfortable thumbs: a bigger arrow hit area */
+  .resume-prev,
+  .resume-next {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* stacked, the pager follows the phone's four-tile toolbox again (resume.js
+     leaves --rs-pager-w alone below 821px) */
+  .resume-pager {
+    width: min(100%, calc(4 * var(--rs-tool-size) + 3 * var(--rs-tool-gap)));
   }
 
   .about-page {
@@ -9990,8 +10463,8 @@ body[data-theme="dark"] .pc-media-soon {
    bright rectangle against the dark cards */
 body[data-theme="dark"] .pc-note {
   background: #1b1917;
-  border-color: #e8e0d6;
-  color: #f3efe9;
+  border-color: #eeeeee;
+  color: #eeeeee;
 }
 
 /* tiny sparse doodles inside cards */
@@ -10615,8 +11088,10 @@ body[data-theme="dark"] .pc-note {
    inset it floated mid-right on a 390px phone (user, 2026-09-02); 18px is
    where the film strip's right fade visibly ends, so the ":)" now lines up
    with the strip's end. Must come AFTER the base .marquee-section rule above
-   (same specificity — source order decides). */
-@media (max-width: 760px) {
+   (same specificity — source order decides). The second clause is the same
+   phone turned sideways (any width, ≤500px tall) — a width-only gate let
+   the inset snap back to 50px the moment the phone rotated. */
+@media (max-width: 760px), (max-height: 500px) {
   .marquee-section {
     --reach-note-x: 18px;
   }

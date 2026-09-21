@@ -39,7 +39,7 @@
     <link rel="icon" type="image/png" href="/favicon.png?v=3" />
     <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-    <link rel="stylesheet" href="styles.css?v=20260806a" />
+    <link rel="stylesheet" href="styles.css?v=20260920-breeze-push-b" />
   </head>
   <body data-page="resume">
     <script>
@@ -51,7 +51,7 @@
     </script>
     <header class="site-header">
       <a class="brand-mark" href="/" aria-label="Xin.L home">
-        <img class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
+        <img draggable="false" class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
       </a>
       <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>
       <nav class="main-nav" aria-label="Main navigation">
@@ -75,85 +75,158 @@
       </div>
     </header>
 
+    <!-- Shared defs for the pager and the pushpin: the same pencil-roughen
+         filter + thin chevron strokes the project deck uses, so the two paged
+         pages share one hand. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <filter id="rs-rough" x="-35%" y="-70%" width="170%" height="240%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <path id="rs-chev-left" d="M 15.5 4.8 Q 11.5 8.4, 8.3 12 Q 11.5 15.6, 15.5 19.2" />
+        <path id="rs-chev-right" d="M 8.5 4.8 Q 12.5 8.4, 15.7 12 Q 12.5 15.6, 8.5 19.2" />
+        <!-- progress marks, the same traced shapes as the project deck's
+             progress row (project/出书宝/progress-reference.png): a felt-tip
+             dot centred at 0,0 and the ink capsule in a 34x24 box, its light
+             slivers holes over a paper-filled mask -->
+        <path id="rs-dot-shape" d="M -1.08 -4.81 L 0.98 -4.69 L 3.15 -3.73 L 4.24 -2.64 L 4.72 -1.31 L 4.85 0.26 L 3.88 3.41 L 3.52 3.77 L 1.22 4.49 L -0.47 4.73 L -2.77 4.13 L -4.22 2.56 L -4.95 0.5 L -4.7 -1.19 L -3.5 -3.36 L -2.41 -4.33 Z" />
+        <g id="rs-pill-shape">
+          <path class="rs-cap-mask" d="M 23.71 7.1 L 27.7 7.23 L 28.91 7.71 L 30.48 9.04 L 31.2 10.37 L 31.45 12.42 L 30.96 13.99 L 29.51 15.69 L 28.06 16.41 L 25.76 16.77 L 10.17 16.77 L 7.99 16.9 L 5.46 16.41 L 4.13 15.57 L 3.16 14.36 L 2.55 12.42 L 2.68 10.85 L 3.16 9.76 L 4.37 8.43 L 7.27 7.47 L 20.32 7.59 Z" />
+          <path class="rs-cap-fill" fill-rule="evenodd" d="M 23.71 7.1 L 27.7 7.23 L 28.91 7.71 L 30.48 9.04 L 31.2 10.37 L 31.45 12.42 L 30.96 13.99 L 29.51 15.69 L 28.06 16.41 L 25.76 16.77 L 10.17 16.77 L 7.99 16.9 L 5.46 16.41 L 4.13 15.57 L 3.16 14.36 L 2.55 12.42 L 2.68 10.85 L 3.16 9.76 L 4.37 8.43 L 7.27 7.47 L 20.32 7.59 Z M 7.39 8.8 L 5.7 9.28 L 5.58 9.76 L 6.42 9.52 L 14.4 9.28 L 16.21 9.16 L 16.21 8.92 Z M 27.7 14.36 L 26.25 14.72 L 19.6 15.08 L 19.6 15.32 L 20.45 15.32 L 26.25 15.45 L 28.42 14.72 L 28.54 14.36 Z M 24.43 8.43 L 23.59 8.55 L 23.59 8.8 L 25.64 8.8 L 26.13 9.4 L 27.7 9.4 L 28.54 9.52 L 28.67 9.28 L 27.46 8.55 Z M 5.82 14.72 L 5.82 15.08 L 6.91 15.45 L 9.93 15.45 L 9.93 15.2 L 7.75 15.08 L 7.27 14.72 Z M 21.65 11.58 L 18.87 11.94 L 18.87 12.18 L 20.08 12.18 L 22.74 11.94 L 22.74 11.58 Z M 14.16 12.54 L 13.31 12.66 L 13.07 13.03 L 15.73 12.91 L 16.82 12.79 L 16.82 12.54 Z M 4.25 10.85 L 3.88 11.21 L 3.76 12.18 L 3.88 12.66 L 4.25 12.79 L 4.37 11.94 L 4.73 11.58 L 4.73 11.09 Z M 29.75 10.97 L 29.51 11.21 L 29.63 12.18 L 29.03 12.91 L 29.39 13.03 L 29.99 12.54 L 29.99 11.21 Z M 13.43 14.96 L 12.95 15.32 L 14.04 15.32 L 14.52 15.32 L 14.52 15.08 Z M 12.95 11.09 L 12.23 11.34 L 13.31 11.46 L 14.04 11.21 Z" />
+        </g>
+      </defs>
+    </svg>
+
+    <!-- One composition: a sheet pinned to the page on the left, the résumé
+         paging through Experience -> Experience + Education -> Skills on the
+         right (resume.js). The sheet never changes; only the text does. -->
     <main class="resume-page reveal-section">
-      <aside class="resume-tree-panel" aria-hidden="true">
-        <img class="resume-tree-large" src="assets/resume/resume-tree-large.png?v=20260607e" alt="" />
-        <img class="resume-tree-small" src="assets/resume/resume-tree-now.png?v=20260707h" alt="" />
+      <aside class="resume-board" aria-hidden="true">
+        <!-- the sheet hangs from the pin: .resume-paper rotates about the pin
+             point (its transform-origin), the pin itself sits still on top -->
+        <div class="resume-paper">
+          <!-- the sheet IS the drawing: it carries its own white paper, so
+               the frame has no padding. Source: the user's resume.png,
+               resized to 900x1350 and palette-optimised (scripts: see
+               project_portfolio_resume_pinned_sheet). -->
+          <img draggable="false" class="resume-art" src="assets/resume/resume-sheet.jpg?v=20260920a" alt="" width="900" height="1350" decoding="async" />
+        </div>
+        <svg class="resume-pin" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <g filter="url(#rs-rough)">
+            <ellipse class="rs-pin-shadow" cx="13.4" cy="14.8" rx="6.2" ry="5.4" />
+            <path class="rs-pin-head" d="M 12 5.4 C 15.6 5.2, 18.4 7.9, 18.3 11.6 C 18.2 15.3, 15.4 18.1, 11.9 18 C 8.3 17.9, 5.7 15.2, 5.8 11.7 C 5.9 8.1, 8.5 5.6, 12 5.4 Z" />
+            <path class="rs-pin-light" d="M 8.9 9.6 C 9.5 8.6, 10.6 7.9, 11.8 7.7" />
+          </g>
+        </svg>
       </aside>
 
       <section class="resume-content" aria-label="Resume content">
-        <section class="resume-section resume-education" aria-labelledby="education-heading">
-          <h2 id="education-heading">Education</h2>
-          <div class="education-entry">
-            <p class="school-name">Vanderbilt University</p>
-            <p class="degree-line">
-              <strong>B.S. in Cognitive Science</strong>
-              <span class="minor-divider" aria-hidden="true">|</span>
-              <span>Minors in Computer Science, Data Science, and Arts</span>
-            </p>
-          </div>
-        </section>
-
-        <section class="resume-section" aria-labelledby="experience-heading">
-          <h2 id="experience-heading">Experience</h2>
-          <div class="experience-list">
-            <article class="experience-entry">
-              <p><strong>Product Design Intern</strong> @ <span class="company-cjk">文通天下</span> (Wisdom of Land)</p>
+        <!-- all three screens share one grid cell, so the slot is always as
+             tall as the tallest screen and the pager never moves -->
+        <div class="resume-screens">
+        <section class="resume-screen is-active" data-screen="0" aria-labelledby="experience-heading">
+          <h2 id="experience-heading" class="resume-heading">Experience</h2>
+          <ol class="experience-list">
+            <li class="experience-entry">
+              <p><strong>AI Design Intern</strong> <span class="at">@</span> <span class="company-cjk">文通天下</span> (Wisdom of Land)</p>
               <span>May – Aug 2026 | Beijing, China</span>
-            </article>
-            <article class="experience-entry">
-              <p><strong>Product Design Intern</strong> @ Develop for Good</p>
+            </li>
+            <li class="experience-entry">
+              <p><strong>AI Design Intern</strong> <span class="at">@</span> Develop for Good</p>
               <span>Oct 2025 – Mar 2026 | Los Angeles, CA</span>
-            </article>
-            <article class="experience-entry">
-              <p><strong>UX Design Intern</strong> @ VandyHacks</p>
+            </li>
+            <li class="experience-entry">
+              <p><strong>UX Engineering Lead</strong> <span class="at">@</span> VandyHacks</p>
               <span>Sep 2025 – Mar 2026 | Nashville, TN</span>
-            </article>
-            <article class="experience-entry">
-              <p><strong>Product Design Intern</strong> @ Voderrn</p>
+            </li>
+            <li class="experience-entry">
+              <p><strong>UX Engineer Intern</strong> <span class="at">@</span> Voderrn</p>
               <span>May – Dec 2025 | Los Angeles, CA</span>
-            </article>
-            <article class="experience-entry">
-              <p><strong>UX Design Intern</strong> @ Vanderbilt University</p>
+            </li>
+            <li class="experience-entry">
+              <p><strong>UX Research Intern</strong> <span class="at">@</span> Vanderbilt University</p>
               <span>Sep – Dec 2024 | Nashville, TN</span>
-            </article>
-            <article class="experience-entry">
-              <p><strong>Graphic Designer</strong> @ Vanderbilt University</p>
+            </li>
+            <li class="experience-entry">
+              <p><strong>Research Assistant</strong> <span class="at">@</span> Vanderbilt University Medical Center</p>
               <span>Summers 2024 &amp; 2025 | Nashville, TN</span>
-            </article>
-            <article class="experience-entry">
-              <p><strong>Computer Science Teaching Assistant</strong> @ Vanderbilt University</p>
+            </li>
+            <li class="experience-entry">
+              <p><strong>Computer Science Teaching Assistant</strong> <span class="at">@</span> Vanderbilt University</p>
               <span>Aug 2025 – May 2027 | Nashville, TN</span>
-            </article>
+            </li>
+          </ol>
+        </section>
+
+        <section class="resume-screen" data-screen="1" aria-label="Education, skills and toolbox">
+          <section class="resume-section" aria-labelledby="education-heading">
+            <h2 id="education-heading" class="resume-heading">Education</h2>
+            <div class="education-entry">
+              <p class="school-name">Vanderbilt University</p>
+              <p class="degree-line"><strong>B.S. in Cognitive Science</strong></p>
+              <p class="degree-line">Minors in Computer Science, Data Science, and AI</p>
+            </div>
+          </section>
+
+          <section class="resume-section" aria-labelledby="skills-heading">
+            <h2 id="skills-heading" class="resume-heading">Skills</h2>
+            <ul class="resume-skill-tags" aria-label="Skills">
+              <li>Python</li>
+              <li>Java</li>
+              <li>UIUX Design</li>
+              <li>Prototyping</li>
+              <li>LLMs</li>
+              <!-- HTML/CSS starts the second row, whatever the column width -->
+              <li class="skill-row-break" aria-hidden="true"></li>
+              <li>HTML/CSS</li>
+              <li>R</li>
+              <li>SQL</li>
+              <li>A/B Testing</li>
+              <li>Design Systems</li>
+            </ul>
+          </section>
+
+          <section class="resume-section" aria-labelledby="toolbox-heading">
+            <h2 id="toolbox-heading" class="resume-heading">Toolbox</h2>
+            <ul class="toolbox-grid" aria-label="Toolbox">
+              <li class="tool-tile figma" aria-label="Figma"><img draggable="false" src="assets/resume/tool-figma.png?v=20260607e" alt="" /><small>Figma</small></li>
+              <li class="tool-tile github" aria-label="GitHub"><img draggable="false" src="assets/resume/tool-github.png" alt="" /><small>GitHub</small></li>
+              <li class="tool-tile cursor" aria-label="Cursor"><img draggable="false" src="assets/resume/tool-cursor.png?v=20260920b" alt="" /><small>Cursor</small></li>
+              <li class="tool-tile vscode" aria-label="Visual Studio Code"><img draggable="false" src="assets/resume/tool-vscode.png?v=20260920b" alt="" /><small>VS Code</small></li>
+              <li class="tool-tile jupyter" aria-label="Jupyter"><img draggable="false" src="assets/resume/tool-jupyter.png?v=20260920b" alt="" /><small>Jupyter</small></li>
+              <li class="tool-tile codex" aria-label="Codex"><img draggable="false" src="assets/resume/tool-codex.png?v=20260607e" alt="" /><small>Codex</small></li>
+              <li class="tool-tile claude" aria-label="Claude"><img draggable="false" src="assets/resume/tool-claude.png?v=20260607e" alt="" /><small>Claude</small></li>
+              <li class="tool-tile ae" aria-label="Adobe After Effects"><span>Ae</span><small>After Effects</small></li>
+              <li class="tool-tile ps" aria-label="Adobe Photoshop"><span>Ps</span><small>Photoshop</small></li>
+              <li class="tool-tile ai" aria-label="Adobe Illustrator"><span>Ai</span><small>Illustrator</small></li>
+              <li class="tool-tile wordpress" aria-label="WordPress"><img draggable="false" src="assets/resume/tool-wordpress.png?v=20260607e" alt="" /><small>WordPress</small></li>
+            </ul>
+          </section>
+        </section>
+        </div>
+
+        <!-- pager: the two arrowheads are the ONLY way to turn the page; the
+             progress row between them is the project deck's felt-tip dots with
+             the ink capsule sliding onto the current page (not clickable) -->
+        <nav class="resume-pager" aria-label="Resume pages">
+          <button class="resume-prev" type="button" aria-label="Previous page" disabled>
+            <svg class="rs-chev" viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#rs-rough)"><use href="#rs-chev-left" /></g></svg>
+          </button>
+          <div class="resume-progress" aria-hidden="true">
+            <svg class="rs-prog" viewBox="0 0 58 24" fill="none">
+              <g class="rs-prog-dots">
+                <use href="#rs-dot-shape" x="12" y="12" />
+                <use href="#rs-dot-shape" x="46" y="12" />
+              </g>
+            </svg>
+            <svg class="rs-cap" viewBox="0 0 34 24"><use href="#rs-pill-shape" /></svg>
           </div>
-        </section>
-
-        <section class="resume-section" aria-labelledby="skills-heading">
-          <h2 id="skills-heading">Skills</h2>
-          <ul class="skill-list" aria-label="Skills">
-            <li>UX/UI Design</li>
-            <li>Prototyping</li>
-            <li>Design Systems</li>
-            <li>HTML/CSS</li>
-            <li>Java</li>
-            <li>Python</li>
-            <li>R</li>
-            <li>Detail-oriented</li>
-          </ul>
-        </section>
-
-        <section class="resume-section" aria-labelledby="toolbox-heading">
-          <h2 id="toolbox-heading">Toolbox</h2>
-          <ul class="toolbox-grid" aria-label="Toolbox">
-            <li class="tool-tile figma" aria-label="Figma"><img src="assets/resume/tool-figma.png?v=20260607e" alt="" /><small>Figma</small></li>
-            <li class="tool-tile codex" aria-label="Codex"><img src="assets/resume/tool-codex.png?v=20260607e" alt="" /><small>Codex</small></li>
-            <li class="tool-tile claude" aria-label="Claude"><img src="assets/resume/tool-claude.png?v=20260607e" alt="" /><small>Claude</small></li>
-            <li class="tool-tile ae" aria-label="Adobe After Effects"><span>Ae</span><small>After Effects</small></li>
-            <li class="tool-tile ps" aria-label="Adobe Photoshop"><span>Ps</span><small>Photoshop</small></li>
-            <li class="tool-tile ai" aria-label="Adobe Illustrator"><span>Ai</span><small>Illustrator</small></li>
-            <li class="tool-tile wordpress" aria-label="WordPress"><img src="assets/resume/tool-wordpress.png?v=20260607e" alt="" /><small>WordPress</small></li>
-          </ul>
-        </section>
+          <p class="resume-status" aria-live="polite">Page 1 of 2: Experience</p>
+          <button class="resume-next" type="button" aria-label="Next page">
+            <svg class="rs-chev" viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#rs-rough)"><use href="#rs-chev-right" /></g></svg>
+          </button>
+        </nav>
       </section>
     </main>
 
@@ -165,6 +238,7 @@
       <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
 
-    <script src="script.js?v=202607211h"></script>
+    <script src="script.js?v=20260920a"></script>
+    <script src="resume.js?v=13"></script>
   </body>
 </html>

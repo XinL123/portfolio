@@ -37,7 +37,7 @@
     <link rel="icon" type="image/png" href="/favicon.png?v=3" />
     <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-    <link rel="stylesheet" href="styles.css?v=20260806a" />
+    <link rel="stylesheet" href="styles.css?v=20260920-breeze-push-b" />
   </head>
   <body data-page="playground">
     <script>
@@ -49,7 +49,7 @@
     </script>
     <header class="site-header">
       <a class="brand-mark" href="/" aria-label="Xin.L home">
-        <img class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
+        <img draggable="false" class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
       </a>
       <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">Menu</button>
       <nav class="main-nav" aria-label="Main navigation">
@@ -73,23 +73,41 @@
       </div>
     </header>
 
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <filter id="game-rough" x="-35%" y="-70%" width="170%" height="240%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="2" seed="7" result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+        <!-- the photo viewer's marks, in the same hand as the project pages'
+             back arrow and the carousel arrows above: one thin, barely bowed
+             stroke through the same roughen filter. The chevron is that same
+             path at 2.5x, so the big viewer arrow keeps the stroke weight the
+             old CSS-border glyph had; the cross is two strokes that miss dead
+             centre by a hair, the way a pencilled one does. -->
+        <path id="pl-chev-left" d="M 38.75 12 Q 28.75 21, 20.75 30 Q 28.75 39, 38.75 48" />
+        <path id="pl-chev-right" d="M 21.25 12 Q 31.25 21, 39.25 30 Q 31.25 39, 21.25 48" />
+        <path id="pl-cross-a" d="M 7.5 7 Q 17.2 18.8, 28.5 29" />
+        <path id="pl-cross-b" d="M 28.5 7 Q 18.8 18.6, 7.5 29" />
+      </defs>
+    </svg>
     <main class="playground-page reveal-section">
       <section class="game-showcase" aria-labelledby="game-heading">
         <button class="game-nav game-nav-prev" type="button" aria-label="Previous game">
-          <span aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#game-rough)"><path d="M 15.5 4.8 Q 11.5 8.4, 8.3 12 Q 11.5 15.6, 15.5 19.2" /></g></svg>
         </button>
 
         <a class="game-feature" href="https://xinl123.github.io/Mercury-Voice/" target="_blank" rel="noreferrer" aria-label="Open Mercury Voice in a new tab">
           <p class="game-kicker">Click to Play</p>
           <div class="game-frame">
-            <img class="game-cover" src="assets/playground/covers/mercury-voice-cover.jpg?v=20260816" alt="Mercury Voice cover" />
+            <img draggable="false" class="game-cover" src="assets/playground/covers/mercury-voice-cover.jpg?v=20260816" alt="Mercury Voice cover" />
             <span class="game-open-cue" aria-hidden="true">Open Game</span>
           </div>
           <h1 id="game-heading">Mercury Voice</h1>
         </a>
 
         <button class="game-nav game-nav-next" type="button" aria-label="Next game">
-          <span aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><g filter="url(#game-rough)"><path d="M 8.5 4.8 Q 12.5 8.4, 15.7 12 Q 12.5 15.6, 8.5 19.2" /></g></svg>
         </button>
       </section>
 
@@ -98,22 +116,22 @@
           <h2>2026</h2>
           <div class="art-row">
             <a class="art-card filled" href="assets/playground/2026/art-2026-01.jpg?v=20260608j" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2026/art-2026-01.jpg?v=20260608j" alt="Artwork from 2026, piece 1" />
+              <img draggable="false" src="assets/playground/2026/art-2026-01.jpg?v=20260608j" alt="Artwork from 2026, piece 1" />
             </a>
             <a class="art-card filled landscape" href="assets/playground/2026/art-2026-02.jpg?v=20260608j" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2026/art-2026-02.jpg?v=20260608j" alt="Artwork from 2026, piece 2" />
+              <img draggable="false" src="assets/playground/2026/art-2026-02.jpg?v=20260608j" alt="Artwork from 2026, piece 2" />
             </a>
             <a class="art-card filled landscape" href="assets/playground/2026/art-2026-03.jpg?v=20260608j" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2026/art-2026-03.jpg?v=20260608j" alt="Artwork from 2026, piece 3" />
+              <img draggable="false" src="assets/playground/2026/art-2026-03.jpg?v=20260608j" alt="Artwork from 2026, piece 3" />
             </a>
             <a class="art-card filled landscape" href="assets/playground/2026/art-2026-04.jpg?v=20260608j" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2026/art-2026-04.jpg?v=20260608j" alt="Artwork from 2026, piece 4" />
+              <img draggable="false" src="assets/playground/2026/art-2026-04.jpg?v=20260608j" alt="Artwork from 2026, piece 4" />
             </a>
             <a class="art-card filled" href="assets/playground/2026/art-2026-05.jpg?v=20260608j" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2026/art-2026-05.jpg?v=20260608j" alt="Artwork from 2026, piece 5" />
+              <img draggable="false" src="assets/playground/2026/art-2026-05.jpg?v=20260608j" alt="Artwork from 2026, piece 5" />
             </a>
             <a class="art-card filled landscape" href="assets/playground/2026/art-2026-06.jpg?v=20260608j" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2026/art-2026-06.jpg?v=20260608j" alt="Artwork from 2026, piece 6" />
+              <img draggable="false" src="assets/playground/2026/art-2026-06.jpg?v=20260608j" alt="Artwork from 2026, piece 6" />
             </a>
           </div>
         </div>
@@ -122,10 +140,10 @@
           <h2>2025</h2>
           <div class="art-row">
             <a class="art-card filled" href="assets/playground/2025/art-2025-01.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2025/art-2025-01.jpg?v=20260608l" alt="Artwork from 2025, piece 1" />
+              <img draggable="false" src="assets/playground/2025/art-2025-01.jpg?v=20260608l" alt="Artwork from 2025, piece 1" />
             </a>
             <a class="art-card filled" href="assets/playground/2025/art-2025-02.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2025/art-2025-02.jpg?v=20260608l" alt="Artwork from 2025, piece 2" />
+              <img draggable="false" src="assets/playground/2025/art-2025-02.jpg?v=20260608l" alt="Artwork from 2025, piece 2" />
             </a>
           </div>
         </div>
@@ -134,19 +152,19 @@
           <h2>2024</h2>
           <div class="art-row">
             <a class="art-card filled" href="assets/playground/2024/art-2024-01.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2024/art-2024-01.jpg?v=20260608l" alt="Artwork from 2024, piece 1" />
+              <img draggable="false" src="assets/playground/2024/art-2024-01.jpg?v=20260608l" alt="Artwork from 2024, piece 1" />
             </a>
             <a class="art-card filled" href="assets/playground/2024/art-2024-02.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2024/art-2024-02.jpg?v=20260608l" alt="Artwork from 2024, piece 2" />
+              <img draggable="false" src="assets/playground/2024/art-2024-02.jpg?v=20260608l" alt="Artwork from 2024, piece 2" />
             </a>
             <a class="art-card filled" href="assets/playground/2024/art-2024-03.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2024/art-2024-03.jpg?v=20260608l" alt="Artwork from 2024, piece 3" />
+              <img draggable="false" src="assets/playground/2024/art-2024-03.jpg?v=20260608l" alt="Artwork from 2024, piece 3" />
             </a>
             <a class="art-card filled" href="assets/playground/2024/art-2024-04.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2024/art-2024-04.jpg?v=20260608l" alt="Artwork from 2024, piece 4" />
+              <img draggable="false" src="assets/playground/2024/art-2024-04.jpg?v=20260608l" alt="Artwork from 2024, piece 4" />
             </a>
             <a class="art-card filled" href="assets/playground/2024/art-2024-05.jpg?v=20260608l" target="_blank" rel="noreferrer">
-              <img src="assets/playground/2024/art-2024-05.jpg?v=20260608l" alt="Artwork from 2024, piece 5" />
+              <img draggable="false" src="assets/playground/2024/art-2024-05.jpg?v=20260608l" alt="Artwork from 2024, piece 5" />
             </a>
           </div>
         </div>
@@ -155,16 +173,16 @@
           <h2>Before 2024</h2>
           <div class="art-row">
             <a class="art-card filled landscape" href="assets/playground/before-2024/art-before-2024-01.jpg?v=20260608m" target="_blank" rel="noreferrer">
-              <img src="assets/playground/before-2024/art-before-2024-01.jpg?v=20260608m" alt="Artwork before 2024, piece 1" />
+              <img draggable="false" src="assets/playground/before-2024/art-before-2024-01.jpg?v=20260608m" alt="Artwork before 2024, piece 1" />
             </a>
             <a class="art-card filled" href="assets/playground/before-2024/art-before-2024-02.jpg?v=20260608m" target="_blank" rel="noreferrer">
-              <img src="assets/playground/before-2024/art-before-2024-02.jpg?v=20260608m" alt="Artwork before 2024, piece 2" />
+              <img draggable="false" src="assets/playground/before-2024/art-before-2024-02.jpg?v=20260608m" alt="Artwork before 2024, piece 2" />
             </a>
             <a class="art-card filled landscape" href="assets/playground/before-2024/art-before-2024-03.jpg?v=20260608m" target="_blank" rel="noreferrer">
-              <img src="assets/playground/before-2024/art-before-2024-03.jpg?v=20260608m" alt="Artwork before 2024, piece 3" />
+              <img draggable="false" src="assets/playground/before-2024/art-before-2024-03.jpg?v=20260608m" alt="Artwork before 2024, piece 3" />
             </a>
             <a class="art-card filled" href="assets/playground/before-2024/art-before-2024-04.jpg?v=20260608m" target="_blank" rel="noreferrer">
-              <img src="assets/playground/before-2024/art-before-2024-04.jpg?v=20260608m" alt="Artwork before 2024, piece 4" />
+              <img draggable="false" src="assets/playground/before-2024/art-before-2024-04.jpg?v=20260608m" alt="Artwork before 2024, piece 4" />
             </a>
           </div>
         </div>
@@ -173,15 +191,17 @@
 
     <div class="art-lightbox" role="dialog" aria-modal="true" aria-label="Artwork viewer" hidden>
       <div class="art-lightbox-count" aria-live="polite">1/1</div>
-      <button class="art-lightbox-close" type="button" aria-label="Close artwork viewer">×</button>
+      <button class="art-lightbox-close" type="button" aria-label="Close artwork viewer">
+        <svg class="pl-mark pl-cross" viewBox="0 0 36 36" aria-hidden="true"><g filter="url(#game-rough)"><use href="#pl-cross-a" /><use href="#pl-cross-b" /></g></svg>
+      </button>
       <button class="art-lightbox-nav art-lightbox-prev" type="button" aria-label="Previous artwork">
-        <span aria-hidden="true"></span>
+        <svg class="pl-mark pl-chev" viewBox="0 0 60 60" aria-hidden="true"><g filter="url(#game-rough)"><use href="#pl-chev-left" /></g></svg>
       </button>
       <figure class="art-lightbox-figure">
-        <img class="art-lightbox-image" src="" alt="" />
+        <img draggable="false" class="art-lightbox-image" src="" alt="" />
       </figure>
       <button class="art-lightbox-nav art-lightbox-next" type="button" aria-label="Next artwork">
-        <span aria-hidden="true"></span>
+        <svg class="pl-mark pl-chev" viewBox="0 0 60 60" aria-hidden="true"><g filter="url(#game-rough)"><use href="#pl-chev-right" /></g></svg>
       </button>
     </div>
 
@@ -193,7 +213,7 @@
       <p class="footer-copy">Copyright © 2026 C.L</p>
     </footer>
 
-    <script src="script.js?v=202607211h"></script>
+    <script src="script.js?v=20260920a"></script>
     <script>
       // Keep the initial year group opacity-only, then restore the usual
       // scroll-reveal geometry for later groups without changing their behavior.

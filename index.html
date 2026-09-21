@@ -50,7 +50,7 @@
     <link rel="icon" type="image/png" href="/favicon.png?v=3" />
     <link rel="icon" href="/favicon.ico?v=3" sizes="any" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
-    <link rel="stylesheet" href="styles.css?v=20260911a" />
+    <link rel="stylesheet" href="styles.css?v=20260920-breeze-push-b" />
     <link rel="stylesheet" href="orange-buddy.css?v=20260721a" />
   </head>
   <body data-page="home">
@@ -63,7 +63,7 @@
     </script>
     <header class="site-header">
       <a class="brand-mark" href="/" aria-label="Xin.L home">
-        <img class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
+        <img draggable="false" class="site-logo" src="assets/system/header-logo-cutout.png" alt="" />
       </a>
 
       <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
@@ -174,7 +174,7 @@
                    keeps the deformations off .orange-stage, whose transform slot
                    belongs to the opening reveal scrub. -->
               <div class="orange-dough">
-                <img class="orange-body" src="assets/system/orange-body-no-eyes.png" alt="" />
+                <img draggable="false" class="orange-body" src="assets/system/orange-body-no-eyes.png" alt="" />
                 <div class="orange-eye-group" aria-hidden="true">
                   <span class="orange-eye orange-eye-left"></span>
                   <span class="orange-eye orange-eye-right"></span>
@@ -208,13 +208,13 @@
           <div class="pc-top" aria-hidden="true">
             <!-- the user's line2 clothesline artwork, a SINGLE centreline stroke in
                  the original 2172×250 coordinate system (scripts/trace-clothesline.py).
-                 INLINE svg (not <img>) so it can be styled and measured live.
+                 INLINE svg (not <img draggable="false">) so it can be styled and measured live.
                  Its on-screen stroke weight is held at the --pc-rope-w dial's
                  CSS px at EVERY viewport by clothesline.js (syncTopRope):
                  stroke-width = dial * 2172 / rendered width — plain arithmetic,
                  deterministic on any zoom/DPI. (vector-effect:non-scaling-stroke
                  was tried first but renders against different coordinate bases
-                 on different display scalings; and as an <img> the stroke simply
+                 on different display scalings; and as an <img draggable="false"> the stroke simply
                  scaled away — ~0.4px on phones.) preserveAspectRatio="none"
                  stretches it to 100vw like the img did; colour comes from CSS
                  (.pc-top-line path) so it themes via --pc-line. It still sags to its lowest point at the drawn clothespin
@@ -316,8 +316,8 @@
                   <a class="pc-card-link" href="/projects/chushubao" aria-label="Open the Chushubao project">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-wentong">
-                        <img class="pc-cover-light" src="assets/cover/wisdom-cover-scene.png?v=20260715f" alt="Land of Wisdom — orange reading with an AI thought" loading="lazy" />
-                        <img class="pc-cover-dark" src="assets/cover/wisdom-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
+                        <img draggable="false" class="pc-cover-light" src="assets/cover/wisdom-cover-scene.png?v=20260715f" alt="Land of Wisdom — orange reading with an AI thought" loading="lazy" />
+                        <img draggable="false" class="pc-cover-dark" src="assets/cover/wisdom-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
                       </div>
                       <div class="pc-caption">
                         <div class="pc-cap-main">
@@ -345,8 +345,8 @@
                   <a class="pc-card-link" href="/projects/voderrn" aria-label="Open the Voderrn project">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-voderrn">
-                        <img class="pc-cover-light" src="assets/cover/voderrn-cover-scene.png?v=20260715f" alt="Voderrn — orange trying on looks at the mirror" loading="lazy" />
-                        <img class="pc-cover-dark" src="assets/cover/voderrn-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
+                        <img draggable="false" class="pc-cover-light" src="assets/cover/voderrn-cover-scene.png?v=20260715f" alt="Voderrn — orange trying on looks at the mirror" loading="lazy" />
+                        <img draggable="false" class="pc-cover-dark" src="assets/cover/voderrn-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
                       </div>
                       <div class="pc-caption">
                         <div class="pc-cap-main">
@@ -371,8 +371,8 @@
                   <div class="pc-card-link">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-llm">
-                        <img class="pc-cover-light" src="assets/cover/llm-cover-scene.png?v=20260715f" alt="Orange scanning a document, thinking about LLMs" loading="lazy" />
-                        <img class="pc-cover-dark" src="assets/cover/llm-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
+                        <img draggable="false" class="pc-cover-light" src="assets/cover/llm-cover-scene.png?v=20260715f" alt="Orange scanning a document, thinking about LLMs" loading="lazy" />
+                        <img draggable="false" class="pc-cover-dark" src="assets/cover/llm-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
                       </div>
                       <div class="pc-caption">
                         <div class="pc-cap-main">
@@ -404,8 +404,8 @@
                   <div class="pc-card-link">
                     <div class="pc-card-body">
                       <div class="pc-media pc-media-health">
-                        <img class="pc-cover-light" src="assets/cover/healthcare-cover-scene.png?v=20260715f" alt="Healthcare — orange as a doctor examining a teddy bear" loading="lazy" />
-                        <img class="pc-cover-dark" src="assets/cover/healthcare-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
+                        <img draggable="false" class="pc-cover-light" src="assets/cover/healthcare-cover-scene.png?v=20260715f" alt="Healthcare — orange as a doctor examining a teddy bear" loading="lazy" />
+                        <img draggable="false" class="pc-cover-dark" src="assets/cover/healthcare-cover-scene-dark.png?v=20260715f" alt="" aria-hidden="true" loading="lazy" />
                       </div>
                       <div class="pc-caption">
                         <div class="pc-cap-main">
@@ -478,7 +478,7 @@
             <ul class="studio-service-list">
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Animation.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Animation.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Worlds drawn frame by frame.</span>
                 </span>
                 <span class="studio-service-name">Animation</span>
@@ -486,7 +486,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Cats.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Cats.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Soft, curious, always watching.</span>
                 </span>
                 <span class="studio-service-name">Cats</span>
@@ -494,7 +494,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Coding.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Coding.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Turning logic into something alive.</span>
                 </span>
                 <span class="studio-service-name">Coding</span>
@@ -502,7 +502,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Design.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Design.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Form, function, and feeling.</span>
                 </span>
                 <span class="studio-service-name">Design</span>
@@ -510,7 +510,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Drawing.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Drawing.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Thinking with a pencil.</span>
                 </span>
                 <span class="studio-service-name">Drawing</span>
@@ -518,7 +518,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Film.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Film.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Stories told in light and time.</span>
                 </span>
                 <span class="studio-service-name">Film</span>
@@ -526,7 +526,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Matcha.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Matcha.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">A quiet, green ritual.</span>
                 </span>
                 <span class="studio-service-name">Matcha</span>
@@ -534,7 +534,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Photography.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Photography.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Catching light, keeping moments.</span>
                 </span>
                 <span class="studio-service-name">Photography</span>
@@ -542,7 +542,7 @@
               </li>
               <li class="studio-service">
                 <span class="studio-service-aside" aria-hidden="true">
-                  <span class="studio-service-media"><img src="assets/home/what%20i%20like/Reading.JPG?v=20260628a" alt="" loading="lazy" /></span>
+                  <span class="studio-service-media"><img draggable="false" src="assets/home/what%20i%20like/Reading.JPG?v=20260628a" alt="" loading="lazy" /></span>
                   <span class="studio-service-caption">Other minds, other worlds.</span>
                 </span>
                 <span class="studio-service-name">Reading</span>
@@ -563,26 +563,26 @@
         <div class="marquee-track" aria-hidden="true">
           <!-- 1. Curious -->
           <span class="marquee-card"><span class="mascot mascot--curious">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <!-- 2. Crying -->
           <span class="marquee-card"><span class="mascot mascot--crying">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
               <i class="mascot-tear mascot-tear-l"></i><i class="mascot-tear mascot-tear-r"></i>
             </span>
           </span></span>
           <!-- 3. Peeking -->
           <span class="marquee-card"><span class="mascot mascot--peeking">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <!-- 4. Working -->
           <span class="marquee-card"><span class="mascot mascot--working">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
               <i class="mascot-glasses"><i class="mg-lens mg-lens-l"></i><i class="mg-bridge"></i><i class="mg-lens mg-lens-r"></i><i class="mg-arm mg-arm-l"></i><i class="mg-arm mg-arm-r"></i></i>
             </span>
@@ -590,85 +590,85 @@
           </span></span>
           <!-- 5. Sleepy -->
           <span class="marquee-card"><span class="mascot mascot--sleepy">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"><i class="mascot-lid"></i></i><i class="mascot-eye mascot-eye-r"><i class="mascot-lid"></i></i></span>
             </span>
             <i class="mascot-z mascot-z1">Z</i><i class="mascot-z mascot-z2">z</i><i class="mascot-z mascot-z3">z</i>
           </span></span>
           <!-- 6. Melting -->
           <span class="marquee-card"><span class="mascot mascot--dizzy">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <!-- 7. Jumping -->
           <span class="marquee-card"><span class="mascot mascot--jumping">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <!-- 8. Listening to Music -->
           <span class="marquee-card"><span class="mascot mascot--music">
-            <span class="mascot-body"><img class="mascot-img mascot-img--music" src="assets/system/mascot-music.png" alt="" loading="lazy" /></span>
-            <i class="mascot-note mascot-note1"><img src="assets/system/mascot-note-single.png" alt="" loading="lazy" /></i><i class="mascot-note mascot-note2"><img src="assets/system/mascot-note-double.png" alt="" loading="lazy" /></i>
+            <span class="mascot-body"><img draggable="false" class="mascot-img mascot-img--music" src="assets/system/mascot-music.png" alt="" loading="lazy" /></span>
+            <i class="mascot-note mascot-note1"><img draggable="false" src="assets/system/mascot-note-single.png" alt="" loading="lazy" /></i><i class="mascot-note mascot-note2"><img draggable="false" src="assets/system/mascot-note-double.png" alt="" loading="lazy" /></i>
           </span></span>
           <!-- 9. Angry -->
           <span class="marquee-card"><span class="mascot mascot--angry">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
-            <i class="mascot-anger"><img src="assets/system/anger-mark.png" alt="" loading="lazy" /></i>
+            <i class="mascot-anger"><img draggable="false" src="assets/system/anger-mark.png" alt="" loading="lazy" /></i>
           </span></span>
 
           <!-- duplicate set for the seamless loop (decorative) -->
           <span class="marquee-card"><span class="mascot mascot--curious">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--crying">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
               <i class="mascot-tear mascot-tear-l"></i><i class="mascot-tear mascot-tear-r"></i>
             </span>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--peeking">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--working">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
               <i class="mascot-glasses"><i class="mg-lens mg-lens-l"></i><i class="mg-bridge"></i><i class="mg-lens mg-lens-r"></i><i class="mg-arm mg-arm-l"></i><i class="mg-arm mg-arm-r"></i></i>
             </span>
             <i class="mascot-laptop"><span class="ml-lid"><svg class="ml-apple" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 12.04c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.97.9-3.76 2.28-1.6 2.78-.41 6.9 1.15 9.16.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74s1.78.74 3 .72c1.24-.02 2.02-1.13 2.78-2.24.5-.72.86-1.46 1.06-2.04-.03-.01-2.42-.93-2.45-3.61z"/><path d="M14.77 5.5c.64-.78 1.07-1.85.95-2.92-.92.04-2.04.61-2.7 1.39-.59.69-1.11 1.79-.97 2.84 1.03.08 2.08-.52 2.72-1.31z"/></svg></span></i>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--sleepy">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"><i class="mascot-lid"></i></i><i class="mascot-eye mascot-eye-r"><i class="mascot-lid"></i></i></span>
             </span>
             <i class="mascot-z mascot-z1">Z</i><i class="mascot-z mascot-z2">z</i><i class="mascot-z mascot-z3">z</i>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--dizzy">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--jumping">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--music">
-            <span class="mascot-body"><img class="mascot-img mascot-img--music" src="assets/system/mascot-music.png" alt="" loading="lazy" /></span>
-            <i class="mascot-note mascot-note1"><img src="assets/system/mascot-note-single.png" alt="" loading="lazy" /></i><i class="mascot-note mascot-note2"><img src="assets/system/mascot-note-double.png" alt="" loading="lazy" /></i>
+            <span class="mascot-body"><img draggable="false" class="mascot-img mascot-img--music" src="assets/system/mascot-music.png" alt="" loading="lazy" /></span>
+            <i class="mascot-note mascot-note1"><img draggable="false" src="assets/system/mascot-note-single.png" alt="" loading="lazy" /></i><i class="mascot-note mascot-note2"><img draggable="false" src="assets/system/mascot-note-double.png" alt="" loading="lazy" /></i>
           </span></span>
           <span class="marquee-card"><span class="mascot mascot--angry">
-            <span class="mascot-body"><img class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
+            <span class="mascot-body"><img draggable="false" class="mascot-img" src="assets/system/orange-body-no-eyes.png" alt="" loading="lazy" />
               <span class="mascot-eyes"><i class="mascot-eye mascot-eye-l"></i><i class="mascot-eye mascot-eye-r"></i></span>
             </span>
-            <i class="mascot-anger"><img src="assets/system/anger-mark.png" alt="" loading="lazy" /></i>
+            <i class="mascot-anger"><img draggable="false" src="assets/system/anger-mark.png" alt="" loading="lazy" /></i>
           </span></span>
         </div>
         <div class="marquee-edge marquee-edge-left" aria-hidden="true"></div>
@@ -730,7 +730,7 @@
         if (w) window.scrollTo({ top: Math.round(w.getBoundingClientRect().top + window.scrollY), behavior: "instant" });
       })();
     </script>
-    <script src="script.js?v=202607211h"></script>
+    <script src="script.js?v=20260920a"></script>
     <script src="orange-buddy.js?v=20260721a"></script>
     <script src="clothesline.js?v=20260913a"></script>
     <script>

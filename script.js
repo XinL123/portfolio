@@ -1,3 +1,21 @@
+/* Pictures stay on the page. Dragging one out of the document is the one
+   gesture that copies artwork without asking, so every drag that starts on a
+   picture is cancelled here — on the document, in the capture phase, so it
+   also covers the pictures built at runtime (the polaroids, the game covers,
+   the project decks) without every one of them having to remember. The site's
+   own dragging (polaroids, the project track) is pointer-event based and is
+   not affected; nothing here uses the HTML drag-and-drop API. */
+document.addEventListener(
+  "dragstart",
+  (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("img, picture, svg, video, canvas")) {
+      event.preventDefault();
+    }
+  },
+  true
+);
+
 const header = document.querySelector(".site-header");
 const menuButton = document.querySelector(".menu-toggle");
 const themeButton = document.querySelector(".pull-chain");

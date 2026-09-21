@@ -800,3 +800,7 @@ html.pj-enter body[data-page="project"] {
   body[data-page="project"] { transition: background-color 240ms ease, color 240ms ease; }
   html.pj-enter body[data-page="project"] { opacity: 1; }
 }
+
+/* Match the resume ink weight while preserving the cue dimensions. */
+.pj-next .pj-chev use,
+.pj-return .pj-chev use { stroke-width: 2.4; }
