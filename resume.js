@@ -130,8 +130,12 @@
   };
 
   refit();
-  // Gaegu arrives after first paint and the lines grow; re-measure when it lands
-  document.fonts?.ready.then(refit);
+  // Gaegu changes the layout after first paint. Keep the initial composition
+  // hidden until that final measurement, then use the existing opacity reveal.
+  const layoutReady = (document.fonts?.ready || Promise.resolve()).then(() => {
+    refit();
+    document.documentElement.classList.remove("resume-layout-pending");
+  });
   let fitFrame = null;
   window.addEventListener("resize", () => {
     window.cancelAnimationFrame(fitFrame);
@@ -241,7 +245,7 @@
   };
 
   // the first, noticing sway lands once the page's own fade-in has finished
-  schedule(2000);
+  layoutReady.then(() => schedule(2000));
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") schedule(3500 + Math.random() * 5000);
     else window.clearTimeout(breezeTimer);

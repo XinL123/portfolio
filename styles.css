@@ -4754,6 +4754,13 @@ body[data-page="resume"] .site-footer {
 }
 
 /* ---- the pin board: the sheet hangs from the pin ---- */
+/* Finish the font-dependent positioning before the first visible frame.
+   The class is installed before paint; without JS the page stays visible. */
+.resume-layout-pending .resume-page.reveal-section {
+  opacity: 0;
+  transition: none;
+}
+
 .resume-board {
   --rs-pin-y: 22px;      /* pivot: how far down the sheet the pin goes in */
   --rs-rest: -1.3deg;    /* the sheet's resting tilt, hung slightly off-true */
