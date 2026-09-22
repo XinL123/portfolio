@@ -140,8 +140,8 @@
 
   /* ---- the breeze. The sheet is still most of the time; now and then a
      draught catches it, swings it about the pin and lets it ring down. The
-     first lands 1.1s after the page is seen, then 7–18s after each one has
-     settled (a swing itself runs 2.9–8s, the wider the longer), and 3.5–8.5s
+     first lands 2s after the page is seen, then 7–15s after each one has
+     settled (a swing itself runs 3–5.2s), and 3.5–8.5s
      after coming back to the tab. Off for reduced motion and on phones, where
      the sheet sits above the text and a moving picture would only distract. */
   const phoneMQ = window.matchMedia("(max-width: 820px)");
@@ -155,9 +155,9 @@
      just blew is the least likely to come again, so small and big interleave
      instead of the sheet ticking along at one size. */
   const BREEZE_TIERS = [
-    { name: "breath", swing: [0.8, 1.6] },
-    { name: "gust", swing: [2.0, 3.4] },
-    { name: "strong", swing: [4.0, 6.0] },
+    { name: "breath", swing: [0.6, 1.2], duration: [3000, 4200], drift: [0, 0] },
+    { name: "gust", swing: [1.4, 2.6], duration: [3400, 4600], drift: [0.6, 1.0] },
+    { name: "strong", swing: [3.0, 4.8], duration: [4000, 5200], drift: [1.0, 2.0] },
   ];
 
   // odds of [breath, gust, strong] given what blew last — each row leans away
@@ -170,6 +170,7 @@
   };
 
   let lastTier = "none";
+  const randomBetween = (low, high) => low + Math.random() * (high - low);
 
   const draught = () => {
     const odds = BREEZE_ODDS[lastTier];
@@ -179,50 +180,75 @@
       roll -= odds[i];
       i += 1;
     }
-    lastTier = BREEZE_TIERS[i].name;
-    const [low, high] = BREEZE_TIERS[i].swing;
-    const swing = low + Math.random() * (high - low);
-    // the harder the push, the longer the sheet takes to stop swinging — but
-    // only the first swing is slow; the keyframes hand the later ones less and
-    // less of this clock, so the flutter quickens as it fades
-    const time = (2000 + swing * 850) * (0.92 + Math.random() * 0.16);
-    // how much of each swing survives into the next one back
-    const decay = 0.4 + Math.random() * 0.1;
-    return { swing, time, decay };
+    const tier = BREEZE_TIERS[i];
+    lastTier = tier.name;
+    const direction = Math.random() < 0.5 ? -1 : 1;
+    const swing = randomBetween(...tier.swing) * direction;
+    const time = randomBetween(...tier.duration);
+    const drift = randomBetween(...tier.drift) * direction;
+    return { swing, time, drift };
   };
 
+  // Integrate a rotational spring under a smooth wind-force envelope. Time is
+  // normalized so duration and amplitude remain independent. Small substeps
+  // give continuous velocity; dense linear frames avoid easing at every peak.
+  const windCurve = (windEnd, damping) => {
+    const steps = 1200;
+    const dt = 1 / steps;
+    const stiffness = 400;
+    let position = 0;
+    let velocity = 0;
+    const samples = [0];
+    for (let i = 1; i <= steps; i += 1) {
+      const t = i * dt;
+      const force = t < windEnd ? Math.sin(Math.PI * t / windEnd) ** 2 : 0;
+      velocity += (stiffness * (force - position) - damping * velocity) * dt;
+      position += velocity * dt;
+      if (i % 4 === 0) {
+        // Smoothly remove the tiny residual tail, with zero endpoint velocity.
+        const u = Math.max(0, (t - 0.8) / 0.2);
+        const settle = 1 - (6 * u ** 5 - 15 * u ** 4 + 10 * u ** 3);
+        samples.push(position * settle);
+      }
+    }
+    const peak = Math.max(...samples.map(Math.abs));
+    return samples.map(value => value / peak);
+  };
+
+  let breezeAnimation = null;
   const sway = () => {
     if (!canSway()) return 0;
-    const { swing, time, decay } = draught();
-    // four peaks, each a fraction of the one before: out, back past rest, and
-    // twice more, smaller, until it hangs still
-    paper.style.setProperty("--rs-breeze-1", `${swing.toFixed(2)}deg`);
-    paper.style.setProperty("--rs-breeze-2", `${(swing * decay).toFixed(2)}deg`);
-    paper.style.setProperty("--rs-breeze-3", `${(swing * decay ** 2).toFixed(2)}deg`);
-    paper.style.setProperty("--rs-breeze-4", `${(swing * decay ** 3).toFixed(2)}deg`);
-    paper.style.setProperty("--rs-breeze-time", `${Math.round(time)}ms`);
-    paper.classList.remove("is-swaying");
-    void paper.offsetWidth; // restart the keyframes if a previous run is still on the class
-    paper.classList.add("is-swaying");
+    const { swing, time, drift } = draught();
+    const curve = windCurve(randomBetween(0.56, 0.64), randomBetween(8, 10));
+    const rest = parseFloat(getComputedStyle(paper).getPropertyValue("--rs-rest"));
+    breezeAnimation?.cancel();
+    breezeAnimation = paper.animate(curve.map((value, i) => ({
+      offset: i / (curve.length - 1),
+      rotate: `${rest + swing * value}deg`,
+      translate: `${drift * value}px 0px`,
+    })), { duration: time, easing: "linear" });
     return time; // the scheduler waits this out before timing the next draught
   };
-  paper.addEventListener("animationend", () => paper.classList.remove("is-swaying"));
 
   const schedule = (delay) => {
     window.clearTimeout(breezeTimer);
     breezeTimer = window.setTimeout(() => {
       // measured from where THIS one settles, so a long push is never followed
-      // straight away by the next: 7–18s of genuine stillness in between
+      // straight away by the next: 7–15s of genuine stillness in between
       const spent = sway() || 0; // a skipped draught (hidden tab) costs nothing
-      schedule(spent + 7000 + Math.random() * 11000);
+      schedule(spent + 7000 + Math.random() * 8000);
     }, delay);
   };
 
   // the first, noticing sway lands once the page's own fade-in has finished
-  schedule(1100);
+  schedule(2000);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") schedule(3500 + Math.random() * 5000);
     else window.clearTimeout(breezeTimer);
   });
-  reduceMQ.addEventListener?.("change", () => { if (reduceMQ.matches) paper.classList.remove("is-swaying"); });
+  const stopIfDisabled = () => {
+    if (reduceMQ.matches || phoneMQ.matches) breezeAnimation?.cancel();
+  };
+  reduceMQ.addEventListener?.("change", stopIfDisabled);
+  phoneMQ.addEventListener?.("change", stopIfDisabled);
 })();

@@ -4713,23 +4713,23 @@ body[data-theme="dark"][data-page="case-study"] .case-placeholder-section {
 
 /* ---- Résumé: ONE composition. A sheet pinned to the page on the left, the
    résumé paging through Experience -> Experience + Education -> Skills on
-   the right (resume.js). Desktop is one screen: sticky header, then the two
-   columns filling the rest of the viewport; the footer is retired here like
-   on the project deck. Phones stack sheet, text and pager and scroll. ---- */
+   the right (resume.js). Desktop keeps the composition in the first screen,
+   with the shared footer directly below. Phones stack sheet, text and pager
+   before the footer. ---- */
 body[data-page="resume"] {
-  display: flex;
-  flex-direction: column;
-  height: 100svh;
-  min-height: 0;
-  overflow: hidden;
+  --resume-footer-lift: 0px;
+  display: grid;
+  grid-template-rows: calc(100svh - var(--resume-footer-lift)) auto;
+  min-height: 100svh;
+  overflow-x: clip;
 }
 
 body[data-page="resume"] .site-header {
-  flex: none;
+  align-self: start;
 }
 
 body[data-page="resume"] .site-footer {
-  display: none;
+  grid-row: 2;
 }
 
 .resume-page {
@@ -4756,7 +4756,7 @@ body[data-page="resume"] .site-footer {
 /* ---- the pin board: the sheet hangs from the pin ---- */
 .resume-board {
   --rs-pin-y: 22px;      /* pivot: how far down the sheet the pin goes in */
-  --rs-rest: -1.1deg;    /* the sheet's resting tilt, hung slightly off-true */
+  --rs-rest: -1.3deg;    /* the sheet's resting tilt, hung slightly off-true */
   position: relative;
   justify-self: end;     /* the sheet's right edge sits --rs-axis-gap off the axis */
   display: grid;
@@ -4867,63 +4867,9 @@ body[data-theme="dark"] .resume-pin .rs-pin-shadow {
   opacity: 0.85;
 }
 
-/* ---- the breeze: one turn about the pin and back to rest. Triggered by
-   resume.js (once soon after the page is seen, then at long, irregular
-   intervals); the class comes off on animationend, so the sheet is
-   genuinely still in between. ---- */
-/* every draught is its own: resume.js hands each one its swing and its length,
-   so a long slow one and a short gentle one look like different gusts of the
-   same wind rather than one animation on a timer */
-.resume-paper.is-swaying {
-  animation: rs-breeze var(--rs-breeze-time, 2600ms) cubic-bezier(0.37, 0, 0.32, 1) both;
-}
-
-/* a gust catches the sheet and lets go: it swings out fast, then rings down —
-   four ever-smaller swings either side of rest before it hangs still. Each
-   peak is the one before it times the draught's own decay, and the whole thing
-   runs longer the harder the push (resume.js sets all five values). The first
-   segment eases OUT so the gust arrives quickly; the rest ease in and out, the
-   way a hanging thing swings. */
-@keyframes rs-breeze {
-  /* the push: the wind carries it over, easing into the turn without hanging
-     there. The old curve spent 74% of this phase in its first third and then
-     crawled the rest, which read as the sheet hunting for its high point. */
-  0% {
-    rotate: var(--rs-rest);
-    /* fast off the mark, then easing into the turn — the gust hits hardest at
-       the start. It can lean this far forward now only because the push itself
-       is short (21% of the clock, ~1.5s on the widest gust): the same curve
-       over a 2.2s push was what read as hunting for the high point. */
-    animation-timing-function: cubic-bezier(0.14, 0.62, 0.42, 1);
-  }
-  /* every swing after it: slowest at the ends, quickest through the middle,
-     the way anything hanging moves. Each one takes less of the clock than the
-     one before (21 / 34 / 22 / 13 / 10), so the flutter quickens as it dies —
-     and the gust shoving it out is quicker than the fall back, which is the
-     wind doing the work one way and gravity the other. */
-  21% {
-    rotate: calc(var(--rs-rest) + var(--rs-breeze-1, 0.9deg));
-    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-  55% {
-    rotate: calc(var(--rs-rest) - var(--rs-breeze-2, 0.4deg));
-    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-  77% {
-    rotate: calc(var(--rs-rest) + var(--rs-breeze-3, 0.17deg));
-    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
-  }
-  90% {
-    rotate: calc(var(--rs-rest) - var(--rs-breeze-4, 0.07deg));
-    animation-timing-function: cubic-bezier(0.4, 0, 0.62, 1);
-  }
-  100% { rotate: var(--rs-rest); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .resume-paper,
-  .resume-paper.is-swaying { animation: none; }
-}
+/* Wind motion is sampled from a damped spring in resume.js. The pin stays
+   separate; the sheet keeps its existing transform origin and idle rotation.
+   Reduced motion and stacked layouts are guarded by the animation controller. */
 
 /* ---- the paged column: three screens in one slot, the pager underneath ---- */
 .resume-content {
@@ -5827,6 +5773,29 @@ html.pg-enter .art-card.filled {
   transform: translateY(var(--lift)) rotate(var(--tilt));
 }
 
+/* Desktop end stop: the heading and artwork, taken as one visual block, land
+   on the viewport's centre when the page reaches its footer. The space after
+   the row is derived from the viewport instead of stacking the archive's
+   bottom padding on top of the page's own bottom padding. */
+@media (min-width: 1081px) {
+  .playground-page {
+    padding-bottom: 0;
+  }
+
+  .art-year-before {
+    padding-bottom: max(28px, calc(50svh - 305px));
+  }
+
+  body[data-page="playground"] .site-footer,
+  body[data-page="about"] .site-footer {
+    margin-top: 48px;
+  }
+
+  body[data-page="about"] .site-footer {
+    margin-top: 56px;
+  }
+}
+
 .art-card.placeholder::before {
   content: "";
   position: absolute;
@@ -6510,6 +6479,15 @@ body[data-theme="dark"] .collage-peek img {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+
+/* The final wall is mathematically centred, but the footer line and the open
+   space beneath the square covers make it read slightly high. Move the whole
+   title + covers unit down together for the optical centre. */
+@media (min-width: 1081px) {
+  .about-page .photo-wall:last-of-type .photo-wall-wrap {
+    translate: 0 clamp(24px, 3svh, 32px);
+  }
 }
 
 .about-page .photo-wall .photo-card {
